@@ -309,3 +309,26 @@ test("the previewed card joins the selection a modifier-click starts", async ({ 
   await cards.nth(1).click({ modifiers: ["Control"] });
   await expect(page.locator(".selection-bar .count")).toContainText("2");
 });
+
+test("a profile picture replaces the initials wherever the name appears", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/account");
+
+  // A 2x2 PNG, scaled and re-encoded by the client before it is stored.
+  await page.getByLabel("Picture").setInputFiles({
+    name: "me.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGP8z8Dwn4GBgYkBBv" +
+      "5DGAAmYgML8Ck1FQAAAABJRU5ErkJggg==", "base64"),
+  });
+
+  const picture = page.locator("img.avatar").first();
+  await expect(picture).toBeVisible();
+  await expect(picture).toHaveAttribute("src", /^data:image\//);
+
+  // Removing it puts the initials back.
+  await page.getByRole("button", { name: "Remove" }).click();
+  await expect(page.locator("img.avatar")).toHaveCount(0);
+  await expect(page.locator(".whoami .avatar")).toHaveText("RO");
+});

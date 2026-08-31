@@ -262,6 +262,7 @@ select.input {
   color: var(--muted-soft); font-family: var(--mono); font-size: 9px; letter-spacing: 0.02em;
 }
 .avatar.empty { background: none; border: 1px dashed var(--border-strong); }
+img.avatar { object-fit: cover; }
 .avatar.big { width: 24px; height: 24px; flex: 0 0 24px; font-size: 10px; color: var(--text); }
 .avatar.comment { width: 26px; height: 26px; flex: 0 0 26px; font-size: 10px; }
 
