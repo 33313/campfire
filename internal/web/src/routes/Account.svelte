@@ -2,10 +2,11 @@
   // Your own account: password, second factor, and the tokens that act as you.
 
   import { api } from "../lib/api.js";
-  import { app } from "../lib/state.svelte.js";
+  import { app, reloadContext } from "../lib/state.svelte.js";
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
   import { when } from "../lib/format.js";
 
+  import Avatar from "../components/Avatar.svelte";
   import Section from "../components/Section.svelte";
   import ScreenHeader from "../components/ScreenHeader.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
@@ -38,6 +39,35 @@
   const guard = async (fn) => {
     try { await fn(); await load(); } catch (err) { failure(err); }
   };
+
+  // A picture is scaled here and stored inline: an instance with no object
+  // store and no third party to fetch from is the whole point.
+  const AVATAR = 96;
+
+  async function saveAvatar(dataUrl) {
+    await api.updateProfile(me.email || "", dataUrl);
+    await reloadContext(app.team?.id); // the user list is where avatars are read from
+  }
+
+  function pickPicture(e) {
+    const file = e.currentTarget.files?.[0];
+    e.currentTarget.value = "";
+    if (!file) return;
+    const img = new Image();
+    img.onload = () => {
+      // Square crop from the centre, then scale: a picture is drawn at 20px
+      // beside a name, and letterboxing it there reads as a mistake.
+      const side = Math.min(img.width, img.height);
+      const canvas = Object.assign(document.createElement("canvas"),
+        { width: AVATAR, height: AVATAR });
+      canvas.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2,
+        side, side, 0, 0, AVATAR, AVATAR);
+      URL.revokeObjectURL(img.src);
+      guard(() => saveAvatar(canvas.toDataURL("image/webp", 0.85)));
+    };
+    img.onerror = () => failure("that file is not an image");
+    img.src = URL.createObjectURL(file);
+  }
 
   async function changePassword() {
     guard(async () => {
@@ -102,6 +132,23 @@
   </ScreenHeader>
 
   <div class="body">
+    <Section title="Picture" sub={me.avatar ? "set" : "initials"}>
+      {#snippet children()}
+        <div style="display:flex;align-items:center;gap:14px">
+          <Avatar name={app.user.username} size="big" />
+          <input class="input" type="file" accept="image/*" aria-label="Picture"
+                 style="height:auto;padding:6px 8px" onchange={pickPicture} />
+          {#if me.avatar}
+            <button class="btn small" onclick={() => guard(() => saveAvatar(""))}>Remove</button>
+          {/if}
+        </div>
+        <p class="explain" style="margin:10px 0 0">
+          Scaled to a {AVATAR}px square and stored with your account. Nothing is fetched from
+          anywhere else to draw it.
+        </p>
+      {/snippet}
+    </Section>
+
     <Section title="Password">
       {#snippet children()}
         <label class="field">
