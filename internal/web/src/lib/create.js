@@ -5,16 +5,15 @@
 // leaving for the detail view throws away the list, the filter and the scroll
 // position the person was working in.
 
-import { openModal, toast, failure } from "./ui.svelte.js";
+// A refusal never reaches here: the dialog keeps itself up and marks the field
+// it was refused on, rather than closing and losing the form (DEV-5).
+
+import { openModal, toast } from "./ui.svelte.js";
 import CreateItemDialog from "../dialogs/CreateItemDialog.svelte";
 
 export async function createItem({ team, states, kind = "ticket", reload }) {
   const res = await openModal(CreateItemDialog, { team, states, kind });
   if (!res) return null;
-  if (res.error) {
-    failure(res.error);
-    return null;
-  }
   toast(`${res.identifier} created`);
   await reload();
   return res;

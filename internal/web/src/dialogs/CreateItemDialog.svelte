@@ -38,8 +38,22 @@
     if (name && !labels.includes(name)) labels.push(name);
   }
 
+  // A refusal marks the field it names and keeps the form up. Closing on a
+  // refusal would throw away everything typed to get here, which is the one
+  // thing the person cannot recover.
+  let invalid = $state(null); // { field, message }
+
+  const clearIf = (field) => () => {
+    if (invalid?.field === field) invalid = null;
+  };
+
   async function create() {
     addLabel(); // whatever is still in the box was meant to be one
+    invalid = null;
+    if (!title.trim()) {
+      invalid = { field: "title", message: "An item needs a title." };
+      return;
+    }
     const body = {
       kind: chosen, teamId: team.id, title, description,
       priority: +priority, plannedEnd: plannedEnd || "", accepted,
@@ -47,9 +61,21 @@
     };
     if (chosen === "bucket") body.icon = icon;
     else if (bucketId) body.bucketId = +bucketId;
-    try { close(await api.createItem(body)); } catch (err) { close({ error: err }); }
+    try {
+      close(await api.createItem(body));
+    } catch (err) {
+      // The API names the offending field; without one the message still has
+      // to land somewhere, so it lands under the footer.
+      invalid = { field: err.field || "", message: err.message };
+    }
   }
 </script>
+
+<!-- The complaint sits under the field it is about, and clears as that field is
+     corrected. -->
+{#snippet complaint(field)}
+  {#if invalid?.field === field}<span class="field-error">{invalid.message}</span>{/if}
+{/snippet}
 
 <Dialog title="New item in {team.name}" {close}>
   {#snippet body()}
@@ -62,7 +88,9 @@
     </div>
     <label class="field">
       <span class="field-label">Title</span>
-      <input class="input" placeholder="What needs doing?" bind:value={title} />
+      <input class="input" class:error={invalid?.field === "title"} placeholder="What needs doing?"
+             bind:value={title} oninput={clearIf("title")} />
+      {@render complaint("title")}
     </label>
     <label class="field">
       <span class="field-label">Description</span>
@@ -71,13 +99,17 @@
     <div style="display:flex;gap:12px">
       <label class="field">
         <span class="field-label">Priority</span>
-        <select class="input" bind:value={priority}>
+        <select class="input" class:error={invalid?.field === "priority"} bind:value={priority}
+                onchange={clearIf("priority")}>
           {#each [1, 2, 3, 4] as p}<option value={p}>{PRIORITY[p].name}</option>{/each}
         </select>
+        {@render complaint("priority")}
       </label>
       <label class="field">
         <span class="field-label">Planned end</span>
-        <input class="input" type="date" bind:value={plannedEnd} />
+        <input class="input" class:error={invalid?.field === "plannedEnd"} type="date"
+               bind:value={plannedEnd} oninput={clearIf("plannedEnd")} />
+        {@render complaint("plannedEnd")}
       </label>
     </div>
     <label class="field">
@@ -100,14 +132,17 @@
           {/each}
         </div>
         <span class="explain">One of the eight. It stands in for the bucket wherever it is named.</span>
+        {@render complaint("icon")}
       </div>
     {:else}
       <label class="field">
         <span class="field-label">Bucket</span>
-        <select class="input" bind:value={bucketId}>
+        <select class="input" class:error={invalid?.field === "bucketId"} bind:value={bucketId}
+                onchange={clearIf("bucketId")}>
           <option value="">None</option>
           {#each buckets as b}<option value={b.id}>{b.identifier}  {b.title}</option>{/each}
         </select>
+        {@render complaint("bucketId")}
       </label>
     {/if}
     <div class="field">
@@ -140,7 +175,11 @@
     </label>
   {/snippet}
   {#snippet footer()}
-    <span class="consequence">{chosen === "bucket" ? "A new bucket" : "A new ticket"}</span>
+    {#if invalid && !invalid.field}
+      <span class="field-error">{invalid.message}</span>
+    {:else}
+      <span class="consequence">{chosen === "bucket" ? "A new bucket" : "A new ticket"}</span>
+    {/if}
     <div class="actions">
       <button class="btn" onclick={() => close(undefined)}>Cancel</button>
       <button class="btn primary" onclick={create}>Create</button>
