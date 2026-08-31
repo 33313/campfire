@@ -129,7 +129,7 @@
     {#snippet right()}
       <SearchBox value={filter.text || ""} onsearch={(t) => setFilter({ ...filter, text: t })} />
       <button class="btn primary" onclick={create}>
-        <Icon body={NAV.plus} size={12} />
+        <Icon body={NAV.plus} size={13} />
         <span>Create</span>
       </button>
     {/snippet}
