@@ -174,9 +174,13 @@ test("a bucket carries an icon and its tickets", async ({ page }) => {
 
   // Put the ticket in it from the ticket's own aside.
   await page.goto("/SOL-1");
-  await page.locator(".aside-control").last().click();
+  await page.getByRole("button", { name: "Change bucket" }).click();
   await page.getByRole("dialog").getByRole("button", { name: /SOL-2\s+Winter readiness/ }).click();
   await expect(page.locator(".aside-control").last()).toContainText("Winter readiness");
+
+  // The bucket on a ticket follows through to the bucket.
+  await page.locator(".aside-control").last().click();
+  await expect(page).toHaveURL(/\/SOL-2$/);
 
   // The bucket's colour rides on its tickets' cards, in the foot beside the
   // identifier rather than above the title.

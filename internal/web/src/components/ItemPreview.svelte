@@ -31,6 +31,8 @@
 
   // A state change is a move, with its reason and note, exactly as it is on
   // the detail view (SPEC.md §7.1).
+  const pickBucket = () => pick("Bucket", bucketOptions(), (v) => ({ bucketId: v }));
+
   async function move() {
     try {
       const states = await api.listWorkStates(it.teamId);
@@ -97,18 +99,28 @@
       </div>
     </div>
   </div>
+  <!-- The bucket is a way through to the bucket, as it is on the detail view;
+       changing it is the deliberate second action beside it. -->
   <div class="aside-field">
     <span class="field-label">Bucket</span>
-    <button class="aside-control" onclick={() => pick("Bucket", bucketOptions(), (v) => ({ bucketId: v }))}>
+    <div style="display:flex;gap:6px">
       {#if it.bucketIdentifier}
-        <BucketIcon name={it.bucketIcon} size={13} {rendering} color={it.bucketColor} />
-        <span>{it.bucketTitle}</span>
-        <span class="note">{it.bucketIdentifier}</span>
+        <a class="aside-control" href="/{it.bucketIdentifier}">
+          <BucketIcon name={it.bucketIcon} size={13} {rendering} color={it.bucketColor} />
+          <span>{it.bucketTitle}</span>
+          <span class="note">{it.bucketIdentifier}</span>
+        </a>
       {:else}
-        <span class="dash">—</span>
-        <span class="note">none</span>
+        <button class="aside-control" onclick={pickBucket}>
+          <span class="dash">—</span>
+          <span class="note">none</span>
+        </button>
       {/if}
-    </button>
+      <button class="btn quiet" style="height:34px" aria-label="Change bucket"
+              title="Change bucket" onclick={pickBucket}>
+        <Icon body={NAV.pen} size={12} />
+      </button>
+    </div>
   </div>
   <div class="aside-rule"></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap">
