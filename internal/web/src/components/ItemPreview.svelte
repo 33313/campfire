@@ -101,7 +101,7 @@
     <span class="field-label">Bucket</span>
     <button class="aside-control" onclick={() => pick("Bucket", bucketOptions(), (v) => ({ bucketId: v }))}>
       {#if it.bucketIdentifier}
-        <BucketIcon name={it.bucketIcon} size={13} {rendering} />
+        <BucketIcon name={it.bucketIcon} size={13} {rendering} color={it.bucketColor} />
         <span>{it.bucketTitle}</span>
         <span class="note">{it.bucketIdentifier}</span>
       {:else}

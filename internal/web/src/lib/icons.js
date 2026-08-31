@@ -45,6 +45,14 @@ export const BUCKET_ICONS = {
   flag: '<path d="M4.1 2.5v11.1"/><path d="M4.1 3.3h7.5L10 5.9l1.6 2.6H4.1"/>',
 };
 
+// The fixed set of colours a bucket may be given, on the same terms as the
+// icons: recognition only, nothing reads one. A bucket without a colour is
+// drawn as it always was, so the set has no default member.
+export const BUCKET_COLOURS = {
+  amber: "#d9a05b", rust: "#c4675c", olive: "#a3a961", steel: "#7d94a8",
+  mauve: "#b087a3", sage: "#8aa8a0", stone: "#8f8578",
+};
+
 // The colour rendering. A team picks which its surfaces use; monochrome is the
 // default and which one is in force never changes the icon a bucket carries.
 export const ICON_COLOURS = {

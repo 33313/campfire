@@ -30,14 +30,23 @@ var BucketIcons = []string{"check", "bug", "bookmark", "page", "pen", "wrench", 
 // DefaultBucketIcon is what a bucket shows when it has not been given one.
 const DefaultBucketIcon = "bookmark"
 
-func ValidIcon(icon string) bool {
-	for _, i := range BucketIcons {
-		if i == icon {
+// BucketColours is the fixed set a bucket may be given, on the same terms as
+// the icons: buckets only, not extensible, and nothing derives behaviour from
+// one. A bucket without a colour is drawn as it always was.
+var BucketColours = []string{"amber", "rust", "olive", "steel", "mauve", "sage", "stone"}
+
+func valid(set []string, v string) bool {
+	for _, s := range set {
+		if s == v {
 			return true
 		}
 	}
 	return false
 }
+
+func ValidIcon(icon string) bool { return valid(BucketIcons, icon) }
+
+func ValidColour(colour string) bool { return valid(BucketColours, colour) }
 
 // Identifier renders an item's permanent public name, e.g. SOL-42. The prefix
 // is the short code of the team that *created* the item, which is not
@@ -74,6 +83,7 @@ type Item struct {
 	AssigneeID   int64  `json:"assigneeId,omitempty"`
 	Priority     int64  `json:"priority"`
 	Icon         string `json:"icon,omitempty"`
+	Color        string `json:"color,omitempty"`
 	BucketID     int64  `json:"bucketId,omitempty"`
 	StateID      int64  `json:"stateId"`
 	PlannedEnd   string `json:"plannedEnd,omitempty"`
@@ -96,15 +106,16 @@ type Item struct {
 	BucketIdentifier string   `json:"bucketIdentifier,omitempty"`
 	BucketTitle      string   `json:"bucketTitle,omitempty"`
 	BucketIcon       string   `json:"bucketIcon,omitempty"`
+	BucketColor      string   `json:"bucketColor,omitempty"`
 	Labels           []string `json:"labels,omitempty"`
 }
 
 const itemColumns = `i.id, i.kind, i.origin_team_id, i.number, i.team_id, i.title, i.description,
-	i.reporter_id, i.assignee_id, i.priority, i.icon, i.bucket_id, i.state_id, i.planned_end,
+	i.reporter_id, i.assignee_id, i.priority, i.icon, i.color, i.bucket_id, i.state_id, i.planned_end,
 	i.actual_start, i.actual_end, i.reject_reason, i.reject_note, i.rank, i.version,
 	i.created_at, i.updated_at,
 	ot.short_code, t.short_code, s.name, s.role, rep.username, asg.username,
-	b.number, bt.short_code, b.title, b.icon`
+	b.number, bt.short_code, b.title, b.icon, b.color`
 
 const itemJoins = `
 	FROM items i
@@ -119,15 +130,15 @@ const itemJoins = `
 func scanItem(row interface{ Scan(...any) error }) (Item, error) {
 	var it Item
 	var assignee, bucket, actualStart, actualEnd, bucketNumber sql.NullInt64
-	var icon, plannedEnd, reason, note sql.NullString
+	var icon, colour, plannedEnd, reason, note sql.NullString
 	var originCode, stateRole, assigneeName sql.NullString
-	var bucketCode, bucketTitle, bucketIcon sql.NullString
+	var bucketCode, bucketTitle, bucketIcon, bucketColour sql.NullString
 	err := row.Scan(&it.ID, &it.Kind, &it.OriginTeamID, &it.Number, &it.TeamID, &it.Title,
-		&it.Description, &it.ReporterID, &assignee, &it.Priority, &icon, &bucket, &it.StateID,
+		&it.Description, &it.ReporterID, &assignee, &it.Priority, &icon, &colour, &bucket, &it.StateID,
 		&plannedEnd, &actualStart, &actualEnd, &reason, &note, &it.Rank, &it.Version,
 		&it.CreatedAt, &it.UpdatedAt,
 		&originCode, &it.TeamShortCode, &it.StateName, &stateRole, &it.ReporterName, &assigneeName,
-		&bucketNumber, &bucketCode, &bucketTitle, &bucketIcon)
+		&bucketNumber, &bucketCode, &bucketTitle, &bucketIcon, &bucketColour)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Item{}, ErrNotFound
 	}
@@ -136,13 +147,14 @@ func scanItem(row interface{ Scan(...any) error }) (Item, error) {
 	}
 	it.AssigneeID, it.BucketID = num(assignee), num(bucket)
 	it.ActualStart, it.ActualEnd = num(actualStart), num(actualEnd)
-	it.Icon, it.PlannedEnd = text(icon), text(plannedEnd)
+	it.Icon, it.Color, it.PlannedEnd = text(icon), text(colour), text(plannedEnd)
 	it.RejectReason, it.RejectNote = text(reason), text(note)
 	it.StateRole, it.AssigneeName = text(stateRole), text(assigneeName)
 	it.Identifier = Identifier(text(originCode), it.Number)
 	if bucketCode.Valid && bucketNumber.Valid {
 		it.BucketIdentifier = Identifier(bucketCode.String, bucketNumber.Int64)
 		it.BucketTitle, it.BucketIcon = text(bucketTitle), text(bucketIcon)
+		it.BucketColor = text(bucketColour)
 		if it.BucketIcon == "" {
 			it.BucketIcon = DefaultBucketIcon
 		}
@@ -168,12 +180,12 @@ func CreateItem(ctx context.Context, q Q, it Item) (Item, error) {
 	}
 	res, err := q.ExecContext(ctx, `
 		INSERT INTO items (kind, origin_team_id, number, team_id, title, description,
-		                   reporter_id, assignee_id, priority, icon, bucket_id, state_id,
+		                   reporter_id, assignee_id, priority, icon, color, bucket_id, state_id,
 		                   planned_end, actual_start, actual_end, reject_reason, reject_note,
 		                   rank, version, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
 		it.Kind, it.OriginTeamID, it.Number, it.TeamID, it.Title, it.Description,
-		it.ReporterID, null(it.AssigneeID), it.Priority, null(it.Icon), null(it.BucketID),
+		it.ReporterID, null(it.AssigneeID), it.Priority, null(it.Icon), null(it.Color), null(it.BucketID),
 		it.StateID, null(it.PlannedEnd), null(it.ActualStart), null(it.ActualEnd),
 		null(it.RejectReason), null(it.RejectNote), it.Rank, it.CreatedAt, it.UpdatedAt)
 	if err != nil {
@@ -232,12 +244,12 @@ var ErrConflict = errors.New("the item changed while you were editing it")
 func UpdateItem(ctx context.Context, q Q, it *Item) error {
 	res, err := q.ExecContext(ctx, `
 		UPDATE items SET title = ?, description = ?, assignee_id = ?, priority = ?, icon = ?,
-		                 bucket_id = ?, state_id = ?, planned_end = ?, actual_start = ?,
+		                 color = ?, bucket_id = ?, state_id = ?, planned_end = ?, actual_start = ?,
 		                 actual_end = ?, reject_reason = ?, reject_note = ?, rank = ?,
 		                 team_id = ?, version = version + 1, updated_at = ?
 		WHERE id = ? AND version = ?`,
 		it.Title, it.Description, null(it.AssigneeID), it.Priority, null(it.Icon),
-		null(it.BucketID), it.StateID, null(it.PlannedEnd), null(it.ActualStart),
+		null(it.Color), null(it.BucketID), it.StateID, null(it.PlannedEnd), null(it.ActualStart),
 		null(it.ActualEnd), null(it.RejectReason), null(it.RejectNote), it.Rank,
 		it.TeamID, it.UpdatedAt, it.ID, it.Version)
 	if err != nil {

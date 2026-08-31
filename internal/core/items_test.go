@@ -473,3 +473,42 @@ func TestCreateWithAssigneeAndLabels(t *testing.T) {
 		Title: "Nobody", AssigneeID: 9999})
 	requireCode(t, err, CodeNotFound)
 }
+
+// A colour is a bucket's, on the same terms as its icon: one of a fixed set,
+// clearable, and never on a ticket (DEV-10).
+func TestBucketColourIsFixedAndBucketsOnly(t *testing.T) {
+	w := newWorld(t)
+	b, err := w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindBucket, TeamID: w.sol.ID,
+		Title: "Winter readiness", Icon: "flag", Color: "rust"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.Color != "rust" {
+		t.Fatalf("colour %q, want rust", b.Color)
+	}
+	// A ticket in it carries the bucket's colour for display, not its own.
+	tk, err := w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindTicket, TeamID: w.sol.ID,
+		Title: "Bleed the radiators", BucketID: b.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tk.BucketColor != "rust" || tk.Color != "" {
+		t.Fatalf("ticket colour %q, bucket colour %q", tk.Color, tk.BucketColor)
+	}
+
+	_, err = w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindTicket, TeamID: w.sol.ID,
+		Title: "Coloured ticket", Color: "rust"})
+	requireCode(t, err, CodeInvalid)
+	_, err = w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindBucket, TeamID: w.sol.ID,
+		Title: "Chartreuse", Color: "chartreuse"})
+	requireCode(t, err, CodeInvalid)
+
+	clear := ""
+	after, err := w.UpdateItem(w.ctx, w.marta, b.ID, ItemPatch{Color: &clear})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Color != "" {
+		t.Fatalf("colour %q after clearing", after.Color)
+	}
+}

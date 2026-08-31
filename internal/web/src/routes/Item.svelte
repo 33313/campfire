@@ -12,7 +12,7 @@
   import { assigneeOptions, bucketOptions } from "../lib/options.js";
   import { when, whenDay, plural } from "../lib/format.js";
   import { loadBuckets, fieldName, eventValue } from "../lib/events.svelte.js";
-  import { NAV, PRIORITY, RELATION_LABELS } from "../lib/icons.js";
+  import { NAV, PRIORITY, RELATION_LABELS, BUCKET_COLOURS } from "../lib/icons.js";
 
   import Icon from "../components/Icon.svelte";
   import Avatar from "../components/Avatar.svelte";
@@ -272,7 +272,7 @@
           </div>
         {:else}
           <h1 style="display:flex;align-items:center;gap:10px">
-            {#if isBucket}<BucketIcon name={item.icon} size={18} />{/if}
+            {#if isBucket}<BucketIcon name={item.icon} size={18} color={item.color} />{/if}
             <span>{item.title}</span>
             {#if isBucket}<span class="state-badge">bucket</span>{/if}
           </h1>
@@ -508,7 +508,7 @@
             <div class="aside-field">
               <span class="field-label">Icon</span>
               <div class="aside-value">
-                <BucketIcon name={item.icon} size={16} />
+                <BucketIcon name={item.icon} size={16} color={item.color} />
                 <span>{item.icon}</span>
                 {#if editing}
                   <button class="btn quiet small" style="margin-left:auto" onclick={pickIcon}>Change</button>
@@ -516,6 +516,20 @@
               </div>
             </div>
             {@render reporter()}
+          </div>
+          <!-- The colour is what its tickets wear on a board. Recognition
+               only: nothing reads it (SPEC.md §6.2). -->
+          <div class="aside-field">
+            <span class="field-label">Colour</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <button class="swatch" class:on={!item.color} title="No colour"
+                      aria-label="No colour" onclick={() => patch({ color: "" })}></button>
+              {#each Object.entries(BUCKET_COLOURS) as [name, hex]}
+                <button class="swatch" class:on={item.color === name} title={name} aria-label={name}
+                        style="background:{hex};border-color:{hex}"
+                        onclick={() => patch({ color: name })}></button>
+              {/each}
+            </div>
           </div>
         {:else}
           {@render reporter()}
@@ -540,7 +554,7 @@
             <span class="field-label">Bucket</span>
             <button class="aside-control" onclick={pickBucket}>
               {#if item.bucketIdentifier}
-                <BucketIcon name={item.bucketIcon} size={13} />
+                <BucketIcon name={item.bucketIcon} size={13} color={item.bucketColor} />
                 <span>{item.bucketTitle}</span>
                 <span class="note">{item.bucketIdentifier}</span>
               {:else}
