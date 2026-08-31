@@ -17,24 +17,6 @@
 
   let { item: it, comments = [], rendering = "mono", onclose, onchange } = $props();
 
-  // The title and the description are typed into where they are drawn; the
-  // floppy beside them writes, the cross puts back what was there. Both only
-  // appear once the field has actually been changed, so nothing hovers over
-  // text that is only being read.
-  //
-  // The drafts follow the previewed item. Live activity refreshes `it` under
-  // them, which is why the pair is keyed by id rather than reset on every load.
-  let draft = $state({ id: null, title: "", description: "" });
-  $effect(() => {
-    if (draft.id !== it.id) draft = { id: it.id, title: it.title, description: it.description || "" };
-  });
-  let titleChanged = $derived(draft.id === it.id && draft.title !== it.title);
-  let descriptionChanged = $derived(draft.id === it.id && draft.description !== (it.description || ""));
-
-  // A title emptied by accident is put back rather than saved as blank.
-  const saveTitle = () =>
-    draft.title.trim() ? patch({ title: draft.title }) : (draft.title = it.title);
-
   async function patch(body) {
     try {
       await api.updateItem(it.id, { ...body, version: it.version });
@@ -46,8 +28,6 @@
     const picked = await openModal(PickDialog, { title, options: await options });
     if (picked !== undefined) patch(then(picked));
   }
-
-  const pickBucket = () => pick("Bucket", bucketOptions(), (v) => ({ bucketId: v }));
 
   // A state change is a move, with its reason and note, exactly as it is on
   // the detail view (SPEC.md §7.1).
@@ -70,45 +50,12 @@
       <Icon body={NAV.close} size={11} />
     </button>
   </div>
-  <div>
-    <!-- The title is the input: a heading wrapped round one is a heading with
-         no text in it. -->
-    <input class="bare" aria-label="Title" bind:value={draft.title}
-           style="font-size:17px;font-weight:600;letter-spacing:-0.008em;color:var(--bright)"
-           onkeydown={(e) => {
-             if (e.key === "Enter") saveTitle();
-             else if (e.key === "Escape") draft.title = it.title;
-           }} />
-    {#if titleChanged}
-      <div class="field-actions">
-        <button class="btn" title="Save title" aria-label="Save title" onclick={saveTitle}>
-          <Icon body={NAV.save} size={12} />
-        </button>
-        <button class="btn" title="Discard" aria-label="Discard title"
-                onclick={() => (draft.title = it.title)}>
-          <Icon body={NAV.close} size={11} />
-        </button>
-      </div>
-    {/if}
-  </div>
-  <div>
-    <textarea class="bare prose" rows="1" style="font-size:14px" aria-label="Description"
-              placeholder="No description. Write one here." bind:value={draft.description}
-              onkeydown={(e) => e.key === "Escape" && (draft.description = it.description || "")}
-    ></textarea>
-    {#if descriptionChanged}
-      <div class="field-actions">
-        <button class="btn" title="Save description" aria-label="Save description"
-                onclick={() => patch({ description: draft.description })}>
-          <Icon body={NAV.save} size={12} />
-        </button>
-        <button class="btn" title="Discard" aria-label="Discard description"
-                onclick={() => (draft.description = it.description || "")}>
-          <Icon body={NAV.close} size={11} />
-        </button>
-      </div>
-    {/if}
-  </div>
+  <h2 style="margin:0">{it.title}</h2>
+  {#if it.description}
+    <div class="prose" style="font-size:14px">{it.description}</div>
+  {:else}
+    <div class="explain">No description.</div>
+  {/if}
   <div class="aside-rule"></div>
   <div class="aside-field">
     <span class="field-label">State</span>
@@ -144,34 +91,24 @@
     <div class="aside-field">
       <span class="field-label">Planned end</span>
       <div class="aside-value">
-        <input class="bare" style="height:34px" type="date" aria-label="Planned end"
+        <input class="input" style="height:34px;width:100%" type="date" aria-label="Planned end"
                value={it.plannedEnd || ""}
                onchange={(e) => patch({ plannedEnd: e.currentTarget.value })} />
       </div>
     </div>
   </div>
-  <!-- The bucket is a way through to the bucket, as it is on the detail view;
-       changing it is the deliberate second action beside it. -->
   <div class="aside-field">
     <span class="field-label">Bucket</span>
-    <div style="display:flex;gap:6px">
+    <button class="aside-control" onclick={() => pick("Bucket", bucketOptions(), (v) => ({ bucketId: v }))}>
       {#if it.bucketIdentifier}
-        <a class="aside-control" href="/{it.bucketIdentifier}">
-          <BucketIcon name={it.bucketIcon} size={13} {rendering} color={it.bucketColor} />
-          <span>{it.bucketTitle}</span>
-          <span class="note">{it.bucketIdentifier}</span>
-        </a>
+        <BucketIcon name={it.bucketIcon} size={13} {rendering} />
+        <span>{it.bucketTitle}</span>
+        <span class="note">{it.bucketIdentifier}</span>
       {:else}
-        <button class="aside-control" onclick={pickBucket}>
-          <span class="dash">—</span>
-          <span class="note">none</span>
-        </button>
+        <span class="dash">—</span>
+        <span class="note">none</span>
       {/if}
-      <button class="btn quiet" style="height:34px" aria-label="Change bucket"
-              title="Change bucket" onclick={pickBucket}>
-        <Icon body={NAV.pen} size={13} />
-      </button>
-    </div>
+    </button>
   </div>
   <div class="aside-rule"></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap">

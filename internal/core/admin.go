@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"strconv"
 	"strings"
@@ -200,43 +199,8 @@ func (s *Service) ListUsers(ctx context.Context, a Actor, afterID int64, limit i
 	return list(out, nil)
 }
 
-// maxAvatar bounds the picture a profile carries. It is stored inline on the
-// user row and ships with every user list, so it is a small square the client
-// has already scaled down — not an upload.
-const maxAvatar = 64 * 1024
-
-var avatarPrefixes = []string{
-	"data:image/png;base64,", "data:image/jpeg;base64,", "data:image/webp;base64,",
-}
-
-// validateAvatar accepts an inline image and nothing else.
-//
-// A remote URL would make every screen a user appears on fetch from a third
-// party, and any other data: scheme is a script the client would be asked to
-// render as a picture.
-func validateAvatar(avatar string) error {
-	if avatar == "" {
-		return nil
-	}
-	if len(avatar) > maxAvatar {
-		return invalidField("avatar", "a picture is at most %dKB once encoded", maxAvatar/1024)
-	}
-	for _, prefix := range avatarPrefixes {
-		if body, ok := strings.CutPrefix(avatar, prefix); ok {
-			if _, err := base64.StdEncoding.DecodeString(body); err != nil {
-				return invalidField("avatar", "that picture is not readable")
-			}
-			return nil
-		}
-	}
-	return invalidField("avatar", "a picture is an inline PNG, JPEG or WebP")
-}
-
 func (s *Service) UpdateProfile(ctx context.Context, a Actor, email, avatar string) error {
 	if err := requireUser(a); err != nil {
-		return err
-	}
-	if err := validateAvatar(avatar); err != nil {
 		return err
 	}
 	return s.write(ctx, a, func(t *wtx) error {

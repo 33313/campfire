@@ -1,7 +1,6 @@
 package core
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/campfire/campfire/internal/store"
@@ -234,42 +233,5 @@ func TestEveryAccountEventReachesTheLog(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("creating an account wrote no event")
-	}
-}
-
-// A profile picture is stored inline and drawn by every screen a user appears
-// on, so what may be stored is exactly an inline image (DEV-3).
-func TestProfilePictureIsAnInlineImage(t *testing.T) {
-	f := newFixture(t)
-	// A 1x1 PNG.
-	const png = "data:image/png;base64," +
-		"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
-	if err := f.UpdateProfile(f.ctx, f.admin, "root@example.invalid", png); err != nil {
-		t.Fatal(err)
-	}
-	users, err := f.ListUsers(f.ctx, f.admin, 0, 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if users[0].Avatar != png {
-		t.Fatalf("avatar %q", users[0].Avatar)
-	}
-
-	for _, bad := range []string{
-		"https://example.invalid/me.png",              // would make every screen fetch elsewhere
-		"data:text/html;base64,PHNjcmlwdD4=",          // a script asked to be drawn as a picture
-		"data:image/png;base64,not base64 at all !!!", // unreadable
-		"data:image/png;base64," + strings.Repeat("A", maxAvatar),
-	} {
-		if err := f.UpdateProfile(f.ctx, f.admin, "", bad); err == nil {
-			t.Fatalf("%.40q was accepted", bad)
-		} else {
-			requireCode(t, err, CodeInvalid)
-		}
-	}
-
-	// Clearing it is how a picture is removed.
-	if err := f.UpdateProfile(f.ctx, f.admin, "", ""); err != nil {
-		t.Fatal(err)
 	}
 }

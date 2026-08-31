@@ -100,7 +100,6 @@ func (s *Server) getInstance(w http.ResponseWriter, r *http.Request, a core.Acto
 	return map[string]any{
 		"needsBootstrap": needs,
 		"bucketIcons":    store.BucketIcons,
-		"bucketColors":   store.BucketColours,
 	}, nil
 }
 

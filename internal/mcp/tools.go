@@ -306,14 +306,12 @@ func (s *Server) toolset() []tool {
 			Name: "create_item", Operation: "createItem",
 			Description: "Create a ticket or a bucket in a team you belong to. It enters the " +
 				"default state, or the accepted state if accepted is true. A bucket carries " +
-				"an icon and optionally a colour from the fixed sets; a ticket has neither " +
-				"and may sit in a bucket.",
+				"an icon from the fixed set; a ticket has none and may sit in a bucket.",
 			Schema: obj(map[string]any{
 				"kind":   map[string]any{"type": "string", "enum": []string{"ticket", "bucket"}},
 				"teamId": pInt, "title": pString, "description": pString,
 				"assigneeId": pInt, "priority": pInt, "bucketId": pInt,
 				"icon":       map[string]any{"type": "string", "enum": store.BucketIcons},
-				"color":      map[string]any{"type": "string", "enum": store.BucketColours},
 				"plannedEnd": pString, "labels": pStrList, "accepted": pBool,
 			}, "kind", "teamId", "title"),
 			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
@@ -330,7 +328,7 @@ func (s *Server) toolset() []tool {
 				"string to clear it. The reporter and the owning team are not editable.",
 			Schema: obj(map[string]any{
 				"itemId": pInt, "title": pString, "description": pString,
-				"assigneeId": pInt, "priority": pInt, "icon": pString, "color": pString,
+				"assigneeId": pInt, "priority": pInt, "icon": pString,
 				"bucketId": pInt, "plannedEnd": pString,
 			}, "itemId"),
 			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {

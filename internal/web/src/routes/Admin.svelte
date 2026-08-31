@@ -257,7 +257,7 @@
                     <tr>
                       <td>
                         <span style="display:flex;align-items:center;gap:8px">
-                          <Icon body={NAV.agent} size={13} color="var(--accent)" />
+                          <Icon body={NAV.agent} size={12} color="var(--accent)" />
                           <span>{t.name}</span>
                         </span>
                       </td>
