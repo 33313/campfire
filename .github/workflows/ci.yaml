@@ -1,0 +1,112 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+          check-latest: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      # The client is a build artefact, so it is not in the repository. Build it
+      # first: the binary embeds whatever internal/web/app holds.
+      - name: Build the client
+        run: npm ci && npm run build
+
+      - name: Formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "not gofmt-clean:"; echo "$unformatted"; exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -race ./...
+
+      # The client's own tests drive the real binary in a browser.
+      - name: End to end
+        run: |
+          go build -o ./campfire .
+          npx playwright install --with-deps chromium
+          npx playwright test
+
+      # SPEC.md §13.3 rule 4: the restore path MUST be exercised in continuous
+      # integration. A backup that has never been restored is not a backup.
+      # The unit tests cover it; this runs it against the real binary too, so
+      # the command an operator types is the one that is tested.
+      - name: Snapshot and restore, end to end
+        run: |
+          set -euxo pipefail
+          go build -o ./campfire .
+          root=$(mktemp -d)
+          cat > "$root/campfire.json" <<EOF
+          {"addr":"127.0.0.1:8791","database":"$root/campfire.db",
+           "snapshots":{"enabled":true,"dir":"$root/snapshots","interval":"1h","keep":3,"shipTo":"$root/offsite"},
+           "mcp":{"enabled":false}}
+          EOF
+          ./campfire -config "$root/campfire.json" &
+          server=$!
+          for i in $(seq 40); do
+            curl -sf http://127.0.0.1:8791/api/instance >/dev/null && break || sleep 0.25
+          done
+
+          jar="$root/cookies"
+          curl -sf -c "$jar" -H 'Content-Type: application/json' \
+            -d '{"username":"root","password":"correct horse battery"}' \
+            http://127.0.0.1:8791/api/instance/bootstrap
+          curl -sf -b "$jar" -c "$jar" -H 'Content-Type: application/json' \
+            -d '{"username":"root","password":"correct horse battery"}' \
+            http://127.0.0.1:8791/api/auth/signin
+          curl -sf -b "$jar" -H 'Content-Type: application/json' \
+            -d '{"name":"Solstice","shortCode":"SOL"}' http://127.0.0.1:8791/api/teams
+          curl -sf -b "$jar" -H 'Content-Type: application/json' \
+            -d '{"kind":"ticket","teamId":1,"title":"before the snapshot"}' \
+            http://127.0.0.1:8791/api/items
+
+          snapshot=$(./campfire -config "$root/campfire.json" snapshot)
+          test -f "$snapshot"
+          test -f "$root/offsite/$(basename "$snapshot")"
+
+          curl -sf -b "$jar" -H 'Content-Type: application/json' \
+            -d '{"kind":"ticket","teamId":1,"title":"after the snapshot"}' \
+            http://127.0.0.1:8791/api/items
+          kill $server; wait $server || true
+
+          ./campfire -config "$root/campfire.json" restore "$snapshot"
+          ./campfire -config "$root/campfire.json" check
+
+          ./campfire -config "$root/campfire.json" &
+          server=$!
+          for i in $(seq 40); do
+            curl -sf http://127.0.0.1:8791/api/instance >/dev/null && break || sleep 0.25
+          done
+          curl -sf -b "$jar" -c "$jar" -H 'Content-Type: application/json' \
+            -d '{"username":"root","password":"correct horse battery"}' \
+            http://127.0.0.1:8791/api/auth/signin
+          titles=$(curl -sf -b "$jar" 'http://127.0.0.1:8791/api/items?team=1')
+          echo "$titles" | grep -q 'before the snapshot'
+          if echo "$titles" | grep -q 'after the snapshot'; then
+            echo "the restore did not roll the database back"; exit 1
+          fi
+          kill $server; wait $server || true
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the container image
+        run: docker build -t campfire:ci .

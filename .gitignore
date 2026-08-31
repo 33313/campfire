@@ -1,0 +1,9 @@
+/campfire
+*.db
+*.db-wal
+*.db-shm
+/node_modules
+/internal/web/app/*
+!/internal/web/app/.gitkeep
+/test-results
+/playwright-report

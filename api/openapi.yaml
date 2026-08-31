@@ -1,0 +1,801 @@
+# Campfire HTTP API.
+#
+# This document is the definition of the interface, not documentation
+# generated from it (SPEC.md §11). It is maintained by hand, versioned with
+# the source, and is what keeps the client from reaching into server
+# internals and what leaves a separate client buildable later.
+#
+# Live updates are deliberately absent: OpenAPI does not usefully describe a
+# long-lived stream, so GET /api/stream is specified by SPEC.md §12, which is
+# normative in the same way.
+#
+# Every MCP tool corresponds to exactly one operation here (SPEC.md §14.1).
+# The `x-agent` extension marks which: `true` where a tool exists, `false`
+# where the operation is deliberately not exposed (SPEC.md §14.3).
+openapi: 3.1.0
+info:
+  title: Campfire
+  version: "1.0"
+  description: |
+    A self-hosted kanban work tracker.
+
+    Authentication is a session cookie issued by POST /api/auth/signin.
+    Agent tokens do not authenticate this API; they authenticate the MCP
+    endpoint only, which is what makes the agent exclusions a property of the
+    interface rather than a second permission model.
+servers:
+  - url: /
+security:
+  - session: []
+
+paths:
+  /api/instance:
+    get:
+      operationId: getInstance
+      summary: Whether the instance needs its first account, and the fixed icon set
+      x-agent: false
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/instance/bootstrap:
+    post:
+      operationId: bootstrap
+      summary: Create the first account on an empty instance
+      x-agent: false
+      security: []
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/auth/signin:
+    post:
+      operationId: signIn
+      summary: Sign in, optionally with a second factor
+      x-agent: false
+      security: []
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+
+  /api/auth/signout:
+    post:
+      operationId: signOut
+      summary: End the current session
+      x-agent: false
+      responses:
+        "204": { description: Signed out }
+
+  /api/auth/session:
+    get:
+      operationId: getSession
+      summary: The signed-in user and their teams
+      x-agent: false
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /api/auth/redeem:
+    post:
+      operationId: redeemLink
+      summary: Redeem an invitation or a password reset
+      x-agent: false
+      security: []
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/auth/password:
+    post:
+      operationId: changePassword
+      summary: Change your own password
+      x-agent: false
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "204": { description: Changed }
+
+  /api/auth/totp/setup:
+    post:
+      operationId: setupTotp
+      summary: Generate a second-factor secret, without enabling it
+      x-agent: false
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/auth/totp/enable:
+    post:
+      operationId: enableTotp
+      summary: Enable the second factor by proving a code
+      x-agent: false
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "204": { description: Enabled }
+
+  /api/auth/totp/disable:
+    post:
+      operationId: disableTotp
+      summary: Disable the second factor
+      x-agent: false
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "204": { description: Disabled }
+
+  /api/users:
+    get:
+      operationId: listUsers
+      summary: List accounts, keyset-paginated
+      x-agent: true
+      parameters:
+        - { $ref: "#/components/parameters/After" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+    post:
+      operationId: createUser
+      summary: Create an account
+      x-agent: false
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/users/{id}:
+    patch:
+      operationId: updateUser
+      summary: Grant or remove the instance administrator role
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "204": { description: Updated }
+
+  /api/users/{id}/reset:
+    post:
+      operationId: createPasswordReset
+      summary: Issue a one-time password reset link
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/profile:
+    patch:
+      operationId: updateProfile
+      summary: Update your own email and avatar
+      x-agent: false
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "204": { description: Updated }
+
+  /api/invitations:
+    post:
+      operationId: createInvitation
+      summary: Issue a one-time invitation link
+      x-agent: false
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/agent-tokens:
+    get:
+      operationId: listAgentTokens
+      summary: List agent tokens
+      x-agent: false
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+    post:
+      operationId: issueAgentToken
+      summary: Issue an agent token, shown once
+      x-agent: false
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/agent-tokens/{id}:
+    delete:
+      operationId: revokeAgentToken
+      summary: Revoke an agent token
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { description: Revoked }
+
+  /api/teams:
+    get:
+      operationId: listTeams
+      summary: List teams
+      x-agent: true
+      parameters:
+        - { name: includeArchived, in: query, schema: { type: boolean } }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+    post:
+      operationId: createTeam
+      summary: Create a team, with the six default work states
+      x-agent: false
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/teams/{id}:
+    get:
+      operationId: getTeam
+      summary: One team
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+    patch:
+      operationId: updateTeam
+      summary: Rename a team or change its icon rendering
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/teams/{id}/archive:
+    post:
+      operationId: archiveTeam
+      summary: Archive or restore a team
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "204": { description: Archived }
+
+  /api/teams/{id}/members:
+    get:
+      operationId: listMembers
+      summary: A team's members and their roles
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/teams/{id}/members/{userId}:
+    put:
+      operationId: setMember
+      summary: Add a member or change their role
+      x-agent: false
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { name: userId, in: path, required: true, schema: { type: integer } }
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "204": { description: Set }
+    delete:
+      operationId: removeMember
+      summary: Remove a member
+      x-agent: false
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { name: userId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: Removed }
+
+  /api/teams/{id}/states:
+    get:
+      operationId: listWorkStates
+      summary: A team's work states, in board order
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+    post:
+      operationId: createWorkState
+      summary: Add a work state
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/states/{id}:
+    patch:
+      operationId: updateWorkState
+      summary: Rename, re-role or reposition a work state
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "204": { description: Updated }
+    delete:
+      operationId: deleteWorkState
+      summary: Delete an empty work state that holds no role
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { description: Deleted }
+
+  /api/teams/{id}/board:
+    get:
+      operationId: getBoard
+      summary: A team's board, one column per work state except default and rejected
+      x-agent: true
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { $ref: "#/components/parameters/Buckets" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/FilterState" }
+        - { $ref: "#/components/parameters/FilterLabel" }
+        - { $ref: "#/components/parameters/FilterAssignee" }
+        - { $ref: "#/components/parameters/FilterReporter" }
+        - { $ref: "#/components/parameters/FilterBucket" }
+        - { $ref: "#/components/parameters/FilterPriority" }
+        - { $ref: "#/components/parameters/FilterText" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/teams/{id}/backlog:
+    get:
+      operationId: getBacklog
+      summary: A team's items in its default state
+      x-agent: true
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { $ref: "#/components/parameters/Buckets" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/FilterLabel" }
+        - { $ref: "#/components/parameters/FilterAssignee" }
+        - { $ref: "#/components/parameters/FilterReporter" }
+        - { $ref: "#/components/parameters/FilterBucket" }
+        - { $ref: "#/components/parameters/FilterPriority" }
+        - { $ref: "#/components/parameters/FilterText" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/teams/{id}/views:
+    get:
+      operationId: listSavedViews
+      summary: A team's saved views, alphabetical
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/views:
+    post:
+      operationId: createSavedView
+      summary: Save a filter under a name
+      x-agent: true
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/views/{id}:
+    patch:
+      operationId: updateSavedView
+      summary: Rename, repin or re-clause a saved view
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+    delete:
+      operationId: deleteSavedView
+      summary: Delete a saved view
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { description: Deleted }
+
+  /api/buckets:
+    get:
+      operationId: listBuckets
+      summary: The bucket index, scoped by participation, ownership or instance
+      x-agent: true
+      parameters:
+        - { name: team, in: query, schema: { type: integer } }
+        - { name: scope, in: query, schema: { type: string, enum: [participation, owned, instance] } }
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/items:
+    get:
+      operationId: listItems
+      summary: Items matching a structured filter, or a saved view
+      x-agent: true
+      parameters:
+        - { name: view, in: query, schema: { type: integer } }
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/FilterTeam" }
+        - { $ref: "#/components/parameters/FilterState" }
+        - { $ref: "#/components/parameters/FilterLabel" }
+        - { $ref: "#/components/parameters/FilterAssignee" }
+        - { $ref: "#/components/parameters/FilterReporter" }
+        - { $ref: "#/components/parameters/FilterBucket" }
+        - { $ref: "#/components/parameters/FilterPriority" }
+        - { $ref: "#/components/parameters/FilterText" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+    post:
+      operationId: createItem
+      summary: Create a ticket or a bucket
+      x-agent: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NewItem" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/items/bulk:
+    post:
+      operationId: bulkEditItems
+      summary: Give a selection one new value for one field
+      x-agent: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BulkEdit" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/items/{id}:
+    get:
+      operationId: getItem
+      summary: One item, with its labels, relations and progress
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+    patch:
+      operationId: updateItem
+      summary: Edit an item's fields
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ItemPatch" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "409": { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteItem
+      summary: Hard-delete an item
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { description: Deleted }
+
+  /api/items/{id}/impact:
+    get:
+      operationId: getItemImpact
+      summary: How many items across how many teams a deletion would affect
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/items/{id}/move:
+    post:
+      operationId: moveItem
+      summary: Move an item to a work state, with a rejection reason if rejecting
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/items/{id}/rank:
+    post:
+      operationId: rankItem
+      summary: Place an item between two neighbours in a column
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/items/{id}/clone:
+    post:
+      operationId: cloneItem
+      summary: Clone a ticket, leaving a relates-to relation
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/items/{id}/split:
+    post:
+      operationId: splitItem
+      summary: Split a ticket into several, each following up the source
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/items/{id}/reassign:
+    post:
+      operationId: reassignBucket
+      summary: Move a bucket to another owning team, keeping its identifier
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/items/{id}/contents:
+    get:
+      operationId: getBucketContents
+      summary: A bucket's contents, grouped by owning team
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/items/{id}/labels:
+    post:
+      operationId: addLabel
+      summary: Add a label, creating it if it is new
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/items/{id}/labels/{name}:
+    delete:
+      operationId: removeLabel
+      summary: Remove a label from an item
+      x-agent: true
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { name: name, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/items/{id}/relations:
+    post:
+      operationId: addRelation
+      summary: Add a relation from this item to another
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/relations/{id}:
+    delete:
+      operationId: removeRelation
+      summary: Remove a relation
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { description: Removed }
+
+  /api/items/{id}/comments:
+    get:
+      operationId: listComments
+      summary: An item's comments, oldest first
+      x-agent: true
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { $ref: "#/components/parameters/After" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+    post:
+      operationId: addComment
+      summary: Comment on an item
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/comments/{id}:
+    patch:
+      operationId: updateComment
+      summary: Edit your own comment
+      x-agent: true
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+    delete:
+      operationId: deleteComment
+      summary: Delete a comment
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { description: Deleted }
+
+  /api/lookup/{identifier}:
+    get:
+      operationId: lookupItem
+      summary: Resolve a permalink such as SOL-42
+      x-agent: true
+      parameters:
+        - { name: identifier, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/labels:
+    get:
+      operationId: listLabels
+      summary: Every label in the instance
+      x-agent: true
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/log:
+    get:
+      operationId: getLog
+      summary: The audit log, keyset-paginated by sequence number
+      description: |
+        Scoped by item, by team, or unfiltered. The unfiltered global log is
+        for instance administrators only.
+      x-agent: true
+      parameters:
+        - { name: item, in: query, schema: { type: integer } }
+        - { name: team, in: query, schema: { type: integer } }
+        - { name: actor, in: query, schema: { type: integer } }
+        - { name: field, in: query, schema: { type: string } }
+        - { name: agent, in: query, schema: { type: boolean } }
+        - { name: before, in: query, schema: { type: integer }, description: Sequence number to read older than }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/snapshots:
+    get:
+      operationId: listSnapshots
+      summary: The snapshots taken of this instance
+      x-agent: false
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+    post:
+      operationId: createSnapshot
+      summary: Take a snapshot now
+      x-agent: false
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+  /api/restore:
+    post:
+      operationId: restoreSnapshot
+      summary: Restore the instance from a snapshot
+      x-agent: false
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: campfire_session
+
+  requestBodies:
+    Json:
+      required: true
+      content:
+        application/json:
+          schema: { type: object }
+
+  responses:
+    Ok:
+      description: Success
+      content:
+        application/json:
+          schema: { type: object }
+    Error:
+      description: A refused request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorBody" }
+
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: integer } }
+    After: { name: after, in: query, schema: { type: integer } }
+    Limit: { name: limit, in: query, schema: { type: integer, maximum: 200 } }
+    Cursor: { name: cursor, in: query, schema: { type: string } }
+    Buckets:
+      name: buckets
+      in: query
+      description: Show buckets in board columns. Off by default.
+      schema: { type: boolean }
+    FilterTeam: { name: team, in: query, schema: { type: array, items: { type: integer } } }
+    FilterState: { name: state, in: query, schema: { type: array, items: { type: integer } } }
+    FilterLabel: { name: label, in: query, schema: { type: array, items: { type: integer } } }
+    FilterAssignee: { name: assignee, in: query, schema: { type: array, items: { type: integer } } }
+    FilterReporter: { name: reporter, in: query, schema: { type: array, items: { type: integer } } }
+    FilterBucket: { name: bucket, in: query, schema: { type: array, items: { type: integer } } }
+    FilterPriority: { name: priority, in: query, schema: { type: array, items: { type: integer, minimum: 1, maximum: 4 } } }
+    FilterText: { name: q, in: query, description: Free text over title and description, schema: { type: string } }
+
+  schemas:
+    ErrorBody:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [invalid, unauthenticated, forbidden, not_found, conflict, rate_limited, too_far_behind, internal]
+            message: { type: string }
+            field: { type: string }
+
+    Item:
+      type: object
+      description: A ticket or a bucket. There is no type field, by design.
+      required: [id, kind, identifier, title, stateId, rank]
+      properties:
+        id: { type: integer }
+        kind: { type: string, enum: [ticket, bucket] }
+        identifier: { type: string, examples: ["SOL-42"] }
+        originTeamId: { type: integer, description: The team whose counter minted the number }
+        number: { type: integer }
+        teamId: { type: integer, description: The owning team. Never parsed out of the identifier. }
+        title: { type: string }
+        description: { type: string }
+        reporterId: { type: integer }
+        assigneeId: { type: integer }
+        priority: { type: integer, minimum: 1, maximum: 4 }
+        icon: { type: string, description: Buckets only, one of the fixed set }
+        bucketId: { type: integer, description: Tickets only }
+        stateId: { type: integer }
+        plannedEnd: { type: string, format: date }
+        actualStart: { type: integer, description: Epoch microseconds. Set on the first move out of the default state. }
+        actualEnd: { type: integer, description: Epoch microseconds. Set on entering a terminal state, cleared on leaving one. }
+        rejectReason: { type: string, enum: [cancelled, duplicate] }
+        rejectNote: { type: string }
+        rank: { type: string, description: Lexical rank over 0-9A-Za-z }
+        version: { type: integer }
+        labels: { type: array, items: { type: string } }
+
+    NewItem:
+      type: object
+      required: [kind, teamId, title]
+      properties:
+        kind: { type: string, enum: [ticket, bucket] }
+        teamId: { type: integer }
+        title: { type: string, maxLength: 300 }
+        description: { type: string }
+        assigneeId: { type: integer }
+        priority: { type: integer, minimum: 1, maximum: 4, default: 3 }
+        icon: { type: string }
+        bucketId: { type: integer }
+        plannedEnd: { type: string, format: date }
+        labels: { type: array, items: { type: string } }
+        accepted: { type: boolean, description: Enter the accepted state rather than the default one }
+
+    ItemPatch:
+      type: object
+      description: A null field is left alone; a zero value clears.
+      properties:
+        title: { type: string }
+        description: { type: string }
+        assigneeId: { type: integer }
+        priority: { type: integer, minimum: 1, maximum: 4 }
+        icon: { type: string }
+        bucketId: { type: integer }
+        plannedEnd: { type: string }
+        version: { type: integer, description: The value the editor last saw }
+
+    BulkEdit:
+      type: object
+      required: [itemIds, field]
+      properties:
+        itemIds: { type: array, items: { type: integer }, maxItems: 500 }
+        field: { type: string, enum: [state, assignee, priority, bucket] }
+        value: { type: integer }
+        reason: { type: string, enum: [cancelled, duplicate] }
+        note: { type: string }
