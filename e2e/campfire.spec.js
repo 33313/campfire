@@ -47,7 +47,7 @@ test("an administrator creates the first team", async ({ page }) => {
   await expect(page.locator(".code-badge").first()).toHaveText("SOL");
 });
 
-test("a new ticket lands in the backlog and opens at its identifier", async ({ page }) => {
+test("a new ticket lands in the backlog and leaves you where you were", async ({ page }) => {
   await signIn(page);
   await page.goto("/t/1/board");
   await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
@@ -57,9 +57,9 @@ test("a new ticket lands in the backlog and opens at its identifier", async ({ p
   await form.getByLabel("Description").fill("It is older than the building.");
   await form.getByRole("button", { name: "Create" }).click();
 
-  await expect(page).toHaveURL(/\/SOL-1$/);
-  await expect(page.getByRole("heading", { name: "Replace the boiler" })).toBeVisible();
-  await expect(page.locator(".crumbs .here")).toHaveText("SOL-1");
+  // Creating does not leave the board for the new item's detail view.
+  await expect(page).toHaveURL(/\/t\/1\/board$/);
+  await expect(page.locator(".toast")).toHaveText(/SOL-1 created/);
 
   await page.goto("/t/1/backlog");
   await expect(page.getByRole("link", { name: "SOL-1" })).toBeVisible();
@@ -135,7 +135,10 @@ test("a bucket carries an icon and its tickets", async ({ page }) => {
   await bucket.getByLabel("Title").fill("Winter readiness");
   await bucket.getByRole("button", { name: "Create" }).click();
 
-  await expect(page).toHaveURL(/\/SOL-2$/);
+  await expect(page).toHaveURL(/\/buckets$/);
+  await expect(page.locator(".bucket-card", { hasText: "Winter readiness" })).toBeVisible();
+
+  await page.goto("/SOL-2");
   await expect(page.locator(".state-badge", { hasText: "bucket" })).toBeVisible();
 
   // Put the ticket in it from the ticket's own aside.
