@@ -176,6 +176,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
    box and the inputs they sit with; only a dialog's footer keeps the full 30px
    (DESIGN.md §5). */
 .screen-header .btn, .body .btn.primary { height: 28px; padding: 0 11px; font-size: 12px; }
+/* The save beside a field being edited is the point of edit mode, so it is
+   sized like the field it belongs to rather than shrunk to a header action. */
+.body .btn.save { height: 38px; padding: 0 20px; font-size: 13px; }
 
 .input {
   height: 30px; padding: 0 11px; background: var(--sunk);
