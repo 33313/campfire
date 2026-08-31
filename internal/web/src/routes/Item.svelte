@@ -268,7 +268,7 @@
         {#if editing}
           <div style="display:flex;gap:8px;margin-bottom:8px">
             <input class="input" style="flex:1;font-size:17px;height:38px" bind:value={draftTitle} />
-            <button class="btn" onclick={() => patch({ title: draftTitle })}>Save</button>
+            <button class="btn primary save" onclick={() => patch({ title: draftTitle })}>Save</button>
           </div>
         {:else}
           <h1 style="display:flex;align-items:center;gap:10px">
@@ -288,7 +288,7 @@
         {#if editing}
           <textarea class="input" rows="10" style="width:100%;font-family:var(--serif);font-size:15px"
                     bind:value={draftDescription}></textarea>
-          <button class="btn" style="margin-top:8px"
+          <button class="btn primary save" style="margin-top:8px"
                   onclick={() => patch({ description: draftDescription })}>Save description</button>
         {:else if item.description}
           <div class="prose">{item.description}</div>
