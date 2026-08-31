@@ -20,6 +20,8 @@ export const NAV = {
   copy: '<rect x="5.4" y="2.6" width="8" height="8"/><path d="M10.6 13.4h-8v-8"/>',
   split: '<path d="M8 2.6v5M8 7.6 3.6 12M8 7.6l4.4 4.4"/>',
   pen: '<path d="M2.9 13.1 4.5 8.5l5.8-5.8 2.9 2.9-5.8 5.8Z"/><path d="M9.3 3.7l2.9 2.9"/>',
+  // The floppy: what a save wears beside the field it writes.
+  save: '<path d="M2.6 2.6h8.4l2.4 2.4v8.4H2.6Z"/><path d="M5.4 2.6v3.8h5.2V2.6"/><path d="M4.8 13.4V9h6.4v4.4"/>',
 };
 
 // Priority is four glyphs *and* four colours. The shape carries the level on
