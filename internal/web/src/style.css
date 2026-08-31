@@ -367,7 +367,11 @@ select.input {
 /* Item detail ----------------------------------------------------------- */
 
 .detail { display: flex; min-height: 100%; }
-.detail-main { flex: 1; min-width: 0; padding: 20px 24px 40px; }
+/* A line of text stops being readable long before it stops fitting, and an
+ * input a title is typed into is not improved by being a metre wide. The
+ * column is capped at a measure and centred in whatever space is left beside
+ * the aside, rather than stretched across the page. */
+.detail-main { flex: 1; min-width: 0; max-width: 860px; margin: 0 auto; padding: 20px 24px 40px; }
 .detail-aside {
   width: 320px; flex: 0 0 320px; background: var(--surface);
   border-left: 1px solid var(--border); padding: 16px; display: flex;
