@@ -451,3 +451,25 @@ func TestTitleIsRequiredAndBounded(t *testing.T) {
 		Title: strings.Repeat("x", maxTitle+1)})
 	requireCode(t, err, CodeInvalid)
 }
+
+// The create form offers every field the item has, so creating one is not
+// followed by three edits to finish it (DEV-4).
+func TestCreateWithAssigneeAndLabels(t *testing.T) {
+	w := newWorld(t)
+	it, err := w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindTicket, TeamID: w.sol.ID,
+		Title: "Replace the boiler", AssigneeID: w.sam.UserID, Labels: []string{"heating", "capex"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it.AssigneeID != w.sam.UserID || it.AssigneeName != "sam" {
+		t.Fatalf("assignee %d/%q, want sam", it.AssigneeID, it.AssigneeName)
+	}
+	if len(it.Labels) != 2 {
+		t.Fatalf("labels %v, want two", it.Labels)
+	}
+	// An assignee that is not a user is refused rather than reaching the
+	// foreign key as a 500.
+	_, err = w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindTicket, TeamID: w.sol.ID,
+		Title: "Nobody", AssigneeID: 9999})
+	requireCode(t, err, CodeNotFound)
+}
