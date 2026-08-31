@@ -73,6 +73,28 @@ test("a new ticket lands in the backlog and leaves you where you were", async ({
   await expect(page.locator(".aside-control", { hasText: "root" })).toBeVisible();
 });
 
+test("a create that cannot go through keeps the form and marks the field", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+
+  const form = page.getByRole("dialog");
+  await form.getByLabel("Description").fill("Typed at some length, and worth keeping.");
+  await form.getByRole("button", { name: "Create" }).click();
+
+  await expect(form).toBeVisible();
+  await expect(form.getByLabel("Title")).toHaveClass(/error/);
+  await expect(form.locator(".field-error")).toHaveText("An item needs a title.");
+  await expect(form.getByLabel("Description")).toHaveValue(/worth keeping/);
+
+  // Correcting the field clears the mark.
+  await form.getByLabel("Title").fill("Bleed the radiators");
+  await expect(form.getByLabel("Title")).not.toHaveClass(/error/);
+  await expect(form.locator(".field-error")).toHaveCount(0);
+
+  await form.getByRole("button", { name: "Cancel" }).click();
+});
+
 test("a ticket moves to a board state and appears in that column", async ({ page }) => {
   await signIn(page);
   await page.goto("/SOL-1");
