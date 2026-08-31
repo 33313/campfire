@@ -134,7 +134,7 @@
       <SearchBox value={text} onsearch={(t) => (text = t)} />
       {#if team}
         <button class="btn primary" onclick={create}>
-          <Icon body={NAV.plus} size={12} /><span>Create</span>
+          <Icon body={NAV.plus} size={13} /><span>Create</span>
         </button>
       {/if}
     {/snippet}

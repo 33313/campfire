@@ -252,14 +252,14 @@
         navigator.clipboard?.writeText(`${location.origin}/${item.identifier}`);
         toast("Link copied");
       }}>
-        <Icon body={NAV.copy} size={12} /><span>Copy link</span>
+        <Icon body={NAV.link} size={13} /><span>Copy link</span>
       </button>
       {#if !isBucket}
         <button class="btn small" onclick={clone}>
-          <Icon body={NAV.copy} size={12} /><span>Clone</span>
+          <Icon body={NAV.clone} size={13} /><span>Clone</span>
         </button>
         <button class="btn small" onclick={split}>
-          <Icon body={NAV.split} size={12} /><span>Split</span>
+          <Icon body={NAV.split} size={13} /><span>Split</span>
         </button>
       {/if}
       <button class="btn small" onclick={() => moveTo((s) => s.role === "rejected")}>Reject</button>
@@ -268,11 +268,11 @@
           <Icon body={NAV.close} size={11} /><span>Cancel</span>
         </button>
         <button class="btn small primary" onclick={saveEdits}>
-          <Icon body={NAV.save} size={12} /><span>Save</span>
+          <Icon body={NAV.save} size={13} /><span>Save</span>
         </button>
       {:else}
         <button class="btn small" onclick={startEditing}>
-          <Icon body={NAV.pen} size={12} /><span>Edit</span>
+          <Icon body={NAV.pen} size={13} /><span>Edit</span>
         </button>
       {/if}
       {#if isBucket && app.user.isAdmin}
@@ -421,7 +421,7 @@
                 {/if}
                 <button class="btn quiet" style="height:34px" aria-label="Change bucket"
                         title="Change bucket" onclick={pickBucket}>
-                  <Icon body={NAV.pen} size={12} />
+                  <Icon body={NAV.pen} size={13} />
                 </button>
               </div>
             </div>
