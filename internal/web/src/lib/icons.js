@@ -1,25 +1,35 @@
 // The glyphs of DESIGN.md, as path data. Every stroke is square and mitred;
 // round caps are off-language.
 
-// Navigation glyphs, taken from the artboards.
+// Navigation glyphs, taken from the artboards in the design directory. Those
+// are the source: where a glyph here disagreed with the one drawn there, the
+// artboard won.
+//
+// Copy link, Clone and Export each have their own glyph. They shared one, and
+// three header actions wearing the same mark is three actions nobody can tell
+// apart at a glance.
 export const NAV = {
   board: '<rect x="2" y="2.5" width="3.5" height="11"/><rect x="6.25" y="2.5" width="3.5" height="7.5"/><rect x="10.5" y="2.5" width="3.5" height="9.5"/>',
-  backlog: '<path d="M5.5 4h8.5M5.5 8h8.5M5.5 12h8.5"/><path d="M2 4h.01M2 8h.01M2 12h.01" stroke-width="2"/>',
+  backlog: '<path d="M5 4.5h6M5 8h6M5 11.5h6"/>',
   // The pail is the sidebar's Buckets section icon and nothing else. It is
   // never a bucket's own icon (DESIGN.md §4).
   buckets: '<path d="M3.2 5.2h9.6l-1 8a1.1 1.1 0 0 1-1.1 1H5.3a1.1 1.1 0 0 1-1.1-1Z"/><path d="M5.5 5.2a2.5 2.5 0 0 1 5 0"/>',
   log: '<circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.5"/>',
-  settings: '<circle cx="8" cy="8" r="2.4"/><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M12.4 3.6 11 5M5 11l-1.4 1.4"/>',
-  admin: '<path d="M8 1.8 13.5 4v4.2c0 3-2.3 5.2-5.5 6-3.2-.8-5.5-3-5.5-6V4Z"/>',
-  view: '<path d="M2.2 3.4h11.6L9.3 8.2v4.6L6.7 14V8.2Z"/>',
-  search: '<circle cx="7" cy="7" r="4.2"/><path d="M10.1 10.1 13.6 13.6"/>',
-  plus: '<path d="M8 3.2v9.6M3.2 8h9.6"/>',
-  chevron: '<path d="M4.5 6.5 8 10l3.5-3.5"/>',
-  close: '<path d="M4 4l8 8M12 4l-8 8"/>',
-  agent: '<rect x="2.6" y="4.6" width="10.8" height="8" /><path d="M8 1.8v2.8M5.4 8.2h.01M10.6 8.2h.01" stroke-width="1.8"/>',
-  copy: '<rect x="5.4" y="2.6" width="8" height="8"/><path d="M10.6 13.4h-8v-8"/>',
-  split: '<path d="M8 2.6v5M8 7.6 3.6 12M8 7.6l4.4 4.4"/>',
-  pen: '<path d="M2.9 13.1 4.5 8.5l5.8-5.8 2.9 2.9-5.8 5.8Z"/><path d="M9.3 3.7l2.9 2.9"/>',
+  settings: '<path d="M2 5h12"/><circle cx="6" cy="5" r="1.9"/><path d="M2 11h12"/><circle cx="10.5" cy="11" r="1.9"/>',
+  admin: '<path d="M8 1.9 13.4 4.1v4.2c0 3-2.3 5.2-5.4 5.9-3.1-.7-5.4-2.9-5.4-5.9V4.1L8 1.9Z"/>',
+  view: '<path d="M2.5 3.5h11l-4.3 5v4.3l-2.4-1.4V8.5Z"/>',
+  // Distinct from the `lens` bucket icon, which the two used to share.
+  search: '<circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4 14 14"/>',
+  plus: '<path d="M8 3v10M3 8h10"/>',
+  chevron: '<path d="M3.5 6 8 10.5 12.5 6"/>',
+  close: '<path d="M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5"/>',
+  agent: '<rect x="2.5" y="5" width="11" height="8.5"/><path d="M5.5 8.2 7 9.7l-1.5 1.5M8.8 11.2h2.2M8 5V2.6"/>',
+  link: '<path d="M6.5 9.5 9.5 6.5"/><path d="M9 4.6 10.4 3.2a2.7 2.7 0 0 1 3.8 3.8l-1.4 1.4"/><path d="M7 11.4 5.6 12.8a2.7 2.7 0 0 1-3.8-3.8l1.4-1.4"/>',
+  clone: '<rect x="5.5" y="5.5" width="8" height="8"/><path d="M10.5 2.5h-8v8"/>',
+  split: '<path d="M2.5 8h4l3-4h4"/><path d="M9.5 12h4"/><path d="M6.5 8l3 4"/><path d="M11.5 2.5 13.5 4l-2 1.5"/><path d="M11.5 10.5 13.5 12l-2 1.5"/>',
+  export: '<path d="M8 2v8M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13h11"/>',
+  // Distinct from the `pen` bucket icon, which the two used to share.
+  pen: '<path d="M10.6 2.9 13.1 5.4 5.5 13H3v-2.5Z"/>',
   // The floppy: what a save wears beside the field it writes.
   save: '<path d="M2.6 2.6h8.4l2.4 2.4v8.4H2.6Z"/><path d="M5.4 2.6v3.8h5.2V2.6"/><path d="M4.8 13.4V9h6.4v4.4"/>',
 };

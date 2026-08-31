@@ -101,7 +101,7 @@
     () => setFilter({ ...filter, bucketIds: [] }))}
 
   <button class="btn quiet small" onclick={saveAsView}>
-    <Icon body={NAV.view} size={12} />
+    <Icon body={NAV.view} size={13} />
     <span>Save as view</span>
   </button>
 

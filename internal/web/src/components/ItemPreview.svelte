@@ -47,10 +47,10 @@
     if (picked !== undefined) patch(then(picked));
   }
 
-  // A state change is a move, with its reason and note, exactly as it is on
-  // the detail view (SPEC.md §7.1).
   const pickBucket = () => pick("Bucket", bucketOptions(), (v) => ({ bucketId: v }));
 
+  // A state change is a move, with its reason and note, exactly as it is on
+  // the detail view (SPEC.md §7.1).
   async function move() {
     try {
       const states = await api.listWorkStates(it.teamId);
@@ -169,7 +169,7 @@
       {/if}
       <button class="btn quiet" style="height:34px" aria-label="Change bucket"
               title="Change bucket" onclick={pickBucket}>
-        <Icon body={NAV.pen} size={12} />
+        <Icon body={NAV.pen} size={13} />
       </button>
     </div>
   </div>
