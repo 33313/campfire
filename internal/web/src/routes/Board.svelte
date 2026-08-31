@@ -8,9 +8,10 @@
 
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
-  import { route, navigate } from "../lib/router.svelte.js";
+  import { route } from "../lib/router.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
-  import { openModal, failure } from "../lib/ui.svelte.js";
+  import { failure } from "../lib/ui.svelte.js";
+  import { createItem } from "../lib/create.js";
   import { filterFromView } from "../lib/options.js";
   import { NAV } from "../lib/icons.js";
 
@@ -23,7 +24,6 @@
   import Card from "../components/Card.svelte";
   import ItemPreview from "../components/ItemPreview.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
-  import CreateItemDialog from "../dialogs/CreateItemDialog.svelte";
 
   let { teamId } = $props();
 
@@ -90,12 +90,7 @@
     if (i < 0) selected.push(id); else selected.splice(i, 1);
   }
 
-  async function create() {
-    const res = await openModal(CreateItemDialog, { team, states });
-    if (!res) return;
-    if (res.error) return failure(res.error);
-    navigate(`/${res.identifier}`);
-  }
+  const create = () => createItem({ team, states, reload: load });
 
   // The card the pointer is above, so a drop lands in front of it rather than
   // always at the end of the column. The dragged card is not its own

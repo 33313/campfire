@@ -9,9 +9,9 @@
 
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
-  import { navigate } from "../lib/router.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
   import { openModal, failure } from "../lib/ui.svelte.js";
+  import { createItem } from "../lib/create.js";
   import { assigneeOptions } from "../lib/options.js";
   import { whenDay } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
@@ -25,7 +25,6 @@
   import ErrorPanel from "../components/ErrorPanel.svelte";
   import LoadOlder from "../components/LoadOlder.svelte";
   import PickDialog from "../dialogs/PickDialog.svelte";
-  import CreateItemDialog from "../dialogs/CreateItemDialog.svelte";
 
   let team = $derived(app.team);
   let page = $state(null);
@@ -123,10 +122,7 @@
 
   async function create() {
     const states = await api.listWorkStates(team.id);
-    const res = await openModal(CreateItemDialog, { team, states, kind: "bucket" });
-    if (!res) return;
-    if (res.error) return failure(res.error);
-    navigate(`/${res.identifier}`);
+    await createItem({ team, states, kind: "bucket", reload: load });
   }
 </script>
 
