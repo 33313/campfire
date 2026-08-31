@@ -550,18 +550,29 @@
             </p>
           </div>
         {:else}
+          <!-- The bucket is a way through to the bucket. Which bucket a ticket
+               is in is changed by asking for it, not by a click that was aimed
+               at reading the milestone. -->
           <div class="aside-field">
             <span class="field-label">Bucket</span>
-            <button class="aside-control" onclick={pickBucket}>
+            <div style="display:flex;gap:6px">
               {#if item.bucketIdentifier}
-                <BucketIcon name={item.bucketIcon} size={13} color={item.bucketColor} />
-                <span>{item.bucketTitle}</span>
-                <span class="note">{item.bucketIdentifier}</span>
+                <a class="aside-control" href="/{item.bucketIdentifier}">
+                  <BucketIcon name={item.bucketIcon} size={13} color={item.bucketColor} />
+                  <span>{item.bucketTitle}</span>
+                  <span class="note">{item.bucketIdentifier}</span>
+                </a>
               {:else}
-                <span class="dash">—</span>
-                <span class="note">none</span>
+                <button class="aside-control" onclick={pickBucket}>
+                  <span class="dash">—</span>
+                  <span class="note">none</span>
+                </button>
               {/if}
-            </button>
+              <button class="btn quiet" style="height:34px" aria-label="Change bucket"
+                      title="Change bucket" onclick={pickBucket}>
+                <Icon body={NAV.pen} size={12} />
+              </button>
+            </div>
           </div>
         {/if}
 
