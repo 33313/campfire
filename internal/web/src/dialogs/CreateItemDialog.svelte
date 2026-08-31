@@ -6,13 +6,14 @@
   import Icon from "../components/Icon.svelte";
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
-  import { BUCKET_ICONS, PRIORITY, NAV } from "../lib/icons.js";
+  import { BUCKET_ICONS, BUCKET_COLOURS, PRIORITY, NAV } from "../lib/icons.js";
 
   /** Create a ticket or a bucket. A bucket carries an icon; a ticket does not. */
   let { team, states, kind = "ticket", close } = $props();
 
   let chosen = $state(untrack(() => kind));
   let icon = $state("bookmark");
+  let color = $state("");
   let title = $state("");
   let description = $state("");
   let priority = $state(3);
@@ -59,7 +60,7 @@
       priority: +priority, plannedEnd: plannedEnd || "", accepted,
       assigneeId: +assigneeId || 0, labels,
     };
-    if (chosen === "bucket") body.icon = icon;
+    if (chosen === "bucket") { body.icon = icon; body.color = color; }
     else if (bucketId) body.bucketId = +bucketId;
     try {
       close(await api.createItem(body));
@@ -133,6 +134,20 @@
         </div>
         <span class="explain">One of the eight. It stands in for the bucket wherever it is named.</span>
         {@render complaint("icon")}
+      </div>
+      <div class="field">
+        <span class="field-label">Colour</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="swatch" class:on={!color} title="No colour" aria-label="No colour"
+                  onclick={() => (color = "")}></button>
+          {#each Object.entries(BUCKET_COLOURS) as [name, hex]}
+            <button class="swatch" class:on={color === name} title={name} aria-label={name}
+                    style="background:{hex};border-color:{hex}"
+                    onclick={() => (color = name)}></button>
+          {/each}
+        </div>
+        <span class="explain">Optional. Its tickets wear it on the board.</span>
+        {@render complaint("color")}
       </div>
     {:else}
       <label class="field">

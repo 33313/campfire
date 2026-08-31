@@ -178,7 +178,8 @@
                 <td>
                   {#if item.bucketIdentifier}
                     <span style="display:flex;align-items:center;gap:6px">
-                      <BucketIcon name={item.bucketIcon} size={11} rendering={team.iconRendering} />
+                      <BucketIcon name={item.bucketIcon} size={11} rendering={team.iconRendering}
+                                  color={item.bucketColor} />
                       <span style="font-size:12px">{item.bucketTitle}</span>
                     </span>
                   {:else}
