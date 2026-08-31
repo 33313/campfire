@@ -163,6 +163,7 @@ test("a bucket carries an icon and its tickets", async ({ page }) => {
   const bucket = page.getByRole("dialog");
   await bucket.getByRole("button", { name: "Bucket", exact: true }).click();
   await bucket.getByLabel("Title").fill("Winter readiness");
+  await bucket.getByRole("button", { name: "rust", exact: true }).click();
   await bucket.getByRole("button", { name: "Create" }).click();
 
   await expect(page).toHaveURL(/\/buckets$/);
@@ -176,6 +177,13 @@ test("a bucket carries an icon and its tickets", async ({ page }) => {
   await page.locator(".aside-control").last().click();
   await page.getByRole("dialog").getByRole("button", { name: /SOL-2\s+Winter readiness/ }).click();
   await expect(page.locator(".aside-control").last()).toContainText("Winter readiness");
+
+  // The bucket's colour rides on its tickets' cards, in the foot beside the
+  // identifier rather than above the title.
+  await page.goto("/t/1/board");
+  const chip = page.locator(".card-foot .card-bucket");
+  await expect(chip).toContainText("Winter readiness");
+  await expect(chip).toHaveCSS("border-color", "rgb(196, 103, 92)");
 
   await page.goto("/SOL-2");
   await expect(page.getByRole("link", { name: "SOL-1" })).toBeVisible();
