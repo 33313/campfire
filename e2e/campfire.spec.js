@@ -55,6 +55,10 @@ test("a new ticket lands in the backlog and leaves you where you were", async ({
   const form = page.getByRole("dialog");
   await form.getByLabel("Title").fill("Replace the boiler");
   await form.getByLabel("Description").fill("It is older than the building.");
+  // Every field the item has is on the form, so creating is not followed by
+  // three edits to finish it.
+  await form.getByLabel("Assignee").selectOption({ label: "root" });
+  await form.getByLabel("Labels").fill("plumbing");
   await form.getByRole("button", { name: "Create" }).click();
 
   // Creating does not leave the board for the new item's detail view.
@@ -63,6 +67,10 @@ test("a new ticket lands in the backlog and leaves you where you were", async ({
 
   await page.goto("/t/1/backlog");
   await expect(page.getByRole("link", { name: "SOL-1" })).toBeVisible();
+
+  await page.goto("/SOL-1");
+  await expect(page.locator(".label-chip", { hasText: "plumbing" })).toBeVisible();
+  await expect(page.locator(".aside-control", { hasText: "root" })).toBeVisible();
 });
 
 test("a ticket moves to a board state and appears in that column", async ({ page }) => {
@@ -91,9 +99,9 @@ test("a card previews beside the board and its identifier opens it", async ({ pa
   await expect(page).toHaveURL(/\/t\/1\/board$/);
 
   // The preview edits in place: a pick lands on the item and the board redraws.
-  await preview.getByRole("button", { name: /Unassigned/ }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "root" }).click();
-  await expect(preview.getByRole("button", { name: /root/ })).toBeVisible();
+  await preview.getByRole("button", { name: /root/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Unassigned" }).click();
+  await expect(preview.getByRole("button", { name: /Unassigned/ })).toBeVisible();
 
   await preview.getByRole("link", { name: "SOL-1" }).click();
   await expect(page).toHaveURL(/\/SOL-1$/);

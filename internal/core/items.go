@@ -124,6 +124,11 @@ func (s *Service) CreateItem(ctx context.Context, a Actor, in NewItem) (*Item, e
 		if err := s.requireTeamMember(ctx, t.Tx, a, in.TeamID); err != nil {
 			return err
 		}
+		if in.AssigneeID != 0 {
+			if _, err := store.UserByID(ctx, t.Tx, in.AssigneeID); err != nil {
+				return err
+			}
+		}
 		role := store.RoleDefault
 		if in.Accepted {
 			role = store.RoleAccepted
