@@ -281,3 +281,23 @@ test("signing out returns to the sign-in card", async ({ page }) => {
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
+
+test("the previewed card joins the selection a modifier-click starts", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+  const form = page.getByRole("dialog");
+  await form.getByLabel("Title").fill("Service the flue");
+  await form.getByLabel("Mark as accepted").check(); // so it lands on the board
+  await form.getByRole("button", { name: "Create" }).click();
+
+  const cards = page.locator(".card");
+  await expect(cards).toHaveCount(2);
+  await cards.first().click();
+  await expect(page.locator(".detail-aside")).toBeVisible();
+
+  // The card being previewed is in the selection the modifier-click starts,
+  // rather than needing a second click of its own.
+  await cards.nth(1).click({ modifiers: ["Control"] });
+  await expect(page.locator(".selection-bar .count")).toContainText("2");
+});

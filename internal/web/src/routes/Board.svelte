@@ -85,7 +85,12 @@
     localStorage.setItem(key, on ? "1" : "0");
     load();
   }
+  // The previewed card is the anchor of a selection that starts from it: a
+  // modifier-click on a second card takes it along. Without that, the card you
+  // were already looking at is the one the bulk action misses, and it has to
+  // be clicked a second time to join the selection it started.
   function toggle(id) {
+    if (!selected.length && focused && focused.item.id !== id) selected.push(focused.item.id);
     const i = selected.indexOf(id);
     if (i < 0) selected.push(id); else selected.splice(i, 1);
   }
