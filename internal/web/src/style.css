@@ -176,9 +176,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
    box and the inputs they sit with; only a dialog's footer keeps the full 30px
    (DESIGN.md §5). */
 .screen-header .btn, .body .btn.primary { height: 28px; padding: 0 11px; font-size: 12px; }
-/* The save beside a field being edited is the point of edit mode, so it is
-   sized like the field it belongs to rather than shrunk to a header action. */
-.body .btn.save { height: 38px; padding: 0 20px; font-size: 13px; }
 
 .input {
   height: 30px; padding: 0 11px; background: var(--sunk);
@@ -187,6 +184,27 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .input::placeholder { color: var(--faint); }
 .input:focus { outline: none; border-color: var(--accent); color: var(--bright); caret-color: var(--accent); }
 .input.error { border-color: var(--alert); color: var(--alert); }
+
+/* A property edited where it is drawn: no fill and no border until the pointer
+   is on it, and the type of the thing it stands in for rather than a form
+   control's. The box is feedback, not furniture. */
+.bare {
+  width: 100%; min-width: 0; background: none; border: 1px solid transparent;
+  color: inherit; font: inherit; padding: 2px 6px; margin: -2px -6px; resize: none;
+  field-sizing: content;
+}
+.bare:hover { border-color: var(--border); }
+.bare:focus {
+  outline: none; border-color: var(--accent); background: var(--sunk);
+  caret-color: var(--accent); color: var(--bright);
+}
+.bare::placeholder { color: var(--ghost); }
+/* The description keeps the prose measure and serif it is read in. */
+.bare.prose { font-family: var(--serif); font-size: 16px; line-height: 1.62; }
+/* Save and cancel for the field above them: two square buttons, appearing only
+   once the field has actually been changed. */
+.field-actions { display: flex; gap: 4px; margin-top: 4px; }
+.field-actions .btn { width: 24px; height: 24px; padding: 0; justify-content: center; }
 textarea.input { height: auto; padding: 8px 11px; line-height: 1.5; resize: vertical; }
 select.input {
   padding: 0 26px 0 8px; appearance: none; cursor: pointer;
@@ -387,9 +405,17 @@ img.avatar { object-fit: cover; }
 .detail { display: flex; min-height: 100%; }
 /* A line of text stops being readable long before it stops fitting, and an
  * input a title is typed into is not improved by being a metre wide. The
- * column is capped at a measure and centred in whatever space is left beside
- * the aside, rather than stretched across the page. */
+ * column is capped at a measure and centred in whatever space is left, rather
+ * than stretched across the page. */
 .detail-main { flex: 1; min-width: 0; max-width: 860px; margin: 0 auto; padding: 20px 24px 40px; }
+/* The item detail has no aside of its own: its fields sit in the one column,
+   as a grid between the description and the relations. */
+.fields {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 18px;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 16px 0; margin: 22px 0 0;
+}
+/* The preview beside a board or a table, which is the only aside left. */
 .detail-aside {
   width: 320px; flex: 0 0 320px; background: var(--surface);
   border-left: 1px solid var(--border); padding: 16px; display: flex;
@@ -403,13 +429,18 @@ img.avatar { object-fit: cover; }
 .aside-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .aside-rule { border-top: 1px solid var(--border); margin: 2px 0; }
 
-/* The work-state control and the bucket row: full-width bordered rows. */
+/* A property that is changed where it is drawn: the value itself, with no fill
+   and no border until the pointer is on it. The box is feedback, not
+   furniture. It still holds the height of a control so nothing shifts. */
 .aside-control {
   display: flex; align-items: center; gap: 8px; width: 100%; height: 34px;
-  padding: 0 11px; background: var(--sunk); border: 1px solid var(--border);
+  padding: 0 7px; margin-left: -7px;
+  background: none; border: 1px solid transparent;
   color: var(--text); font-size: 12.5px; cursor: pointer; text-align: left;
 }
-.aside-control:hover { border-color: var(--border-strong); }
+.aside-control:hover, .aside-control:focus-visible {
+  background: var(--sunk); border-color: var(--border); outline: none;
+}
 /* A control may be an anchor — the bucket row follows through to the bucket —
    without picking up the link colour and underline. */
 a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: none; }

@@ -111,7 +111,7 @@ Three families, each with one job.
 | Sidebar | 224px fixed |
 | Screen header | 56px |
 | Filter / scope bar | 46px |
-| Right-hand detail aside | 320px fixed |
+| Right-hand detail aside (the preview) | 320px fixed |
 | Board column | 280px fixed, 12px gutter |
 | Card | 10px 11px padding, 9px internal gap, 8px between cards |
 | Table row | 42px; header row 34px; 12px column gap; 14px side padding |
@@ -218,7 +218,7 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | `SignIn.dc.html` | Sign in | Username + password, optional TOTP step (`Dialogs.dc.html`). |
 | `Main.dc.html` | Board | Four columns shown of six states. Show-buckets toggle in the filter bar. |
 | `Backlog.dc.html` | Backlog | Table + detail aside. Carries the selection bar and the checkbox column. |
-| `ItemDetail.dc.html` | Item detail | Header actions: Copy link · **Clone** · **Split** · Reject · Edit. Relations, comments/history tabs, field aside. |
+| `ItemDetail.dc.html` | Item detail | Header actions: Copy link · **Clone** · **Split** · Reject · Edit (Save · Cancel while open). Relations, comments/history tabs. The fields are a grid in the one column: the artboard's field aside is drawn beside the board's sidebar, and two asides on one screen read as neither. |
 | `BucketIndex.dc.html` | Bucket index | Cards with progress bar, per-bucket icon, scope switch (participation / owned / instance). |
 | `BucketDetail.dc.html` | Bucket detail | Contents grouped by owning team, per-row remove ×. `Icon` is a field here. |
 | `Log.dc.html` | Log | Keyset paging: the footer says "load older from 41192", never a page number. Agent actions carry a small accent glyph beside the actor. |

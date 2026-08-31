@@ -2,14 +2,19 @@
   // Item detail: the full record, its relations, its comments and its history.
   //
   // Header actions are Copy link, Clone, Split, Reject and Edit — buttons, not
-  // menu items buried in an overflow (DESIGN.md §6).
+  // menu items buried in an overflow (DESIGN.md §6). Edit becomes Save and
+  // Cancel while it is open.
+  //
+  // The fields sit in the one column with everything else. A second sidebar
+  // beside the board's own is two asides on one screen and nobody can say what
+  // either is for.
 
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
   import { navigate } from "../lib/router.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
-  import { assigneeOptions, bucketOptions } from "../lib/options.js";
+  import { assigneeOptions, bucketOptions, priorityOptions } from "../lib/options.js";
   import { when, whenDay, plural } from "../lib/format.js";
   import { loadBuckets, fieldName, eventValue } from "../lib/events.svelte.js";
   import { NAV, PRIORITY, RELATION_LABELS, BUCKET_COLOURS } from "../lib/icons.js";
@@ -66,9 +71,9 @@
   loadBuckets();
   $effect(() => onNotify(load));
 
-  // A field patch leaves edit mode alone: the aside's controls patch while the
-  // title and description drafts are still open, and collapsing the editor
-  // would discard them.
+  // A field patch leaves edit mode alone: the pickers patch while the title and
+  // description drafts are still open, and collapsing the editor would discard
+  // them.
   async function patch(body) {
     try {
       item = await api.updateItem(item.id, { ...body, version: item.version });
@@ -86,11 +91,12 @@
     editing = true;
   }
 
-  // Done saves whatever the drafts still hold, so leaving edit mode is never
-  // the thing that loses an edit.
-  async function stopEditing() {
+  // Save writes whatever the drafts hold; Cancel throws them away. An
+  // unchanged field writes nothing, and a title emptied by accident is left
+  // alone rather than saved as blank.
+  async function saveEdits() {
     const body = {};
-    if (draftTitle !== item.title) body.title = draftTitle;
+    if (draftTitle.trim() && draftTitle !== item.title) body.title = draftTitle;
     if (draftDescription !== (item.description || "")) body.description = draftDescription;
     if (Object.keys(body).length) await patch(body);
     editing = false;
@@ -191,6 +197,11 @@
 
 
 
+  async function pickPriority() {
+    const picked = await openModal(PickDialog, { title: "Priority", options: priorityOptions() });
+    if (picked !== undefined) patch({ priority: picked });
+  }
+
   async function pickIcon() {
     const picked = await openModal(IconPickDialog);
     if (picked) patch({ icon: picked });
@@ -252,10 +263,18 @@
         </button>
       {/if}
       <button class="btn small" onclick={() => moveTo((s) => s.role === "rejected")}>Reject</button>
-      <button class="btn small" class:primary={editing}
-              onclick={() => (editing ? stopEditing() : startEditing())}>
-        {editing ? "Done" : "Edit"}
-      </button>
+      {#if editing}
+        <button class="btn small" onclick={() => (editing = false)}>
+          <Icon body={NAV.close} size={11} /><span>Cancel</span>
+        </button>
+        <button class="btn small primary" onclick={saveEdits}>
+          <Icon body={NAV.save} size={12} /><span>Save</span>
+        </button>
+      {:else}
+        <button class="btn small" onclick={startEditing}>
+          <Icon body={NAV.pen} size={12} /><span>Edit</span>
+        </button>
+      {/if}
       {#if isBucket && app.user.isAdmin}
         <button class="btn small destructive" onclick={removeBucket}>Delete</button>
       {/if}
@@ -265,18 +284,16 @@
   <div class="body">
     <div class="detail">
       <div class="detail-main">
-        {#if editing}
-          <div style="display:flex;gap:8px;margin-bottom:8px">
-            <input class="input" style="flex:1;font-size:17px;height:38px" bind:value={draftTitle} />
-            <button class="btn primary save" onclick={() => patch({ title: draftTitle })}>Save</button>
-          </div>
-        {:else}
-          <h1 style="display:flex;align-items:center;gap:10px">
-            {#if isBucket}<BucketIcon name={item.icon} size={18} color={item.color} />{/if}
+        <h1 style="display:flex;align-items:center;gap:10px">
+          {#if isBucket}<BucketIcon name={item.icon} size={18} color={item.color} />{/if}
+          {#if editing}
+            <input class="input" style="flex:1;font-size:17px;height:38px" aria-label="Title"
+                   bind:value={draftTitle} />
+          {:else}
             <span>{item.title}</span>
-            {#if isBucket}<span class="state-badge">bucket</span>{/if}
-          </h1>
-        {/if}
+          {/if}
+          {#if isBucket}<span class="state-badge">bucket</span>{/if}
+        </h1>
 
         <div style="display:flex;align-items:center;gap:8px;margin:10px 0 18px">
           <Avatar name={item.reporterName} />
@@ -286,15 +303,189 @@
         </div>
 
         {#if editing}
-          <textarea class="input" rows="10" style="width:100%;font-family:var(--serif);font-size:15px"
+          <textarea class="input" rows="10" aria-label="Description"
+                    style="width:100%;font-family:var(--serif);font-size:15px"
                     bind:value={draftDescription}></textarea>
-          <button class="btn primary save" style="margin-top:8px"
-                  onclick={() => patch({ description: draftDescription })}>Save description</button>
         {:else if item.description}
           <div class="prose">{item.description}</div>
         {:else}
           <div class="explain">No description.</div>
         {/if}
+
+        <!-- The fields, in the column with everything else rather than in a
+             second sidebar. A move and the pickers are always available; the
+             rest open with Edit. -->
+        <div class="fields">
+          <div class="aside-field">
+            <span class="field-label">Work state</span>
+            <button class="aside-control" onclick={() => moveTo(null)}>
+              <StatePip role={item.stateRole} />
+              <span>{item.stateName}</span>
+              <span class="note">{item.stateRole || "intermediate"}</span>
+              <Icon body={NAV.chevron} size={11} color="var(--faint)" />
+            </button>
+          </div>
+
+          {#snippet assignee()}
+            <!-- A bucket's assignee is presented as its owner: the person
+                 accountable for the milestone (SPEC.md §6.2). -->
+            <div class="aside-field">
+              <span class="field-label">{isBucket ? "Owner" : "Assignee"}</span>
+              <button class="aside-control" onclick={pickAssignee}>
+                <Avatar name={item.assigneeName} />
+                <span>{item.assigneeName || "Unassigned"}</span>
+                <Icon body={NAV.chevron} size={11} color="var(--faint)" />
+              </button>
+            </div>
+          {/snippet}
+          {#snippet priority()}
+            <div class="aside-field">
+              <span class="field-label">Priority</span>
+              <button class="aside-control" onclick={pickPriority}>
+                <PriorityGlyph level={item.priority} />
+                <span>{PRIORITY[item.priority].name}</span>
+                <Icon body={NAV.chevron} size={11} color="var(--faint)" />
+              </button>
+            </div>
+          {/snippet}
+          {#if isBucket}{@render assignee()}{@render priority()}
+          {:else}{@render priority()}{@render assignee()}{/if}
+
+          {#if item.rejectReason}
+            <div class="aside-field" style="grid-column:1/-1">
+              <span class="field-label">Rejected as</span>
+              <div class="aside-value">
+                <span>{item.rejectReason}</span>
+                {#if item.rejectNote}<span class="explain">{item.rejectNote}</span>{/if}
+              </div>
+            </div>
+          {/if}
+
+          <div class="aside-field">
+            <span class="field-label">Reporter</span>
+            <div class="aside-value"><Avatar name={item.reporterName} /><span>{item.reporterName}</span></div>
+          </div>
+
+          {#if isBucket}
+            <div class="aside-field">
+              <span class="field-label">Icon</span>
+              <button class="aside-control" onclick={pickIcon}>
+                <BucketIcon name={item.icon} size={16} color={item.color} />
+                <span>{item.icon}</span>
+                <Icon body={NAV.chevron} size={11} color="var(--faint)" />
+              </button>
+            </div>
+            <!-- The colour is what its tickets wear on a board. Recognition
+                 only: nothing reads it (SPEC.md §6.2). -->
+            <div class="aside-field">
+              <span class="field-label">Colour</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                <button class="swatch" class:on={!item.color} title="No colour"
+                        aria-label="No colour" onclick={() => patch({ color: "" })}></button>
+                {#each Object.entries(BUCKET_COLOURS) as [name, hex]}
+                  <button class="swatch" class:on={item.color === name} title={name} aria-label={name}
+                          style="background:{hex};border-color:{hex}"
+                          onclick={() => patch({ color: name })}></button>
+                {/each}
+              </div>
+            </div>
+            <div class="aside-field" style="grid-column:1/-1">
+              <span class="field-label">Owning team</span>
+              <div class="aside-value">
+                <span class="code-badge">{item.teamShortCode}</span>
+                <span>{team ? team.name : item.teamShortCode}</span>
+              </div>
+              <p class="explain">
+                Reassignable by an instance administrator. The identifier stays
+                {item.identifier} wherever it goes.
+              </p>
+            </div>
+          {:else}
+            <!-- The bucket is a way through to the bucket. Which bucket a ticket
+                 is in is changed by asking for it, not by a click that was aimed
+                 at reading the milestone. -->
+            <div class="aside-field">
+              <span class="field-label">Bucket</span>
+              <div style="display:flex;gap:6px">
+                {#if item.bucketIdentifier}
+                  <a class="aside-control" href="/{item.bucketIdentifier}">
+                    <BucketIcon name={item.bucketIcon} size={13} color={item.bucketColor} />
+                    <span>{item.bucketTitle}</span>
+                    <span class="note">{item.bucketIdentifier}</span>
+                  </a>
+                {:else}
+                  <button class="aside-control" onclick={pickBucket}>
+                    <span class="dash">—</span>
+                    <span class="note">none</span>
+                  </button>
+                {/if}
+                <button class="btn quiet" style="height:34px" aria-label="Change bucket"
+                        title="Change bucket" onclick={pickBucket}>
+                  <Icon body={NAV.pen} size={12} />
+                </button>
+              </div>
+            </div>
+          {/if}
+
+          <div class="aside-field">
+            <span class="field-label">Planned end</span>
+            <div class="aside-value">
+              {#if editing}
+                <input class="input" style="width:100%" type="date" aria-label="Planned end"
+                       value={item.plannedEnd || ""}
+                       onchange={(e) => patch({ plannedEnd: e.currentTarget.value })} />
+              {:else if item.plannedEnd}
+                <span class="mono">{whenDay(item.plannedEnd)}</span>
+              {:else}
+                <span class="dash">—</span>
+              {/if}
+            </div>
+          </div>
+          <div class="aside-field">
+            <span class="field-label">Actual start</span>
+            <div class="aside-value">
+              {#if item.actualStart}<span class="mono">{when(item.actualStart)}</span>
+              {:else}<span class="dash">—</span>{/if}
+            </div>
+          </div>
+          <div class="aside-field">
+            <span class="field-label">Actual end</span>
+            <div class="aside-value">
+              {#if item.actualEnd}<span class="mono">{when(item.actualEnd)}</span>
+              {:else}<span class="dash">—</span>{/if}
+            </div>
+          </div>
+
+          <!-- Labels live on the detail view only. They are a filtering
+               mechanism, and cards carrying them become unreadable (SPEC.md §8.1). -->
+          <div class="aside-field" style="grid-column:1/-1">
+            <span class="field-label">Labels</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              {#each item.labels || [] as name}
+                <span class="label-chip">
+                  <span>{name}</span>
+                  <button class="btn quiet" style="padding:0;height:auto;border:0"
+                          aria-label="Remove {name}"
+                          onclick={() => guard(() => api.removeLabel(item.id, name))}>
+                    <Icon body={NAV.close} size={9} />
+                  </button>
+                </span>
+              {/each}
+              {#if !addingLabel}
+                <button class="label-chip" style="cursor:pointer;background:none;border-style:dashed"
+                        onclick={() => (addingLabel = true)}>
+                  <Icon body={NAV.plus} size={9} /><span>Label</span>
+                </button>
+              {/if}
+            </div>
+            {#if addingLabel}
+              <!-- svelte-ignore a11y_autofocus -->
+              <input class="input" style="height:26px;max-width:240px" placeholder="Type to create"
+                     autofocus bind:value={labelDraft}
+                     onkeydown={(e) => e.key === "Enter" && addLabel()} />
+            {/if}
+          </div>
+        </div>
 
         {#if isBucket}
           <!-- A bucket's progress is a view over its contents, not a field
@@ -440,205 +631,6 @@
           {/if}
         </section>
       </div>
-
-      <aside class="detail-aside">
-        <div class="aside-field">
-          <span class="field-label">Work state</span>
-          <button class="aside-control" onclick={() => moveTo(null)}>
-            <StatePip role={item.stateRole} />
-            <span>{item.stateName}</span>
-            <span class="note">{item.stateRole || "intermediate"}</span>
-            <Icon body={NAV.chevron} size={11} color="var(--faint)" />
-          </button>
-        </div>
-
-        {#if item.rejectReason}
-          <div class="aside-field">
-            <span class="field-label">Rejected as</span>
-            <div class="aside-value">
-              <span>{item.rejectReason}</span>
-              {#if item.rejectNote}<span class="explain">{item.rejectNote}</span>{/if}
-            </div>
-          </div>
-        {/if}
-
-        <div class="aside-pair">
-          {#snippet assignee()}
-            <!-- A bucket's assignee is presented as its owner: the person
-                 accountable for the milestone (SPEC.md §6.2). -->
-            <div class="aside-field">
-              <span class="field-label">{isBucket ? "Owner" : "Assignee"}</span>
-              <button class="aside-control" onclick={pickAssignee}>
-                <Avatar name={item.assigneeName} />
-                <span>{item.assigneeName || "Unassigned"}</span>
-                <Icon body={NAV.chevron} size={11} color="var(--faint)" />
-              </button>
-            </div>
-          {/snippet}
-          {#snippet priority()}
-            <div class="aside-field">
-              <span class="field-label">Priority</span>
-              <div class="aside-value">
-                <PriorityGlyph level={item.priority} />
-                <span>{PRIORITY[item.priority].name}</span>
-                {#if editing}
-                  <select class="input" style="margin-left:auto;height:26px" aria-label="Priority"
-                          onchange={(e) => patch({ priority: +e.currentTarget.value })}>
-                    {#each [1, 2, 3, 4] as p}
-                      <option value={p} selected={p === item.priority}>P{p}</option>
-                    {/each}
-                  </select>
-                {/if}
-              </div>
-            </div>
-          {/snippet}
-          {#if isBucket}{@render assignee()}{@render priority()}
-          {:else}{@render priority()}{@render assignee()}{/if}
-        </div>
-
-        {#snippet reporter()}
-          <div class="aside-field">
-            <span class="field-label">Reporter</span>
-            <div class="aside-value"><Avatar name={item.reporterName} /><span>{item.reporterName}</span></div>
-          </div>
-        {/snippet}
-
-        {#if isBucket}
-          <div class="aside-pair">
-            <div class="aside-field">
-              <span class="field-label">Icon</span>
-              <div class="aside-value">
-                <BucketIcon name={item.icon} size={16} color={item.color} />
-                <span>{item.icon}</span>
-                {#if editing}
-                  <button class="btn quiet small" style="margin-left:auto" onclick={pickIcon}>Change</button>
-                {/if}
-              </div>
-            </div>
-            {@render reporter()}
-          </div>
-          <!-- The colour is what its tickets wear on a board. Recognition
-               only: nothing reads it (SPEC.md §6.2). -->
-          <div class="aside-field">
-            <span class="field-label">Colour</span>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-              <button class="swatch" class:on={!item.color} title="No colour"
-                      aria-label="No colour" onclick={() => patch({ color: "" })}></button>
-              {#each Object.entries(BUCKET_COLOURS) as [name, hex]}
-                <button class="swatch" class:on={item.color === name} title={name} aria-label={name}
-                        style="background:{hex};border-color:{hex}"
-                        onclick={() => patch({ color: name })}></button>
-              {/each}
-            </div>
-          </div>
-        {:else}
-          {@render reporter()}
-        {/if}
-
-        <div class="aside-rule"></div>
-
-        {#if isBucket}
-          <div class="aside-field">
-            <span class="field-label">Owning team</span>
-            <div class="aside-value">
-              <span class="code-badge">{item.teamShortCode}</span>
-              <span>{team ? team.name : item.teamShortCode}</span>
-            </div>
-            <p class="explain">
-              Reassignable by an instance administrator. The identifier stays
-              {item.identifier} wherever it goes.
-            </p>
-          </div>
-        {:else}
-          <!-- The bucket is a way through to the bucket. Which bucket a ticket
-               is in is changed by asking for it, not by a click that was aimed
-               at reading the milestone. -->
-          <div class="aside-field">
-            <span class="field-label">Bucket</span>
-            <div style="display:flex;gap:6px">
-              {#if item.bucketIdentifier}
-                <a class="aside-control" href="/{item.bucketIdentifier}">
-                  <BucketIcon name={item.bucketIcon} size={13} color={item.bucketColor} />
-                  <span>{item.bucketTitle}</span>
-                  <span class="note">{item.bucketIdentifier}</span>
-                </a>
-              {:else}
-                <button class="aside-control" onclick={pickBucket}>
-                  <span class="dash">—</span>
-                  <span class="note">none</span>
-                </button>
-              {/if}
-              <button class="btn quiet" style="height:34px" aria-label="Change bucket"
-                      title="Change bucket" onclick={pickBucket}>
-                <Icon body={NAV.pen} size={12} />
-              </button>
-            </div>
-          </div>
-        {/if}
-
-        <div class="aside-rule"></div>
-
-        <div class="aside-pair">
-          <div class="aside-field">
-            <span class="field-label">Planned end</span>
-            <div class="aside-value">
-              {#if editing}
-                <input class="input" type="date" value={item.plannedEnd || ""}
-                       onchange={(e) => patch({ plannedEnd: e.currentTarget.value })} />
-              {:else if item.plannedEnd}
-                <span class="mono">{whenDay(item.plannedEnd)}</span>
-              {:else}
-                <span class="dash">—</span>
-              {/if}
-            </div>
-          </div>
-          <div class="aside-field">
-            <span class="field-label">Actual start</span>
-            <div class="aside-value">
-              {#if item.actualStart}<span class="mono">{when(item.actualStart)}</span>
-              {:else}<span class="dash">—</span>{/if}
-            </div>
-          </div>
-        </div>
-        <div class="aside-field">
-          <span class="field-label">Actual end</span>
-          <div class="aside-value">
-            {#if item.actualEnd}<span class="mono">{when(item.actualEnd)}</span>
-            {:else}<span class="dash">—</span>{/if}
-          </div>
-        </div>
-
-        <div class="aside-rule"></div>
-
-        <!-- Labels live on the detail view only. They are a filtering mechanism,
-             and cards carrying them become unreadable (SPEC.md §8.1). -->
-        <div class="aside-field">
-          <span class="field-label">Labels</span>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-            {#each item.labels || [] as name}
-              <span class="label-chip">
-                <span>{name}</span>
-                <button class="btn quiet" style="padding:0;height:auto;border:0"
-                        aria-label="Remove {name}"
-                        onclick={() => guard(() => api.removeLabel(item.id, name))}>
-                  <Icon body={NAV.close} size={9} />
-                </button>
-              </span>
-            {/each}
-            {#if !addingLabel}
-              <button class="label-chip" style="cursor:pointer;background:none;border-style:dashed"
-                      onclick={() => (addingLabel = true)}>
-                <Icon body={NAV.plus} size={9} /><span>Label</span>
-              </button>
-            {/if}
-          </div>
-          {#if addingLabel}
-            <!-- svelte-ignore a11y_autofocus -->
-            <input class="input" style="height:26px" placeholder="Type to create" autofocus
-                   bind:value={labelDraft} onkeydown={(e) => e.key === "Enter" && addLabel()} />
-          {/if}
-        </div>
-      </aside>
     </div>
   </div>
 {/if}

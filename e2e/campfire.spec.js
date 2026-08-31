@@ -117,7 +117,7 @@ test("a card previews beside the board and its identifier opens it", async ({ pa
 
   await page.locator(".card").first().click();
   const preview = page.locator(".detail-aside");
-  await expect(preview.getByRole("heading", { name: "Replace the boiler" })).toBeVisible();
+  await expect(preview.getByLabel("Title")).toHaveValue("Replace the boiler");
   await expect(page).toHaveURL(/\/t\/1\/board$/);
 
   // The preview edits in place: a pick lands on the item and the board redraws.
@@ -335,4 +335,44 @@ test("a profile picture replaces the initials wherever the name appears", async 
   await page.getByRole("button", { name: "Remove" }).click();
   await expect(page.locator("img.avatar")).toHaveCount(0);
   await expect(page.locator(".whoami .avatar")).toHaveText("RO");
+});
+
+test("the detail page edits behind Edit; the preview edits in place", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/SOL-1");
+
+  // The fields are in the one column: no second sidebar beside the board's.
+  await expect(page.locator(".detail-aside")).toHaveCount(0);
+  await expect(page.locator(".fields")).toBeVisible();
+
+  // Cancel throws the draft away.
+  const header = page.getByRole("banner");
+  await header.getByRole("button", { name: "Edit" }).click();
+  await page.getByLabel("Title").fill("nonsense");
+  await header.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("heading", { name: "Replace the boiler", exact: true })).toBeVisible();
+
+  // Save writes it.
+  await header.getByRole("button", { name: "Edit" }).click();
+  await page.getByLabel("Title").fill("Replace the boiler and its flue");
+  await header.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("heading", { name: "Replace the boiler and its flue" })).toBeVisible();
+
+  // In the preview the title is the text it shows, typed into where it is
+  // drawn. The floppy and the cross appear only once it has been changed.
+  await page.goto("/t/1/board");
+  await page.locator(".card", { hasText: "Replace the boiler and its flue" }).click();
+  const preview = page.locator(".detail-aside");
+  const save = preview.getByRole("button", { name: "Save title" });
+  await expect(save).toHaveCount(0);
+
+  await preview.getByLabel("Title").fill("nonsense");
+  await preview.getByRole("button", { name: "Discard title" }).click();
+  await expect(preview.getByLabel("Title")).toHaveValue("Replace the boiler and its flue");
+
+  await preview.getByLabel("Title").fill("Replace the boiler");
+  await save.click();
+  await expect(save).toHaveCount(0);
+  await page.goto("/SOL-1");
+  await expect(page.getByRole("heading", { name: "Replace the boiler", exact: true })).toBeVisible();
 });
