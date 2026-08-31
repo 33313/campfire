@@ -9,9 +9,9 @@
 
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
+  import { navigate } from "../lib/router.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
   import { openModal, failure } from "../lib/ui.svelte.js";
-  import { createItem } from "../lib/create.js";
   import { assigneeOptions } from "../lib/options.js";
   import { whenDay } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
@@ -25,6 +25,7 @@
   import ErrorPanel from "../components/ErrorPanel.svelte";
   import LoadOlder from "../components/LoadOlder.svelte";
   import PickDialog from "../dialogs/PickDialog.svelte";
+  import CreateItemDialog from "../dialogs/CreateItemDialog.svelte";
 
   let team = $derived(app.team);
   let page = $state(null);
@@ -122,7 +123,10 @@
 
   async function create() {
     const states = await api.listWorkStates(team.id);
-    await createItem({ team, states, kind: "bucket", reload: load });
+    const res = await openModal(CreateItemDialog, { team, states, kind: "bucket" });
+    if (!res) return;
+    if (res.error) return failure(res.error);
+    navigate(`/${res.identifier}`);
   }
 </script>
 
@@ -134,7 +138,7 @@
       <SearchBox value={text} onsearch={(t) => (text = t)} />
       {#if team}
         <button class="btn primary" onclick={create}>
-          <Icon body={NAV.plus} size={13} /><span>Create</span>
+          <Icon body={NAV.plus} size={12} /><span>Create</span>
         </button>
       {/if}
     {/snippet}
@@ -171,7 +175,7 @@
             ? Math.round((b.progress.done / b.progress.total) * 100) : 0}
           <a class="bucket-card" href="/{b.identifier}">
             <div style="display:flex;align-items:center;gap:8px">
-              <BucketIcon name={b.icon} size={13} color={b.color}
+              <BucketIcon name={b.icon} size={13}
                           rendering={b.teamShortCode === team?.shortCode ? team.iconRendering : "mono"} />
               <span class="ident">{b.identifier}</span>
               <span class="column-count" style="margin-left:auto">{b.teamShortCode}</span>

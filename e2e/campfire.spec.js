@@ -47,7 +47,7 @@ test("an administrator creates the first team", async ({ page }) => {
   await expect(page.locator(".code-badge").first()).toHaveText("SOL");
 });
 
-test("a new ticket lands in the backlog and leaves you where you were", async ({ page }) => {
+test("a new ticket lands in the backlog and opens at its identifier", async ({ page }) => {
   await signIn(page);
   await page.goto("/t/1/board");
   await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
@@ -55,44 +55,14 @@ test("a new ticket lands in the backlog and leaves you where you were", async ({
   const form = page.getByRole("dialog");
   await form.getByLabel("Title").fill("Replace the boiler");
   await form.getByLabel("Description").fill("It is older than the building.");
-  // Every field the item has is on the form, so creating is not followed by
-  // three edits to finish it.
-  await form.getByLabel("Assignee").selectOption({ label: "root" });
-  await form.getByLabel("Labels").fill("plumbing");
   await form.getByRole("button", { name: "Create" }).click();
 
-  // Creating does not leave the board for the new item's detail view.
-  await expect(page).toHaveURL(/\/t\/1\/board$/);
-  await expect(page.locator(".toast")).toHaveText(/SOL-1 created/);
+  await expect(page).toHaveURL(/\/SOL-1$/);
+  await expect(page.getByRole("heading", { name: "Replace the boiler" })).toBeVisible();
+  await expect(page.locator(".crumbs .here")).toHaveText("SOL-1");
 
   await page.goto("/t/1/backlog");
   await expect(page.getByRole("link", { name: "SOL-1" })).toBeVisible();
-
-  await page.goto("/SOL-1");
-  await expect(page.locator(".label-chip", { hasText: "plumbing" })).toBeVisible();
-  await expect(page.locator(".aside-control", { hasText: "root" })).toBeVisible();
-});
-
-test("a create that cannot go through keeps the form and marks the field", async ({ page }) => {
-  await signIn(page);
-  await page.goto("/t/1/board");
-  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
-
-  const form = page.getByRole("dialog");
-  await form.getByLabel("Description").fill("Typed at some length, and worth keeping.");
-  await form.getByRole("button", { name: "Create" }).click();
-
-  await expect(form).toBeVisible();
-  await expect(form.getByLabel("Title")).toHaveClass(/error/);
-  await expect(form.locator(".field-error")).toHaveText("An item needs a title.");
-  await expect(form.getByLabel("Description")).toHaveValue(/worth keeping/);
-
-  // Correcting the field clears the mark.
-  await form.getByLabel("Title").fill("Bleed the radiators");
-  await expect(form.getByLabel("Title")).not.toHaveClass(/error/);
-  await expect(form.locator(".field-error")).toHaveCount(0);
-
-  await form.getByRole("button", { name: "Cancel" }).click();
 });
 
 test("a ticket moves to a board state and appears in that column", async ({ page }) => {
@@ -117,13 +87,13 @@ test("a card previews beside the board and its identifier opens it", async ({ pa
 
   await page.locator(".card").first().click();
   const preview = page.locator(".detail-aside");
-  await expect(preview.getByLabel("Title")).toHaveValue("Replace the boiler");
+  await expect(preview.getByRole("heading", { name: "Replace the boiler" })).toBeVisible();
   await expect(page).toHaveURL(/\/t\/1\/board$/);
 
   // The preview edits in place: a pick lands on the item and the board redraws.
-  await preview.getByRole("button", { name: /root/ }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Unassigned" }).click();
-  await expect(preview.getByRole("button", { name: /Unassigned/ })).toBeVisible();
+  await preview.getByRole("button", { name: /Unassigned/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "root" }).click();
+  await expect(preview.getByRole("button", { name: /root/ })).toBeVisible();
 
   await preview.getByRole("link", { name: "SOL-1" }).click();
   await expect(page).toHaveURL(/\/SOL-1$/);
@@ -163,31 +133,16 @@ test("a bucket carries an icon and its tickets", async ({ page }) => {
   const bucket = page.getByRole("dialog");
   await bucket.getByRole("button", { name: "Bucket", exact: true }).click();
   await bucket.getByLabel("Title").fill("Winter readiness");
-  await bucket.getByRole("button", { name: "rust", exact: true }).click();
   await bucket.getByRole("button", { name: "Create" }).click();
 
-  await expect(page).toHaveURL(/\/buckets$/);
-  await expect(page.locator(".bucket-card", { hasText: "Winter readiness" })).toBeVisible();
-
-  await page.goto("/SOL-2");
+  await expect(page).toHaveURL(/\/SOL-2$/);
   await expect(page.locator(".state-badge", { hasText: "bucket" })).toBeVisible();
 
   // Put the ticket in it from the ticket's own aside.
   await page.goto("/SOL-1");
-  await page.getByRole("button", { name: "Change bucket" }).click();
+  await page.locator(".aside-control").last().click();
   await page.getByRole("dialog").getByRole("button", { name: /SOL-2\s+Winter readiness/ }).click();
   await expect(page.locator(".aside-control").last()).toContainText("Winter readiness");
-
-  // The bucket on a ticket follows through to the bucket.
-  await page.locator(".aside-control").last().click();
-  await expect(page).toHaveURL(/\/SOL-2$/);
-
-  // The bucket's colour rides on its tickets' cards, in the foot beside the
-  // identifier rather than above the title.
-  await page.goto("/t/1/board");
-  const chip = page.locator(".card-foot .card-bucket");
-  await expect(chip).toContainText("Winter readiness");
-  await expect(chip).toHaveCSS("border-color", "rgb(196, 103, 92)");
 
   await page.goto("/SOL-2");
   await expect(page.getByRole("link", { name: "SOL-1" })).toBeVisible();
@@ -292,87 +247,4 @@ test("signing out returns to the sign-in card", async ({ page }) => {
   await page.goto("/account");
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-});
-
-test("the previewed card joins the selection a modifier-click starts", async ({ page }) => {
-  await signIn(page);
-  await page.goto("/t/1/board");
-  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
-  const form = page.getByRole("dialog");
-  await form.getByLabel("Title").fill("Service the flue");
-  await form.getByLabel("Mark as accepted").check(); // so it lands on the board
-  await form.getByRole("button", { name: "Create" }).click();
-
-  const cards = page.locator(".card");
-  await expect(cards).toHaveCount(2);
-  await cards.first().click();
-  await expect(page.locator(".detail-aside")).toBeVisible();
-
-  // The card being previewed is in the selection the modifier-click starts,
-  // rather than needing a second click of its own.
-  await cards.nth(1).click({ modifiers: ["Control"] });
-  await expect(page.locator(".selection-bar .count")).toContainText("2");
-});
-
-test("a profile picture replaces the initials wherever the name appears", async ({ page }) => {
-  await signIn(page);
-  await page.goto("/account");
-
-  // A 2x2 PNG, scaled and re-encoded by the client before it is stored.
-  await page.getByLabel("Picture").setInputFiles({
-    name: "me.png",
-    mimeType: "image/png",
-    buffer: Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGP8z8Dwn4GBgYkBBv" +
-      "5DGAAmYgML8Ck1FQAAAABJRU5ErkJggg==", "base64"),
-  });
-
-  const picture = page.locator("img.avatar").first();
-  await expect(picture).toBeVisible();
-  await expect(picture).toHaveAttribute("src", /^data:image\//);
-
-  // Removing it puts the initials back.
-  await page.getByRole("button", { name: "Remove" }).click();
-  await expect(page.locator("img.avatar")).toHaveCount(0);
-  await expect(page.locator(".whoami .avatar")).toHaveText("RO");
-});
-
-test("the detail page edits behind Edit; the preview edits in place", async ({ page }) => {
-  await signIn(page);
-  await page.goto("/SOL-1");
-
-  // The fields are in the one column: no second sidebar beside the board's.
-  await expect(page.locator(".detail-aside")).toHaveCount(0);
-  await expect(page.locator(".fields")).toBeVisible();
-
-  // Cancel throws the draft away.
-  const header = page.getByRole("banner");
-  await header.getByRole("button", { name: "Edit" }).click();
-  await page.getByLabel("Title").fill("nonsense");
-  await header.getByRole("button", { name: "Cancel" }).click();
-  await expect(page.getByRole("heading", { name: "Replace the boiler", exact: true })).toBeVisible();
-
-  // Save writes it.
-  await header.getByRole("button", { name: "Edit" }).click();
-  await page.getByLabel("Title").fill("Replace the boiler and its flue");
-  await header.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("heading", { name: "Replace the boiler and its flue" })).toBeVisible();
-
-  // In the preview the title is the text it shows, typed into where it is
-  // drawn. The floppy and the cross appear only once it has been changed.
-  await page.goto("/t/1/board");
-  await page.locator(".card", { hasText: "Replace the boiler and its flue" }).click();
-  const preview = page.locator(".detail-aside");
-  const save = preview.getByRole("button", { name: "Save title" });
-  await expect(save).toHaveCount(0);
-
-  await preview.getByLabel("Title").fill("nonsense");
-  await preview.getByRole("button", { name: "Discard title" }).click();
-  await expect(preview.getByLabel("Title")).toHaveValue("Replace the boiler and its flue");
-
-  await preview.getByLabel("Title").fill("Replace the boiler");
-  await save.click();
-  await expect(save).toHaveCount(0);
-  await page.goto("/SOL-1");
-  await expect(page.getByRole("heading", { name: "Replace the boiler", exact: true })).toBeVisible();
 });

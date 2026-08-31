@@ -32,7 +32,7 @@ paths:
   /api/instance:
     get:
       operationId: getInstance
-      summary: Whether the instance needs its first account, and the fixed icon and colour sets
+      summary: Whether the instance needs its first account, and the fixed icon set
       x-agent: false
       security: []
       responses:
@@ -750,7 +750,6 @@ components:
         assigneeId: { type: integer }
         priority: { type: integer, minimum: 1, maximum: 4 }
         icon: { type: string, description: Buckets only, one of the fixed set }
-        color: { type: string, description: Buckets only, one of the fixed set. Optional. }
         bucketId: { type: integer, description: Tickets only }
         stateId: { type: integer }
         plannedEnd: { type: string, format: date }
@@ -773,7 +772,6 @@ components:
         assigneeId: { type: integer }
         priority: { type: integer, minimum: 1, maximum: 4, default: 3 }
         icon: { type: string }
-        color: { type: string }
         bucketId: { type: integer }
         plannedEnd: { type: string, format: date }
         labels: { type: array, items: { type: string } }
@@ -788,7 +786,6 @@ components:
         assigneeId: { type: integer }
         priority: { type: integer, minimum: 1, maximum: 4 }
         icon: { type: string }
-        color: { type: string }
         bucketId: { type: integer }
         plannedEnd: { type: string }
         version: { type: integer, description: The value the editor last saw }

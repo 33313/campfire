@@ -8,10 +8,9 @@
 
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
-  import { route } from "../lib/router.svelte.js";
+  import { route, navigate } from "../lib/router.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
-  import { failure } from "../lib/ui.svelte.js";
-  import { createItem } from "../lib/create.js";
+  import { openModal, failure } from "../lib/ui.svelte.js";
   import { filterFromView } from "../lib/options.js";
   import { NAV } from "../lib/icons.js";
 
@@ -24,6 +23,7 @@
   import Card from "../components/Card.svelte";
   import ItemPreview from "../components/ItemPreview.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
+  import CreateItemDialog from "../dialogs/CreateItemDialog.svelte";
 
   let { teamId } = $props();
 
@@ -85,17 +85,17 @@
     localStorage.setItem(key, on ? "1" : "0");
     load();
   }
-  // The previewed card is the anchor of a selection that starts from it: a
-  // modifier-click on a second card takes it along. Without that, the card you
-  // were already looking at is the one the bulk action misses, and it has to
-  // be clicked a second time to join the selection it started.
   function toggle(id) {
-    if (!selected.length && focused && focused.item.id !== id) selected.push(focused.item.id);
     const i = selected.indexOf(id);
     if (i < 0) selected.push(id); else selected.splice(i, 1);
   }
 
-  const create = () => createItem({ team, states, reload: load });
+  async function create() {
+    const res = await openModal(CreateItemDialog, { team, states });
+    if (!res) return;
+    if (res.error) return failure(res.error);
+    navigate(`/${res.identifier}`);
+  }
 
   // The card the pointer is above, so a drop lands in front of it rather than
   // always at the end of the column. The dragged card is not its own
@@ -129,7 +129,7 @@
     {#snippet right()}
       <SearchBox value={filter.text || ""} onsearch={(t) => setFilter({ ...filter, text: t })} />
       <button class="btn primary" onclick={create}>
-        <Icon body={NAV.plus} size={13} />
+        <Icon body={NAV.plus} size={12} />
         <span>Create</span>
       </button>
     {/snippet}

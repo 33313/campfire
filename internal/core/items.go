@@ -17,7 +17,6 @@ type NewItem struct {
 	AssigneeID  int64    `json:"assigneeId,omitempty"`
 	Priority    int64    `json:"priority,omitempty"`
 	Icon        string   `json:"icon,omitempty"`
-	Color       string   `json:"color,omitempty"`
 	BucketID    int64    `json:"bucketId,omitempty"`
 	PlannedEnd  string   `json:"plannedEnd,omitempty"`
 	Labels      []string `json:"labels,omitempty"`
@@ -34,7 +33,6 @@ type ItemPatch struct {
 	AssigneeID  *int64  `json:"assigneeId,omitempty"`
 	Priority    *int64  `json:"priority,omitempty"`
 	Icon        *string `json:"icon,omitempty"`
-	Color       *string `json:"color,omitempty"`
 	BucketID    *int64  `json:"bucketId,omitempty"`
 	PlannedEnd  *string `json:"plannedEnd,omitempty"`
 	// Version is the value the editor last saw. Zero means "whatever is there
@@ -116,25 +114,15 @@ func (s *Service) CreateItem(ctx context.Context, a Actor, in NewItem) (*Item, e
 		if !store.ValidIcon(in.Icon) {
 			return nil, invalidField("icon", "that is not one of the bucket icons")
 		}
-		if in.Color != "" && !store.ValidColour(in.Color) {
-			return nil, invalidField("color", "that is not one of the bucket colours")
-		}
 	} else if in.Icon != "" {
 		// A ticket carries nothing of the kind (SPEC.md §6.1).
 		return nil, invalidField("icon", "a ticket has no icon")
-	} else if in.Color != "" {
-		return nil, invalidField("color", "a ticket has no colour")
 	}
 
 	var out *Item
 	err = s.write(ctx, a, func(t *wtx) error {
 		if err := s.requireTeamMember(ctx, t.Tx, a, in.TeamID); err != nil {
 			return err
-		}
-		if in.AssigneeID != 0 {
-			if _, err := store.UserByID(ctx, t.Tx, in.AssigneeID); err != nil {
-				return err
-			}
 		}
 		role := store.RoleDefault
 		if in.Accepted {
@@ -147,7 +135,7 @@ func (s *Service) CreateItem(ctx context.Context, a Actor, in NewItem) (*Item, e
 		it := store.Item{
 			Kind: in.Kind, OriginTeamID: in.TeamID, TeamID: in.TeamID,
 			Title: title, Description: in.Description, ReporterID: a.UserID,
-			AssigneeID: in.AssigneeID, Priority: in.Priority, Icon: in.Icon, Color: in.Color,
+			AssigneeID: in.AssigneeID, Priority: in.Priority, Icon: in.Icon,
 			StateID: st.ID, PlannedEnd: in.PlannedEnd,
 			CreatedAt: t.now, UpdatedAt: t.now,
 		}
@@ -312,16 +300,6 @@ func (s *Service) UpdateItem(ctx context.Context, a Actor, id int64, p ItemPatch
 			}
 			it.Icon = *p.Icon
 		}
-		if p.Color != nil {
-			if it.Kind != store.KindBucket {
-				return invalidField("color", "a ticket has no colour")
-			}
-			// Empty clears it: a bucket may go back to having no colour.
-			if *p.Color != "" && !store.ValidColour(*p.Color) {
-				return invalidField("color", "that is not one of the bucket colours")
-			}
-			it.Color = *p.Color
-		}
 		if p.PlannedEnd != nil {
 			if err := validatePlannedEnd(*p.PlannedEnd); err != nil {
 				return err
@@ -357,7 +335,7 @@ func (s *Service) UpdateItem(ctx context.Context, a Actor, id int64, p ItemPatch
 func isBucketRemoval(p ItemPatch) bool {
 	return p.BucketID != nil && *p.BucketID == 0 &&
 		p.Title == nil && p.Description == nil && p.AssigneeID == nil &&
-		p.Priority == nil && p.Icon == nil && p.Color == nil && p.PlannedEnd == nil
+		p.Priority == nil && p.Icon == nil && p.PlannedEnd == nil
 }
 
 func (s *Service) checkBucketTarget(ctx context.Context, q store.Q, bucketID int64) error {
@@ -390,7 +368,6 @@ func (s *Service) logDiff(ctx context.Context, t *wtx, before, after store.Item)
 	add("assignee", strconv.FormatInt(before.AssigneeID, 10), strconv.FormatInt(after.AssigneeID, 10))
 	add("priority", "P"+strconv.FormatInt(before.Priority, 10), "P"+strconv.FormatInt(after.Priority, 10))
 	add("icon", before.Icon, after.Icon)
-	add("color", before.Color, after.Color)
 	add("bucket", strconv.FormatInt(before.BucketID, 10), strconv.FormatInt(after.BucketID, 10))
 	add("plannedEnd", before.PlannedEnd, after.PlannedEnd)
 	add("team", strconv.FormatInt(before.TeamID, 10), strconv.FormatInt(after.TeamID, 10))

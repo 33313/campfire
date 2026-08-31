@@ -172,12 +172,12 @@
                           <td>
                             <div style="display:flex;gap:4px;justify-content:flex-end">
                               <button class="btn quiet small" title="Edit" onclick={() => editState(s)}>
-                                <Icon body={NAV.pen} size={13} />
+                                <Icon body={NAV.pen} size={12} />
                               </button>
                               {#if !s.role}
                                 <button class="btn quiet small" title="Delete"
                                         onclick={() => guard(() => api.deleteWorkState(s.id))}>
-                                  <Icon body={NAV.close} size={11} />
+                                  <Icon body={NAV.close} size={12} />
                                 </button>
                               {/if}
                             </div>

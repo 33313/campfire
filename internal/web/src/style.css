@@ -184,27 +184,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .input::placeholder { color: var(--faint); }
 .input:focus { outline: none; border-color: var(--accent); color: var(--bright); caret-color: var(--accent); }
 .input.error { border-color: var(--alert); color: var(--alert); }
-
-/* A property edited where it is drawn: no fill and no border until the pointer
-   is on it, and the type of the thing it stands in for rather than a form
-   control's. The box is feedback, not furniture. */
-.bare {
-  width: 100%; min-width: 0; background: none; border: 1px solid transparent;
-  color: inherit; font: inherit; padding: 2px 6px; margin: -2px -6px; resize: none;
-  field-sizing: content;
-}
-.bare:hover { border-color: var(--border); }
-.bare:focus {
-  outline: none; border-color: var(--accent); background: var(--sunk);
-  caret-color: var(--accent); color: var(--bright);
-}
-.bare::placeholder { color: var(--ghost); }
-/* The description keeps the prose measure and serif it is read in. */
-.bare.prose { font-family: var(--serif); font-size: 16px; line-height: 1.62; }
-/* Save and cancel for the field above them: two square buttons, appearing only
-   once the field has actually been changed. */
-.field-actions { display: flex; gap: 4px; margin-top: 4px; }
-.field-actions .btn { width: 24px; height: 24px; padding: 0; justify-content: center; }
 textarea.input { height: auto; padding: 8px 11px; line-height: 1.5; resize: vertical; }
 select.input {
   padding: 0 26px 0 8px; appearance: none; cursor: pointer;
@@ -228,14 +207,6 @@ select.input {
 .chip-group { display: inline-flex; align-items: center; }
 .chip-group > .chip:not(:last-child) { border-right: 0; }
 .chip-group > .chip + .chip { padding: 0 6px; }
-
-/* A bucket colour, offered as the colour itself. Square, like everything that
-   is not a status pip. The empty one is "no colour". */
-.swatch {
-  width: 20px; height: 20px; flex: 0 0 20px; padding: 0; cursor: pointer;
-  background: none; border: 1px solid var(--border-strong);
-}
-.swatch.on { box-shadow: inset 0 0 0 2px var(--surface), 0 0 0 1px var(--bright); }
 
 .label-chip {
   display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px;
@@ -280,7 +251,6 @@ select.input {
   color: var(--muted-soft); font-family: var(--mono); font-size: 9px; letter-spacing: 0.02em;
 }
 .avatar.empty { background: none; border: 1px dashed var(--border-strong); }
-img.avatar { object-fit: cover; }
 .avatar.big { width: 24px; height: 24px; flex: 0 0 24px; font-size: 10px; color: var(--text); }
 .avatar.comment { width: 26px; height: 26px; flex: 0 0 26px; font-size: 10px; }
 
@@ -341,19 +311,13 @@ img.avatar { object-fit: cover; }
 .card.selected .card-title { color: var(--bright); }
 .card.focused { border-color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
 .card.dragging { opacity: 0.4; }
-/* The bucket chip in a card's foot. It wears the bucket's colour where it has
-   one, and an uncoloured bucket keeps the plain border it always had. */
 .card-bucket {
-  display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 58%;
-  padding: 1px 6px; border: 1px solid var(--border); font-family: var(--mono); font-size: 9.5px;
-  letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim);
+  display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
-.card-bucket .name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .card-title { margin: 0; font-size: 13px; line-height: 1.42; color: var(--text); text-wrap: pretty; }
 .card-foot { display: flex; align-items: center; gap: 8px; }
-/* The identifier is the one thing on a card that must never wrap or shorten;
-   the bucket chip beside it gives way instead. */
-.card-foot .ident { white-space: nowrap; flex: 0 0 auto; }
 .drop-placeholder { height: 74px; border: 1px dashed var(--border); background: var(--accent-tint-weak); }
 
 /* Tables ---------------------------------------------------------------- */
@@ -403,19 +367,7 @@ img.avatar { object-fit: cover; }
 /* Item detail ----------------------------------------------------------- */
 
 .detail { display: flex; min-height: 100%; }
-/* A line of text stops being readable long before it stops fitting, and an
- * input a title is typed into is not improved by being a metre wide. The
- * column is capped at a measure and centred in whatever space is left, rather
- * than stretched across the page. */
-.detail-main { flex: 1; min-width: 0; max-width: 860px; margin: 0 auto; padding: 20px 24px 40px; }
-/* The item detail has no aside of its own: its fields sit in the one column,
-   as a grid between the description and the relations. */
-.fields {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 18px;
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  padding: 16px 0; margin: 22px 0 0;
-}
-/* The preview beside a board or a table, which is the only aside left. */
+.detail-main { flex: 1; min-width: 0; padding: 20px 24px 40px; }
 .detail-aside {
   width: 320px; flex: 0 0 320px; background: var(--surface);
   border-left: 1px solid var(--border); padding: 16px; display: flex;
@@ -429,21 +381,13 @@ img.avatar { object-fit: cover; }
 .aside-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .aside-rule { border-top: 1px solid var(--border); margin: 2px 0; }
 
-/* A property that is changed where it is drawn: the value itself, with no fill
-   and no border until the pointer is on it. The box is feedback, not
-   furniture. It still holds the height of a control so nothing shifts. */
+/* The work-state control and the bucket row: full-width bordered rows. */
 .aside-control {
   display: flex; align-items: center; gap: 8px; width: 100%; height: 34px;
-  padding: 0 7px; margin-left: -7px;
-  background: none; border: 1px solid transparent;
+  padding: 0 11px; background: var(--sunk); border: 1px solid var(--border);
   color: var(--text); font-size: 12.5px; cursor: pointer; text-align: left;
 }
-.aside-control:hover, .aside-control:focus-visible {
-  background: var(--sunk); border-color: var(--border); outline: none;
-}
-/* A control may be an anchor — the bucket row follows through to the bucket —
-   without picking up the link colour and underline. */
-a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: none; }
+.aside-control:hover { border-color: var(--border-strong); }
 .aside-control .note { margin-left: auto; font-family: var(--mono); font-size: 9.5px;
   letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 
@@ -554,8 +498,6 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 }
 .dialog-foot .actions { display: flex; gap: 8px; margin-left: auto; }
 .field { display: flex; flex-direction: column; gap: 6px; }
-/* What a refused field says, under the field it is about. */
-.field-error { font-size: 11.5px; color: var(--alert); }
 .field > .field-label { color: var(--muted); }
 .body .field { max-width: 340px; }
 .count-block {
