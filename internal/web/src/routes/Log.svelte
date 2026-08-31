@@ -118,7 +118,7 @@
   <ScreenHeader title="Log" sub="ordered by sequence, newest first">
     {#snippet right()}
       <button class="btn small" onclick={exportRows}>
-        <Icon body={NAV.copy} size={12} /><span>Export</span>
+        <Icon body={NAV.export} size={13} /><span>Export</span>
       </button>
     {/snippet}
   </ScreenHeader>

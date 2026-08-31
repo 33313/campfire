@@ -7,7 +7,8 @@
   import { app } from "../lib/state.svelte.js";
   import { route, navigate } from "../lib/router.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
-  import { openModal, failure } from "../lib/ui.svelte.js";
+  import { failure } from "../lib/ui.svelte.js";
+  import { createItem } from "../lib/create.js";
   import { filterFromView } from "../lib/options.js";
   import { whenDay } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
@@ -23,7 +24,6 @@
   import LoadOlder from "../components/LoadOlder.svelte";
   import ItemPreview from "../components/ItemPreview.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
-  import CreateItemDialog from "../dialogs/CreateItemDialog.svelte";
 
   let { teamId } = $props();
 
@@ -111,12 +111,7 @@
     } catch (err) { failure(err); }
   }
 
-  async function create() {
-    const res = await openModal(CreateItemDialog, { team, states });
-    if (!res) return;
-    if (res.error) return failure(res.error);
-    navigate(`/${res.identifier}`);
-  }
+  const create = () => createItem({ team, states, reload: load });
 </script>
 
 {#if error}
@@ -126,7 +121,7 @@
     {#snippet right()}
       <SearchBox value={filter.text || ""} onsearch={(t) => setFilter({ ...filter, text: t })} />
       <button class="btn primary" onclick={create}>
-        <Icon body={NAV.plus} size={12} />
+        <Icon body={NAV.plus} size={13} />
         <span>Create</span>
       </button>
     {/snippet}
@@ -182,10 +177,14 @@
                 <td class="cell-title">{item.title}</td>
                 <td>
                   {#if item.bucketIdentifier}
-                    <span style="display:flex;align-items:center;gap:6px">
-                      <BucketIcon name={item.bucketIcon} size={11} rendering={team.iconRendering} />
+                    <!-- The bucket follows through to the bucket, like the key
+                         beside it; the row click still focuses the ticket. -->
+                    <a style="display:flex;align-items:center;gap:6px;color:var(--text)"
+                       href="/{item.bucketIdentifier}" onclick={(e) => e.stopPropagation()}>
+                      <BucketIcon name={item.bucketIcon} size={11} rendering={team.iconRendering}
+                                  color={item.bucketColor} />
                       <span style="font-size:12px">{item.bucketTitle}</span>
-                    </span>
+                    </a>
                   {:else}
                     <span class="dash">—</span>
                   {/if}

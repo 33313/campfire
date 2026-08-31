@@ -3,19 +3,25 @@
 
   import Dialog from "../components/Dialog.svelte";
   import BucketIcon from "../components/BucketIcon.svelte";
+  import Icon from "../components/Icon.svelte";
   import { api } from "../lib/api.js";
-  import { BUCKET_ICONS, PRIORITY } from "../lib/icons.js";
+  import { app } from "../lib/state.svelte.js";
+  import { BUCKET_ICONS, BUCKET_COLOURS, PRIORITY, NAV } from "../lib/icons.js";
 
   /** Create a ticket or a bucket. A bucket carries an icon; a ticket does not. */
   let { team, states, kind = "ticket", close } = $props();
 
   let chosen = $state(untrack(() => kind));
   let icon = $state("bookmark");
+  let color = $state("");
   let title = $state("");
   let description = $state("");
   let priority = $state(3);
+  let assigneeId = $state("");
   let bucketId = $state("");
   let plannedEnd = $state("");
+  let labels = $state([]);
+  let labelDraft = $state("");
   let accepted = $state(false);
   let buckets = $state([]);
   let acceptedState = $derived(states.find((s) => s.role === "accepted"));
@@ -24,16 +30,53 @@
     .then((page) => (buckets = page.items || []))
     .catch(() => {});
 
+  // Labels are created by typing them: there is no separate label registry to
+  // pick from first (SPEC.md §8.1). The datalist offers the ones that exist so
+  // a second spelling of an existing label is not the easiest thing to do.
+  function addLabel() {
+    const name = labelDraft.trim();
+    labelDraft = "";
+    if (name && !labels.includes(name)) labels.push(name);
+  }
+
+  // A refusal marks the field it names and keeps the form up. Closing on a
+  // refusal would throw away everything typed to get here, which is the one
+  // thing the person cannot recover.
+  let invalid = $state(null); // { field, message }
+
+  const clearIf = (field) => () => {
+    if (invalid?.field === field) invalid = null;
+  };
+
   async function create() {
+    addLabel(); // whatever is still in the box was meant to be one
+    invalid = null;
+    if (!title.trim()) {
+      invalid = { field: "title", message: "An item needs a title." };
+      return;
+    }
     const body = {
       kind: chosen, teamId: team.id, title, description,
       priority: +priority, plannedEnd: plannedEnd || "", accepted,
+      assigneeId: +assigneeId || 0, labels,
     };
-    if (chosen === "bucket") body.icon = icon;
+    if (chosen === "bucket") { body.icon = icon; body.color = color; }
     else if (bucketId) body.bucketId = +bucketId;
-    try { close(await api.createItem(body)); } catch (err) { close({ error: err }); }
+    try {
+      close(await api.createItem(body));
+    } catch (err) {
+      // The API names the offending field; without one the message still has
+      // to land somewhere, so it lands under the footer.
+      invalid = { field: err.field || "", message: err.message };
+    }
   }
 </script>
+
+<!-- The complaint sits under the field it is about, and clears as that field is
+     corrected. -->
+{#snippet complaint(field)}
+  {#if invalid?.field === field}<span class="field-error">{invalid.message}</span>{/if}
+{/snippet}
 
 <Dialog title="New item in {team.name}" {close}>
   {#snippet body()}
@@ -46,7 +89,9 @@
     </div>
     <label class="field">
       <span class="field-label">Title</span>
-      <input class="input" placeholder="What needs doing?" bind:value={title} />
+      <input class="input" class:error={invalid?.field === "title"} placeholder="What needs doing?"
+             bind:value={title} oninput={clearIf("title")} />
+      {@render complaint("title")}
     </label>
     <label class="field">
       <span class="field-label">Description</span>
@@ -55,15 +100,28 @@
     <div style="display:flex;gap:12px">
       <label class="field">
         <span class="field-label">Priority</span>
-        <select class="input" bind:value={priority}>
+        <select class="input" class:error={invalid?.field === "priority"} bind:value={priority}
+                onchange={clearIf("priority")}>
           {#each [1, 2, 3, 4] as p}<option value={p}>{PRIORITY[p].name}</option>{/each}
         </select>
+        {@render complaint("priority")}
       </label>
       <label class="field">
         <span class="field-label">Planned end</span>
-        <input class="input" type="date" bind:value={plannedEnd} />
+        <input class="input" class:error={invalid?.field === "plannedEnd"} type="date"
+               bind:value={plannedEnd} oninput={clearIf("plannedEnd")} />
+        {@render complaint("plannedEnd")}
       </label>
     </div>
+    <label class="field">
+      <!-- A bucket's assignee is its owner: the person accountable for the
+           milestone (SPEC.md §6.2). -->
+      <span class="field-label">{chosen === "bucket" ? "Owner" : "Assignee"}</span>
+      <select class="input" bind:value={assigneeId}>
+        <option value="">Unassigned</option>
+        {#each app.users as u}<option value={u.id}>{u.username}</option>{/each}
+      </select>
+    </label>
     {#if chosen === "bucket"}
       <div class="field">
         <span class="field-label">Icon</span>
@@ -75,16 +133,56 @@
           {/each}
         </div>
         <span class="explain">One of the eight. It stands in for the bucket wherever it is named.</span>
+        {@render complaint("icon")}
+      </div>
+      <div class="field">
+        <span class="field-label">Colour</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="swatch" class:on={!color} title="No colour" aria-label="No colour"
+                  onclick={() => (color = "")}></button>
+          {#each Object.entries(BUCKET_COLOURS) as [name, hex]}
+            <button class="swatch" class:on={color === name} title={name} aria-label={name}
+                    style="background:{hex};border-color:{hex}"
+                    onclick={() => (color = name)}></button>
+          {/each}
+        </div>
+        <span class="explain">Optional. Its tickets wear it on the board.</span>
+        {@render complaint("color")}
       </div>
     {:else}
       <label class="field">
         <span class="field-label">Bucket</span>
-        <select class="input" bind:value={bucketId}>
+        <select class="input" class:error={invalid?.field === "bucketId"} bind:value={bucketId}
+                onchange={clearIf("bucketId")}>
           <option value="">None</option>
           {#each buckets as b}<option value={b.id}>{b.identifier}  {b.title}</option>{/each}
         </select>
+        {@render complaint("bucketId")}
       </label>
     {/if}
+    <div class="field">
+      <span class="field-label">Labels</span>
+      {#if labels.length}
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          {#each labels as name}
+            <span class="label-chip">
+              <span>{name}</span>
+              <button class="btn quiet" style="padding:0;height:auto;border:0"
+                      aria-label="Remove {name}"
+                      onclick={() => labels.splice(labels.indexOf(name), 1)}>
+                <Icon body={NAV.close} size={9} />
+              </button>
+            </span>
+          {/each}
+        </div>
+      {/if}
+      <input class="input" list="label-names" placeholder="Type to create" bind:value={labelDraft}
+             aria-label="Labels"
+             onkeydown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLabel(); } }} />
+      <datalist id="label-names">
+        {#each app.labels as l}<option value={l.name}></option>{/each}
+      </datalist>
+    </div>
     <label style="display:flex;gap:8px;align-items:center">
       <input class="check" type="checkbox" bind:checked={accepted} />
       <span>Mark as accepted</span>
@@ -92,7 +190,11 @@
     </label>
   {/snippet}
   {#snippet footer()}
-    <span class="consequence">{chosen === "bucket" ? "A new bucket" : "A new ticket"}</span>
+    {#if invalid && !invalid.field}
+      <span class="field-error">{invalid.message}</span>
+    {:else}
+      <span class="consequence">{chosen === "bucket" ? "A new bucket" : "A new ticket"}</span>
+    {/if}
     <div class="actions">
       <button class="btn" onclick={() => close(undefined)}>Cancel</button>
       <button class="btn primary" onclick={create}>Create</button>
