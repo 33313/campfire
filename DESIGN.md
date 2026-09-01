@@ -1,7 +1,9 @@
 # Campfire — Design Handoff
 
 **For:** whoever builds the client.
-**Status:** matches the canvas as published on 2026-08-30.
+**Status:** the source of truth. Reconciled with the built client on 2026-09-01. Where an artboard
+or the published canvas shows something else, this file wins — the drawings came first and are not
+kept in step.
 
 ## Where the design files are
 
@@ -19,12 +21,14 @@ file in there.
 | File | What it settles | Authority |
 |---|---|---|
 | `SPEC.md` *(this repo)* | What the application does and does not do; data model; API and storage rules. | Behaviour. If this document and `SPEC.md` disagree, `SPEC.md` wins. |
-| This file *(this repo)* | Tokens, components, and the rules the mockups are expressing. | Appearance. |
-| `*.dc.html` *(design dir)* | Pixel reference, one file per screen. | The tiebreaker for anything this document does not say. |
+| This file *(this repo)* | Tokens, components, and the rules the interface is expressing. | Appearance. Nothing overrules it. |
+| `*.dc.html` *(design dir)* | The original drawings, one file per screen. | Reference for anything this document does not say. Superseded wherever it disagrees. |
 | `THEME.md` *(design dir)* | The desktop theme the palette was taken from. | Background only. Not a dependency. |
 
 `kanban-ui.html` in the design directory is the published canvas — the same artboards wrapped in a
-viewer. Read the `*.dc.html` files directly; the bundle exists to be looked at, not built from.
+viewer, and the artifact published from it is a snapshot of that bundle. Both carry the standing of
+the artboards, no more: they are a picture of the intent before the client existed. Read the
+`*.dc.html` files directly; the bundle exists to be looked at, not built from.
 
 ### How to read an artboard
 
@@ -112,17 +116,29 @@ Three families, each with one job.
 | Screen header | 56px |
 | Filter / scope bar | 46px |
 | Right-hand detail aside (the preview) | 320px fixed |
-| Board column | 280px fixed, 12px gutter |
+| Item detail column | 860px maximum, centred in what is left; 20px 24px padding |
+| Board column | 280px minimum, 12px gutter. Columns share spare width above that, capped at 420px, and scroll sideways below it |
 | Card | 10px 11px padding, 9px internal gap, 8px between cards |
 | Table row | 42px; header row 34px; 12px column gap; 14px side padding |
-| Button | 30px tall, 0 12px padding (primary 0 14px) |
+| Button | 30px tall, 0 12px padding (primary 0 14px). 28px in a screen header or beside a field, where it sits with 28px inputs; only a dialog footer keeps 30px |
 | Chip / small control | 26px tall, 0 8–10px |
 | Input | 30–34px tall, 0 11px |
 | Avatar | 20px in lists and cards, 24px in the sidebar, 26px on a comment |
+| Settings rail | 190px fixed |
 | Icon | 15px nav, 13px inline with text, 11px on a card, 9–10px as a marker |
 
 Icon strokes: 1.4 for outline glyphs, 1.5–1.8 for markers, 2 for priority and check marks.
 `stroke-linecap="square"`, `stroke-linejoin="miter"` — round caps are off-language.
+
+These are the numbers for a ~1440px viewport, and they are not re-specified per size. A display that
+wants them larger is normally the desktop's job: OS scaling reports a smaller viewport in CSS
+pixels, and the geometry above then lands at the size it was drawn at.
+
+A very large panel run with no OS scaling at all is the case the desktop does not cover, and there
+the whole interface is zoomed rather than re-specified — `zoom: 1.25 / 1.5 / 2` at 2400 / 3000 /
+3800px wide. Each also requires the height, so an ultrawide is not scaled into a letterbox, and each
+requires `resolution <= 1x`, so this never stacks on top of a desktop that is already scaling. Zoom
+reflows; a transform would not.
 
 ---
 
@@ -180,6 +196,26 @@ A monochrome set (`muted-soft`) is the default. A colour set exists — `check` 
 `#a3a961`, `flag` `#7d94a8`. A team picks which rendering its surfaces use (`SPEC.md` §6.2), so both
 ship. Monochrome is the default and the one every artboard here draws.
 
+### A bucket's colour
+
+A bucket may also carry one colour, on the same terms as the icon: recognition only, nothing reads
+it. The set is fixed at seven and there is no default member — a bucket without a colour is drawn
+exactly as it always was.
+
+| Key | Hex |
+|---|---|
+| `amber` | `#d9a05b` |
+| `rust` | `#c4675c` |
+| `olive` | `#a3a961` |
+| `steel` | `#7d94a8` |
+| `mauve` | `#b087a3` |
+| `sage` | `#8aa8a0` |
+| `stone` | `#8f8578` |
+
+Where a bucket has one, its colour beats both the team's rendering and the icon's own default: it
+was chosen for this bucket. It tints the bucket chip on a card — border and text in the colour, a
+13% mix of it as the fill — and the bucket's icon wherever that is drawn.
+
 The **pail** glyph (`M3.2 5.2h9.6l-1 8a1.1 1.1 0 0 1-1.1 1H5.3a1.1 1.1 0 0 1-1.1-1Z` +
 `M5.5 5.2a2.5 2.5 0 0 1 5 0`) is *not* a bucket icon. It is the sidebar's Buckets section icon and
 nothing else.
@@ -199,9 +235,17 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | **Toggle** | 30×17px. On: `accent-tint` field, 1px accent, 11px accent knob, right. Off: `sunk`, 1px `border`, `ghost` knob, left. |
 | **Label chip** | 1px `border`, `muted-soft`, 3px 8px. Not clickable, not coloured, never on a card. |
 | **Filter chip** | 26px, 1px `border`, `muted`, chevron. Active chip carries the accent treatment and an × to clear. |
-| **Avatar** | square. `border` fill, `muted-soft` mono initials. Unassigned is a 1px dashed `border-strong` square of the same size — never a person glyph. |
+| **Avatar** | square. A person's picture where they have one, cropped square from the centre and `object-fit: cover`; otherwise `border` fill with `muted-soft` mono initials. Unassigned is a 1px dashed `border-strong` square of the same size — never a person glyph. |
 | **State pip** | 5px circle. `ghost` for a plain state, `ok` for the final state, `alert` for rejected. |
-| **Card** | `surface`, 1px `border`. Selected: 1px `accent`, `bright` title. Contents, in order: bucket line (icon + name, mono caps, omitted when there is no bucket) → title → footer (priority glyph, identifier, avatar pushed right). Five fields, no sixth. |
+| **Card** | `surface`, 1px `border`. Selected: 1px `accent`, `bright` title. Focused: 1px `accent` and a 2px inset accent left edge. Dragging: `opacity: 0.4`. Contents: title → footer (priority glyph, identifier, bucket chip, avatar pushed right). Five fields, no sixth. |
+| **Bucket chip** *(on a card)* | icon + name, mono 9.5 caps, 1px `border`, `dim`, in the card's foot rather than above the title. Wears the bucket's colour where it has one (§4). Omitted when there is no bucket. It truncates before the identifier does: the identifier never wraps or shortens. |
+| **Bare field** | a property typed into where it is drawn. No fill and no border until the pointer is on it (then 1px `border`), 1px `accent` on `sunk` when focused, `field-sizing: content`. It keeps the type of the thing it stands for — a title stays a title, a description stays serif prose at the 66ch measure. Save (floppy) and cancel are two 24px square buttons under the field, appearing only once it has actually changed. |
+| **Aside control** | the preview's version of the same idea for a property that is picked rather than typed: a 34px row, transparent until hover, then `sunk` + 1px `border`. May be an anchor — the bucket row follows through to the bucket — without taking the link colour. |
+| **Swatch** | 20px square, 1px `border-strong`, filled with the colour itself. Selected: a `surface` inset ring inside a `bright` outline. The empty one is "no colour". |
+| **Search box** | 250px, 28px tall, magnifier inside the border on the left. Searches on Enter. |
+| **State badge** | the work state named in a bordered mono-caps box, `muted`. Terminal states carry their pip and take `ok` / `alert` text. |
+| **Live indicator** | the live pip (6px, `ok`) and the stream status as an eyebrow. |
+| **Toast** | bottom right, `surface`, 1px `border`, max 420px; 1px `alert` when it reports a failure. Stacks upward. |
 | **Board column** | header (state pip, name in mono caps, count in a bordered box, right) over a `sunk` body. Drop target is a 74px dashed `border` box on `accent-tint-weak`. |
 | **Table row** | 42px, `rule-faint` underline. Focused row: `accent-tint` + 2px accent left border. Selected row: `accent-tint-weak`. Deprioritised row: `opacity: 0.32`. |
 | **Selection bar** | appears above a table or board when a selection is non-empty. Count in accent mono caps, then the actions of §6, then Clear on the right. |
@@ -216,16 +260,20 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | Artboard | Screen | Notes for the build |
 |---|---|---|
 | `SignIn.dc.html` | Sign in | Username + password, optional TOTP step (`Dialogs.dc.html`). |
-| `Main.dc.html` | Board | Four columns shown of six states. Show-buckets toggle in the filter bar. |
-| `Backlog.dc.html` | Backlog | Table + detail aside. Carries the selection bar and the checkbox column. |
+| `Main.dc.html` | Board | One column per work state, less the default and rejected ones; the header says "4 of 6 states". Search box in the header, show-buckets toggle and filter chips in the filter bar. A plain click on a card previews it in the aside; the identifier in the preview opens it. |
+| `Backlog.dc.html` | Backlog | Table + preview aside, same preview as the board. Carries the selection bar and the checkbox column. |
 | `ItemDetail.dc.html` | Item detail | Header actions: Copy link · **Clone** · **Split** · Reject · Edit (Save · Cancel while open). Relations, comments/history tabs. The fields are a grid in the one column: the artboard's field aside is drawn beside the board's sidebar, and two asides on one screen read as neither. |
 | `BucketIndex.dc.html` | Bucket index | Cards with progress bar, per-bucket icon, scope switch (participation / owned / instance). |
-| `BucketDetail.dc.html` | Bucket detail | Contents grouped by owning team, per-row remove ×. `Icon` is a field here. |
+| `BucketDetail.dc.html` | Bucket detail | Contents grouped by owning team, per-row remove ×. `Icon` and `Colour` are fields here. The screen is the item detail screen — a bucket and a ticket are one namespace. |
 | `Log.dc.html` | Log | Keyset paging: the footer says "load older from 41192", never a page number. Agent actions carry a small accent glyph beside the actor. |
-| `TeamSettings.dc.html` | Team settings | Work states, Members, Identity, Archive. **No ticket types tab.** |
+| `TeamSettings.dc.html` | Team settings | Work states, Members, Identity, Archive. Identity carries the icon-rendering switch (mono / colour). **No ticket types tab.** |
 | `Admin.dc.html` | Administration | Users, backup/restore, agent access. |
 | `Components.dc.html` | Foundations | The token and component reference this document describes. |
+| *(none)* | Account | Your own account: picture, password, second factor, and the tokens that act as you. Reached from the identity block at the foot of the sidebar. Never drawn. |
 | `Dialogs.dc.html` | Dialogs and states | Create item · Reject · New bucket · Split · Bulk move · Bulk edit · delete confirms · second factor · stream banners. |
+
+The sidebar also lists the saved views of `SPEC.md` §9.3 under a `Views` section heading, between
+the main navigation and team settings.
 
 `canvas.json` in the design directory holds the layout and the annotations; the annotations are
 design intent in prose and are worth reading once.
@@ -237,7 +285,8 @@ design intent in prose and are worth reading once.
 Behaviour is in `SPEC.md` §6.5. What the design fixes:
 
 - **Selection** lives on the board and the backlog. A checkbox column leads each row; the header
-  checkbox is select-all and goes indeterminate on a partial selection.
+  checkbox is select-all and goes indeterminate on a partial selection. A board card has no
+  checkbox: ⌘/Ctrl-click picks it into the selection, where a plain click previews it.
 - **Selection bar** offers, in this order: `Move to…` (primary), `Reject…`, then `Assignee`,
   `Priority`, `Bucket`, then `Clear`. All five are v1.
 - **Bulk edit is one field at a time.** The dialog has a field switcher across the top and a value
@@ -252,10 +301,13 @@ Behaviour is in `SPEC.md` §6.5. What the design fixes:
 Ask rather than invent:
 
 - Light mode. There is none, and the palette is not built for one.
-- Responsive and mobile layouts. Every artboard is 1440 wide with fixed rails.
+- Mobile and narrow layouts. The rails are fixed; the board columns flex and an unscaled large panel
+  is zoomed (§1), and that is the whole of it. Narrower than the rails allow, the interface scrolls
+  rather than reflows.
 - Motion. No transition, easing or duration is specified anywhere.
-- Empty states beyond the board's empty column and the log's end-of-list.
-- Error and validation copy beyond the one input error state.
-- Keyboard shortcuts and focus order.
-- The control that picks the icon rendering. The setting is specified and both sets are drawn (§4),
-  but no Team settings artboard shows the switch.
+- Empty states beyond the board's empty column, the log's end-of-list, and the one-line `empty-note`
+  a list falls back to.
+- Error and validation copy beyond the input error state, the per-field message under a refused
+  field, and the failure toast.
+- Keyboard shortcuts and focus order. Escape closes a dialog and reverts a bare field; Enter submits
+  a search or a label; nothing else is bound.

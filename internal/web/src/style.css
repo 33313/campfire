@@ -603,11 +603,16 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 /* The geometry above is the fixed pixel geometry of DESIGN.md, drawn for a
  * ~1440px viewport. On a 4K panel run without OS scaling that leaves the whole
  * application a postage stamp in the corner, so scale it rather than
- * re-specifying every number: zoom reflows, where a transform would not. The
- * height condition keeps an ultrawide from being scaled into a letterbox. */
-@media (min-width: 2400px) and (min-height: 1000px) { :root { zoom: 1.25; } }
-@media (min-width: 3000px) and (min-height: 1200px) { :root { zoom: 1.5; } }
-@media (min-width: 3800px) and (min-height: 1500px) { :root { zoom: 2; } }
+ * re-specifying every number: zoom reflows, where a transform would not.
+ *
+ * The resolution condition is what keeps this from stacking on top of the
+ * desktop's own scaling: at 150% the viewport is already reported in scaled
+ * CSS pixels, and zooming that again is 187% of the size anybody asked for.
+ * These fire only when the desktop is scaling nothing at all. The height
+ * condition keeps an ultrawide from being scaled into a letterbox. */
+@media (resolution <= 1x) and (min-width: 2400px) and (min-height: 1000px) { :root { zoom: 1.25; } }
+@media (resolution <= 1x) and (min-width: 3000px) and (min-height: 1200px) { :root { zoom: 1.5; } }
+@media (resolution <= 1x) and (min-width: 3800px) and (min-height: 1500px) { :root { zoom: 2; } }
 
 /* A card is an anchor to its item, so the link colour and underline that
  * every other anchor carries are turned off on it. */
