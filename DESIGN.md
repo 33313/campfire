@@ -136,9 +136,18 @@ pixels, and the geometry above then lands at the size it was drawn at.
 
 A very large panel run with no OS scaling at all is the case the desktop does not cover, and there
 the whole interface is zoomed rather than re-specified — `zoom: 1.25 / 1.5 / 2` at 2400 / 3000 /
-3800px wide. Each also requires the height, so an ultrawide is not scaled into a letterbox, and each
-requires `resolution <= 1x`, so this never stacks on top of a desktop that is already scaling. Zoom
-reflows; a transform would not.
+3800px wide. Each step also requires a height — 1000 / 1500 / 1500 — because height is what sorts a
+dense panel from a merely wide one: every 1440p panel is 1440 tall however wide it gets, and a real
+4K is 2160. And each requires `resolution <= 1x`, so none of it stacks on top of a desktop that is
+already scaling. Zoom reflows; a transform would not.
+
+| Panel | zoom | Layout gets |
+|---|---|---|
+| 1920×1080 | 1 | 1920×1080 |
+| 2560×1440 | 1.25 | 2048×1152 |
+| 3440×1440 *(ultrawide)* | 1.25 | 2752×1152 |
+| 3840×2160 *(4K)* | 2 | 1920×1080 |
+| 5120×2160 *(5K2K)* | 2 | 2560×1080 |
 
 ---
 
