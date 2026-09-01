@@ -214,5 +214,5 @@ states, icon paths — and says nothing about behaviour. Where they appear to di
 wins on behaviour and `DESIGN.md` on appearance.
 
 The mockups `DESIGN.md` describes are **not in this repository**: they live in `~/dev/.design/kanban/`
-as one `.dc.html` file per screen plus `canvas.json`. `SPEC.md` and `DESIGN.md` are symlinked into
-that directory, so editing either from either side edits the copy tracked here.
+as one `.dc.html` file per screen plus `canvas.json`. They are the drawings that came first, and
+`DESIGN.md` supersedes them wherever the two disagree.
