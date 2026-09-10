@@ -423,3 +423,18 @@ test("a comment shows its author's picture, not just their initials", async ({ p
   await page.goto("/account");
   await page.getByRole("button", { name: "Remove" }).click();
 });
+
+test("the account page is a column at a measure, not a stretched page", async ({ page }) => {
+  await signIn(page);
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto("/account");
+
+  const box = await page.locator(".body").evaluate((el) => {
+    const own = el.getBoundingClientRect();
+    const room = el.parentElement.getBoundingClientRect();
+    return { width: own.width, left: own.left - room.left, right: room.right - own.right };
+  });
+  expect(box.width).toBeLessThan(900);
+  // Centred in whatever space is left, rather than pinned to one side.
+  expect(Math.abs(box.left - box.right)).toBeLessThan(2);
+});
