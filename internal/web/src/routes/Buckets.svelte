@@ -169,6 +169,8 @@
         {#each buckets as b (b.id)}
           {@const percent = b.progress.total
             ? Math.round((b.progress.done / b.progress.total) * 100) : 0}
+          {@const started = b.progress.total
+            ? Math.round((b.progress.accepted / b.progress.total) * 100) : 0}
           <a class="bucket-card" href="/{b.identifier}">
             <div style="display:flex;align-items:center;gap:8px">
               <BucketIcon name={b.icon} size={13} color={b.color}
@@ -182,7 +184,10 @@
               <span class="of">/ {b.progress.total}</span>
               <span class="ident" style="margin-left:auto">{percent}%</span>
             </div>
-            <div class="progress"><i style="width:{percent}%"></i></div>
+            <div class="progress">
+              <i style="width:{percent}%"></i>
+              <i class="accepted" style="width:{started}%"></i>
+            </div>
             <div style="display:flex;align-items:center;gap:8px">
               <StateBadge name={b.stateName} role={b.stateRole} />
               <span class="ident">{b.plannedEnd ? whenDay(b.plannedEnd) : "no date"}</span>

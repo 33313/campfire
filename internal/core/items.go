@@ -195,8 +195,12 @@ type Item struct {
 }
 
 type Progress struct {
-	Done  int `json:"done"`
-	Total int `json:"total"`
+	Done int `json:"done"`
+	// Accepted is what has been picked up and is not finished: accepted or
+	// anywhere past it, short of a terminal state. Work in the default state
+	// has not been started and does not count.
+	Accepted int `json:"accepted"`
+	Total    int `json:"total"`
 }
 
 func (s *Service) loadItem(ctx context.Context, q store.Q, id int64) (*Item, error) {

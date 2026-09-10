@@ -106,6 +106,8 @@
   let isBucket = $derived(item?.kind === "bucket");
   let progress = $derived(item?.progress || { done: 0, total: 0 });
   let percent = $derived(progress.total ? Math.round((progress.done / progress.total) * 100) : 0);
+  let started = $derived(progress.total
+    ? Math.round(((progress.accepted || 0) / progress.total) * 100) : 0);
 
   async function clone() {
     try { navigate(`/${(await api.cloneItem(item.id)).identifier}`); } catch (err) { failure(err); }
@@ -494,9 +496,16 @@
             <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">
               <span class="big">{progress.done}</span>
               <span class="of">/ {progress.total}</span>
-              <span class="ident" style="margin-left:auto">{progress.total - progress.done} open</span>
+              <!-- Open says how much is left; accepted says how much of that
+                   anyone has actually picked up. -->
+              <span class="ident" style="margin-left:auto">
+                {progress.total - progress.done} open, {progress.accepted || 0} accepted
+              </span>
             </div>
-            <div class="progress"><i style="width:{percent}%"></i></div>
+            <div class="progress">
+              <i style="width:{percent}%"></i>
+              <i class="accepted" style="width:{started}%"></i>
+            </div>
             <div style="margin-top:8px">
               <span class="ident">{plural((contents || []).length, "team")}</span>
             </div>

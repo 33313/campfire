@@ -468,3 +468,32 @@ test("switching team is a drop-down, and the name follows the switch", async ({ 
   await expect(page.locator(".team-switch")).toContainText("Solstice");
   await expect(page.locator(".team-switch .code-badge")).toHaveText("SOL");
 });
+
+test("a bucket's progress separates what is done from what is under way", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/SOL-2");
+
+  // SOL-1 is in this bucket, in an intermediate state: not in the backlog, not
+  // finished. Open counts what is left; accepted counts what someone holds.
+  const block = page.locator(".progress-block");
+  await expect(block).toContainText("1 open, 1 accepted");
+
+  const widths = () => page.locator(".progress > i").evaluateAll(
+    (els) => els.map((e) => e.getBoundingClientRect().width));
+  const [done, underway] = await widths();
+  expect(done).toBe(0);
+  expect(underway).toBeGreaterThan(0);
+
+  // Finishing it moves the width from the one bar to the other.
+  await page.goto("/SOL-1");
+  await page.locator(".aside-control").first().click();
+  const move = page.getByRole("dialog");
+  await move.getByRole("button", { name: "Done" }).click();
+  await move.getByRole("button", { name: "Move", exact: true }).click();
+
+  await page.goto("/SOL-2");
+  await expect(block).toContainText("0 open, 0 accepted");
+  const [doneNow, underwayNow] = await widths();
+  expect(doneNow).toBeGreaterThan(0);
+  expect(underwayNow).toBe(0);
+});
