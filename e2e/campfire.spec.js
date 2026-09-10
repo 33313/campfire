@@ -438,3 +438,33 @@ test("the account page is a column at a measure, not a stretched page", async ({
   // Centred in whatever space is left, rather than pinned to one side.
   expect(Math.abs(box.left - box.right)).toBeLessThan(2);
 });
+
+test("switching team is a drop-down, and the name follows the switch", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+
+  // A drop-down under the name it changes, not a modal over the screen.
+  await page.locator(".team-switch").click();
+  await expect(page.locator(".team-list")).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // Escape puts it away again, as a drop-down does.
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".team-list")).toBeHidden();
+
+  await page.locator(".team-switch").click();
+  await page.locator(".team-option", { hasText: "New team" }).click();
+  const form = page.getByRole("dialog");
+  await form.getByLabel("Name").fill("Terra Nova");
+  await form.getByLabel("Short code").fill("TERRA");
+  await form.getByRole("button", { name: "Create" }).click();
+  await expect(page.locator(".team-switch")).toContainText("Terra Nova");
+
+  // The switch changed the board and left the selector naming the team it
+  // switched away from. It names the team you are on.
+  await page.locator(".team-switch").click();
+  await page.locator(".team-option", { hasText: "Solstice" }).click();
+  await expect(page).toHaveURL(/\/t\/1\/board$/);
+  await expect(page.locator(".team-switch")).toContainText("Solstice");
+  await expect(page.locator(".team-switch .code-badge")).toHaveText("SOL");
+});

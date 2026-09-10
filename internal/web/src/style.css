@@ -108,6 +108,21 @@ button, input, select, textarea { font: inherit; color: inherit; }
   width: 100%; text-align: left;
 }
 .team-switch:hover { border-color: var(--border-strong); }
+/* The panel hangs under the name it changes, over whatever is below it. */
+.team-menu { position: relative; }
+.team-switch.on { border-color: var(--border-strong); }
+.team-list {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
+  background: var(--surface); border: 1px solid var(--border-strong);
+  display: flex; flex-direction: column; padding: 3px;
+}
+.team-option {
+  display: flex; align-items: center; gap: 9px; padding: 7px 6px; width: 100%;
+  background: none; border: 0; text-align: left; cursor: pointer; color: var(--muted);
+}
+.team-option:hover { background: var(--sunk); color: var(--text); }
+.team-option.on { color: var(--accent); }
+.team-option .note { font-family: var(--mono); font-size: 9.5px; color: var(--faint); }
 .code-badge {
   display: flex; align-items: center; justify-content: center;
   width: 24px; height: 22px; flex: 0 0 24px; background: var(--border);

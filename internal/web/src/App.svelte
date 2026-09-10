@@ -62,6 +62,22 @@
 
   boot();
 
+  // The team in context follows the address. Everything per-team the sidebar
+  // draws — the name in the switcher, the views, the backlog count — is read
+  // from app.team, which otherwise only ever held the team the session booted
+  // on, so switching changed the board and nothing around it.
+  //
+  // The team has to be one we know of: reloading a team the instance does not
+  // have leaves app.team null, and the effect would ask again forever. Asking
+  // only for a known team ends it, because loading that team is what makes the
+  // condition false.
+  $effect(() => {
+    const id = +(route.path.match(/^\/t\/(\d+)\//)?.[1] || 0);
+    if (id && app.user && id !== app.team?.id && app.allTeams.some((t) => t.id === id)) {
+      reloadContext(id);
+    }
+  });
+
   // The one address that is a redirect: land on the first team's board, or on
   // the bucket index when there is no team yet.
   $effect(() => {
