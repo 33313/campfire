@@ -34,6 +34,7 @@ type User struct {
 	Username string `json:"username"`
 	Email    string `json:"email,omitempty"`
 	Avatar   string `json:"avatar,omitempty"`
+	Bio      string `json:"bio,omitempty"`
 	IsAdmin  bool   `json:"isAdmin"`
 	HasTOTP  bool   `json:"hasTotp"`
 	// Teams and LastSeenAt are filled by ListUsers for the administration
@@ -43,8 +44,8 @@ type User struct {
 }
 
 func publicUser(u store.User) *User {
-	return &User{ID: u.ID, Username: u.Username, Email: u.Email,
-		Avatar: u.Avatar, IsAdmin: u.IsAdmin, HasTOTP: u.TOTPSecret != ""}
+	return &User{ID: u.ID, Username: u.Username, Email: u.Email, Avatar: u.Avatar,
+		Bio: u.Bio, IsAdmin: u.IsAdmin, HasTOTP: u.TOTPSecret != ""}
 }
 
 // SignIn verifies a password and, if the account has one, a TOTP code.

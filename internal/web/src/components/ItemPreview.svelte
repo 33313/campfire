@@ -214,7 +214,7 @@
         <div class="aside-comment">
           <div class="comment-meta">
             <Avatar name={c.authorName} />
-            <b>{c.authorName}</b>
+            <b><a href="/users/{c.authorName}">{c.authorName}</a></b>
             <time>{when(c.createdAt)}</time>
           </div>
           <div class="comment-body">{c.body}</div>

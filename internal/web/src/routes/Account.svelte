@@ -45,9 +45,28 @@
   const AVATAR = 96;
 
   async function saveAvatar(dataUrl) {
-    await api.updateProfile(me.email || "", dataUrl);
+    await api.updateProfile(me.email || "", dataUrl, me.bio || "");
     await reloadContext(app.team?.id); // the user list is where avatars are read from
   }
+
+  // Email and bio are one write: the endpoint takes the profile as a whole, so
+  // saving either without the other would clear it.
+  const BIO = 1000;
+  let email = $state("");
+  let bio = $state("");
+  let profileLoaded = null;
+  $effect(() => {
+    if (me && profileLoaded !== me.id) {
+      profileLoaded = me.id;
+      email = me.email || "";
+      bio = me.bio || "";
+    }
+  });
+  const saveProfile = () =>
+    guard(async () => {
+      await api.updateProfile(email, me.avatar || "", bio);
+      toast("Saved");
+    });
 
   function pickPicture(e) {
     const file = e.currentTarget.files?.[0];
@@ -125,6 +144,7 @@
   <ScreenHeader title={app.user.username}
                 sub={app.user.isAdmin ? "Instance administrator" : "Member"}>
     {#snippet right()}
+      <a class="btn small" href="/users/{app.user.username}">Your profile</a>
       <button class="btn small" onclick={async () => { await api.signOut(); location.href = "/"; }}>
         Sign out
       </button>
@@ -146,6 +166,28 @@
           Scaled to a {AVATAR}px square and stored with your account. Nothing is fetched from
           anywhere else to draw it.
         </p>
+      {/snippet}
+    </Section>
+
+    <Section title="About you" sub="on your profile">
+      {#snippet children()}
+        <p class="explain">
+          Everyone signed in can read this, as they can read every item and
+          comment in the instance. It is on <a href="/users/{app.user.username}">your profile</a>.
+        </p>
+        <label class="field" style="margin-top:10px">
+          <span class="field-label">Email</span>
+          <input class="input" type="email" bind:value={email} />
+        </label>
+        <label class="field" style="max-width:none">
+          <span class="field-label">Bio</span>
+          <textarea class="input" rows="4" style="width:100%;max-width:62ch"
+                    placeholder="How to reach you, what you work on — anything you like."
+                    bind:value={bio}></textarea>
+        </label>
+        <p class="explain">{bio.length} / {BIO}</p>
+        <button class="btn primary" style="margin-top:10px;align-self:flex-start"
+                disabled={bio.length > BIO} onclick={saveProfile}>Save</button>
       {/snippet}
     </Section>
 

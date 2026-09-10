@@ -244,7 +244,7 @@ func TestProfilePictureIsAnInlineImage(t *testing.T) {
 	// A 1x1 PNG.
 	const png = "data:image/png;base64," +
 		"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
-	if err := f.UpdateProfile(f.ctx, f.admin, "root@example.invalid", png); err != nil {
+	if err := f.UpdateProfile(f.ctx, f.admin, "root@example.invalid", png, ""); err != nil {
 		t.Fatal(err)
 	}
 	users, err := f.ListUsers(f.ctx, f.admin, 0, 10)
@@ -261,7 +261,7 @@ func TestProfilePictureIsAnInlineImage(t *testing.T) {
 		"data:image/png;base64,not base64 at all !!!", // unreadable
 		"data:image/png;base64," + strings.Repeat("A", maxAvatar),
 	} {
-		if err := f.UpdateProfile(f.ctx, f.admin, "", bad); err == nil {
+		if err := f.UpdateProfile(f.ctx, f.admin, "", bad, ""); err == nil {
 			t.Fatalf("%.40q was accepted", bad)
 		} else {
 			requireCode(t, err, CodeInvalid)
@@ -269,7 +269,78 @@ func TestProfilePictureIsAnInlineImage(t *testing.T) {
 	}
 
 	// Clearing it is how a picture is removed.
-	if err := f.UpdateProfile(f.ctx, f.admin, "", ""); err != nil {
+	if err := f.UpdateProfile(f.ctx, f.admin, "", "", ""); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// A profile is a user as the rest of the instance sees them (DEV-19). Reading
+// is instance-wide (SPEC.md §3.2), so any authenticated user may read one —
+// but the activity it shows is still bounded by §10: an instance-level event
+// belongs to the global log, which is an administrator's to read.
+func TestProfileIsReadableByAnyoneAndScopesActivityByRole(t *testing.T) {
+	w := newWorld(t)
+
+	if err := w.UpdateProfile(w.ctx, w.marta, "marta@example.invalid", "",
+		"  Fixes boilers. Find me in the workshop.  "); err != nil {
+		t.Fatal(err)
+	}
+	w.ticket(w.sol, w.marta, "a ticket marta reported")
+
+	// sam is in another team and is not an administrator, and still sees her.
+	p, err := w.Profile(w.ctx, w.sam, "MARTA") // the lookup folds case
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.User.Username != "marta" {
+		t.Fatalf("username %q", p.User.Username)
+	}
+	if p.User.Bio != "Fixes boilers. Find me in the workshop." {
+		t.Fatalf("bio %q is not trimmed prose", p.User.Bio)
+	}
+	if p.User.Email != "marta@example.invalid" {
+		t.Fatalf("email %q", p.User.Email)
+	}
+	if len(p.User.Teams) != 1 || p.User.Teams[0].ShortCode != "SOL" {
+		t.Fatalf("teams %+v", p.User.Teams)
+	}
+	if len(p.Activity) == 0 {
+		t.Fatal("no activity for a user who has just reported a ticket")
+	}
+	for _, e := range p.Activity {
+		if e.TeamID == 0 {
+			t.Fatalf("event %d has no team and is instance-level; a non-administrator "+
+				"must not read it here", e.Seq)
+		}
+	}
+
+	// The administrator sees the instance-level events too — creating marta's
+	// own account was one of them.
+	full, err := w.Profile(w.ctx, w.admin, "marta")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(full.Activity) <= len(p.Activity) {
+		t.Fatalf("an administrator saw %d events, a member saw %d; the instance-level "+
+			"ones are missing", len(full.Activity), len(p.Activity))
+	}
+
+	if _, err := w.Profile(w.ctx, w.sam, "nobody"); err == nil {
+		t.Fatal("a profile was returned for an account that does not exist")
+	} else {
+		requireCode(t, err, CodeNotFound)
+	}
+}
+
+// A bio is a paragraph, not a document.
+func TestBioIsBounded(t *testing.T) {
+	f := newFixture(t)
+	if err := f.UpdateProfile(f.ctx, f.admin, "", "", strings.Repeat("a", maxBio)); err != nil {
+		t.Fatal(err)
+	}
+	err := f.UpdateProfile(f.ctx, f.admin, "", "", strings.Repeat("a", maxBio+1))
+	if err == nil {
+		t.Fatal("a bio over the limit was accepted")
+	}
+	requireCode(t, err, CodeInvalid)
 }

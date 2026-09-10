@@ -143,6 +143,22 @@ paths:
         "200": { $ref: "#/components/responses/Ok" }
         "403": { $ref: "#/components/responses/Error" }
 
+  /api/users/{username}/profile:
+    get:
+      operationId: getProfile
+      summary: One user as the rest of the instance sees them, with recent activity
+      # The client's profile page. An agent already gets names, teams and last
+      # seen from listUsers, and has no use for a page of someone's trail.
+      x-agent: false
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "404": { $ref: "#/components/responses/Error" }
+
   /api/users/{id}:
     patch:
       operationId: updateUser
@@ -165,7 +181,7 @@ paths:
   /api/profile:
     patch:
       operationId: updateProfile
-      summary: Update your own email and avatar
+      summary: Update your own email, avatar and bio
       x-agent: false
       requestBody: { $ref: "#/components/requestBodies/Json" }
       responses:

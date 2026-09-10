@@ -517,3 +517,35 @@ test("the preview carries the comments and the history, not just their counts", 
   await expect(preview.locator(".aside-event").first()).toBeVisible();
   await expect(preview.locator(".aside-activity")).toContainText("state");
 });
+
+test("a profile is a page at a name, and the bio is written from the account", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/account");
+
+  await page.getByLabel("Email").fill("root@example.invalid");
+  await page.getByLabel("Bio").fill("Keeps the boiler running.\nIn the workshop, most mornings.");
+  await page.locator(".body").getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator(".toast")).toHaveText(/Saved/);
+
+  await page.getByRole("banner").getByRole("link", { name: "Your profile" }).click();
+  await expect(page).toHaveURL(/\/users\/root$/);
+
+  // The picture at a size worth looking at, the name, the email, last seen,
+  // the teams and the trail.
+  await expect(page.locator(".profile-facts h1")).toHaveText("root");
+  await expect(page.locator(".profile-email")).toHaveText("root@example.invalid");
+  await expect(page.locator(".profile-head")).toContainText("Last seen");
+  await expect(page.locator(".profile-bio")).toContainText("In the workshop, most mornings.");
+  await expect(page.locator(".code-badge", { hasText: "SOL" }).last()).toBeVisible();
+  await expect(page.locator(".relation-row").last()).toContainText(/\d{4}/);
+
+  // The bio keeps the line breaks it was typed with, as a description does.
+  const lines = await page.locator(".profile-bio").evaluate((el) =>
+    el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight));
+  expect(lines).toBeGreaterThan(1.5);
+
+  // A comment author is a way through to their profile.
+  await page.goto("/SOL-1");
+  await page.locator(".comment-meta a").first().click();
+  await expect(page).toHaveURL(/\/users\/root$/);
+});

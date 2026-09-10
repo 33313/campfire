@@ -70,7 +70,8 @@ export const api = {
   createUser: (body) => post("/api/users", body),
   updateUser: (id, isAdmin) => patch(`/api/users/${id}`, { isAdmin }),
   createPasswordReset: (id) => post(`/api/users/${id}/reset`),
-  updateProfile: (email, avatar) => patch("/api/profile", { email, avatar }),
+  updateProfile: (email, avatar, bio) => patch("/api/profile", { email, avatar, bio }),
+  getProfile: (username) => get(`/api/users/${encodeURIComponent(username)}/profile`),
   createInvitation: () => post("/api/invitations"),
   // userId 0 asks for every token in the instance, which needs an
   // administrator; omitting it asks for your own.
