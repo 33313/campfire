@@ -131,7 +131,7 @@
     {/snippet}
   </ScreenHeader>
 
-  <div class="body">
+  <div class="body measure">
     <Section title="Picture" sub={me.avatar ? "set" : "initials"}>
       {#snippet children()}
         <div style="display:flex;align-items:center;gap:14px">

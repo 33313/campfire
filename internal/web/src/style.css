@@ -154,6 +154,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .rule-v { width: 1px; height: 18px; background: var(--border); margin: 0 4px; flex: 0 0 1px; }
 
 .body { flex: 1; min-height: 0; overflow: auto; }
+/* A screen that is read rather than scanned takes the same measure the item
+   detail takes, centred in whatever space is left. A board is a wide thing and
+   uses the width; a page of settings and prose is not, and stretching it to a
+   metre makes every line a journey.
+
+   The width is explicit: an auto margin on a column-flex child cancels the
+   stretch it would otherwise get, and the measure collapses onto the content. */
+.measure { width: 100%; max-width: 860px; margin: 0 auto; }
 
 /* Controls -------------------------------------------------------------- */
 
