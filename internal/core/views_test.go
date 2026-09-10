@@ -340,3 +340,63 @@ func TestBoardHonoursAStateClauseFromAView(t *testing.T) {
 		}
 	}
 }
+
+// A bucket's progress separates what is finished from what has been picked up.
+// Both are views over its contents, counted the same way as the "37 / 50"
+// (SPEC.md §6.2): nothing is stored on the bucket.
+func TestBucketProgressCountsStartedWorkSeparately(t *testing.T) {
+	w := newWorld(t)
+	milestone := w.bucket(w.sol, w.marta, "Winter release")
+
+	// One left in the backlog, one accepted, one in a state the team invented,
+	// one done and one rejected.
+	inBacklog := w.ticket(w.sol, w.marta, "not started")
+	accepted := w.ticket(w.sol, w.marta, "picked up")
+	underway := w.ticket(w.sol, w.marta, "waiting on a part")
+	done := w.ticket(w.sol, w.marta, "finished")
+	dropped := w.ticket(w.sol, w.marta, "not doing this")
+	for _, it := range []*Item{inBacklog, accepted, underway, done, dropped} {
+		if _, err := w.UpdateItem(w.ctx, w.marta, it.ID,
+			ItemPatch{BucketID: &milestone.ID}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// An intermediate state carries no role at all, and still counts as work
+	// somebody is holding.
+	intermediate, err := w.CreateWorkState(w.ctx, w.admin, w.sol.ID, "Awaiting parts", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	move := func(it *Item, stateID int64, reason string) {
+		t.Helper()
+		fresh, err := w.GetItem(w.ctx, w.marta, it.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := w.MoveItem(w.ctx, w.marta, fresh.ID, stateID, reason, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	move(accepted, w.state(w.sol, store.RoleAccepted).ID, "")
+	move(underway, intermediate.ID, "")
+	move(done, w.state(w.sol, store.RoleFinal).ID, "")
+	move(dropped, w.state(w.sol, store.RoleRejected).ID, store.ReasonCancelled)
+
+	p, err := progress(w.ctx, w.DB.R, milestone.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Total != 5 {
+		t.Fatalf("total %d, want 5", p.Total)
+	}
+	// Done is terminal, either way it got there.
+	if p.Done != 2 {
+		t.Fatalf("done %d, want 2 (the finished one and the rejected one)", p.Done)
+	}
+	// Accepted and the intermediate state; never the backlog, never a
+	// terminal state.
+	if p.Accepted != 2 {
+		t.Fatalf("accepted %d, want 2 (the accepted one and the one in progress)", p.Accepted)
+	}
+}

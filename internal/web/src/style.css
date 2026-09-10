@@ -550,8 +550,11 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 .bucket-card .title { font-size: 15px; font-weight: 600; letter-spacing: -0.008em; color: var(--bright); }
 .bucket-card .big { font-family: var(--mono); font-size: 19px; color: var(--bright); }
 .bucket-card .of { font-family: var(--mono); font-size: 12px; color: var(--faint); }
-.progress { height: 4px; background: var(--sunk); border: 1px solid var(--border); }
+.progress { display: flex; height: 4px; background: var(--sunk); border: 1px solid var(--border); }
 .progress > i { display: block; height: 100%; background: var(--ok); }
+/* What is under way but not finished, between the done part and the rest. It
+   is the same amber the interface uses for attention: work someone is holding. */
+.progress > i.accepted { background: var(--accent); }
 
 /* Dialogs --------------------------------------------------------------- */
 

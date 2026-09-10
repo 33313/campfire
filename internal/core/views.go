@@ -212,7 +212,9 @@ func (s *Service) BucketIndex(ctx context.Context, a Actor, teamID int64, scope,
 }
 
 // progress counts a bucket's contents in a terminal state over the total —
-// the "37 / 50" of SPEC.md §6.2.
+// the "37 / 50" of SPEC.md §6.2 — and, between the two, what has been picked
+// up and is not finished. A bucket with nothing done still reads differently
+// depending on whether its tickets have been started.
 func progress(ctx context.Context, q store.Q, bucketID int64) (Progress, error) {
 	total, err := store.CountItems(ctx, q, store.ItemFilter{BucketIDs: []int64{bucketID}})
 	if err != nil {
@@ -223,7 +225,14 @@ func progress(ctx context.Context, q store.Q, bucketID int64) (Progress, error) 
 	if err != nil {
 		return Progress{}, mapErr(err)
 	}
-	return Progress{Done: done, Total: total}, nil
+	// Every role but the default one and the two terminal ones, which is also
+	// every intermediate state a team has invented: those carry no role at all.
+	accepted, err := store.CountItems(ctx, q, store.ItemFilter{BucketIDs: []int64{bucketID},
+		ExcludeRoles: []string{store.RoleDefault, store.RoleFinal, store.RoleRejected}})
+	if err != nil {
+		return Progress{}, mapErr(err)
+	}
+	return Progress{Done: done, Accepted: accepted, Total: total}, nil
 }
 
 // participatingBuckets is the default scope's set: buckets the team owns, plus
