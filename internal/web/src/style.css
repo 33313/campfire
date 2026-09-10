@@ -285,8 +285,8 @@ select.input {
 }
 .avatar.empty { background: none; border: 1px dashed var(--border-strong); }
 img.avatar { object-fit: cover; }
-.avatar.big { width: 24px; height: 24px; flex: 0 0 24px; font-size: 10px; color: var(--text); }
-.avatar.comment { width: 26px; height: 26px; flex: 0 0 26px; font-size: 10px; }
+.avatar-big { width: 24px; height: 24px; flex: 0 0 24px; font-size: 10px; color: var(--text); }
+.avatar-comment { width: 26px; height: 26px; flex: 0 0 26px; font-size: 10px; }
 
 /* A work state named in a bordered mono box; terminal states carry a pip. */
 .state-badge {

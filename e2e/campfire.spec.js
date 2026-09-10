@@ -393,3 +393,33 @@ test("a description is read back with the line breaks it was typed with", async 
     el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight));
   expect(lines).toBeGreaterThan(1.5);
 });
+
+test("a comment shows its author's picture, not just their initials", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/account");
+  await page.getByLabel("Picture").setInputFiles({
+    name: "me.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGP8z8Dwn4GBgYkBBv" +
+      "5DGAAmYgML8Ck1FQAAAABJRU5ErkJggg==", "base64"),
+  });
+
+  await page.goto("/SOL-1");
+  const picture = page.locator(".comment img").first();
+  await expect(picture).toBeVisible();
+
+  // The size class must not also match the block the picture sits in. As
+  // "comment" it did, and the block's padding left the image no content box to
+  // be drawn in — a full-height border box with nothing inside it.
+  const drawn = await picture.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return el.getBoundingClientRect().height
+      - parseFloat(s.paddingTop) - parseFloat(s.paddingBottom)
+      - parseFloat(s.borderTopWidth) - parseFloat(s.borderBottomWidth);
+  });
+  expect(drawn).toBeGreaterThan(20);
+
+  await page.goto("/account");
+  await page.getByRole("button", { name: "Remove" }).click();
+});
