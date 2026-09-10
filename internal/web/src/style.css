@@ -78,6 +78,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .prose {
   font-family: var(--serif); font-size: 16px; line-height: 1.62; max-width: 66ch;
   color: var(--text);
+  /* A description is typed with its line breaks in it, and it is read back
+     with them: the preview edits it in a textarea, which keeps them, so a
+     detail view that collapses them disagrees with the field beside it. */
+  white-space: pre-wrap;
 }
 .prose p:first-child { margin-top: 0; }
 .prose code, .prose pre { font-family: var(--mono); font-size: 13px; }

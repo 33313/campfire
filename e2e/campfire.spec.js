@@ -376,3 +376,20 @@ test("the detail page edits behind Edit; the preview edits in place", async ({ p
   await page.goto("/SOL-1");
   await expect(page.getByRole("heading", { name: "Replace the boiler", exact: true })).toBeVisible();
 });
+
+test("a description is read back with the line breaks it was typed with", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/SOL-1");
+
+  const header = page.getByRole("banner");
+  await header.getByRole("button", { name: "Edit" }).click();
+  await page.getByLabel("Description").fill("It is older than the building.\nThe flue is worse.");
+  await header.getByRole("button", { name: "Save" }).click();
+
+  // The break is drawn, not merely stored: two typed lines occupy two lines.
+  const prose = page.locator(".prose");
+  await expect(prose).toContainText("The flue is worse.");
+  const lines = await prose.evaluate((el) =>
+    el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight));
+  expect(lines).toBeGreaterThan(1.5);
+});
