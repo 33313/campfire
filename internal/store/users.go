@@ -17,23 +17,25 @@ type User struct {
 	Email        string `json:"email,omitempty"`
 	TOTPSecret   string `json:"-"`
 	Avatar       string `json:"avatar,omitempty"`
+	Bio          string `json:"bio,omitempty"`
 	IsAdmin      bool   `json:"isAdmin"`
 	CreatedAt    int64  `json:"createdAt"`
 }
 
-const userColumns = `id, username, password_hash, email, totp_secret, avatar, is_admin, created_at`
+const userColumns = `id, username, password_hash, email, totp_secret, avatar, bio, is_admin, created_at`
 
 func scanUser(row interface{ Scan(...any) error }) (User, error) {
 	var u User
-	var email, secret, avatar sql.NullString
-	err := row.Scan(&u.ID, &u.Username, &u.PasswordHash, &email, &secret, &avatar, &u.IsAdmin, &u.CreatedAt)
+	var email, secret, avatar, bio sql.NullString
+	err := row.Scan(&u.ID, &u.Username, &u.PasswordHash, &email, &secret, &avatar, &bio,
+		&u.IsAdmin, &u.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
 	if err != nil {
 		return User{}, err
 	}
-	u.Email, u.TOTPSecret, u.Avatar = text(email), text(secret), text(avatar)
+	u.Email, u.TOTPSecret, u.Avatar, u.Bio = text(email), text(secret), text(avatar), text(bio)
 	return u, nil
 }
 
@@ -148,10 +150,10 @@ func SetTOTPSecret(ctx context.Context, q Q, userID int64, secret string) error 
 	return err
 }
 
-func SetProfile(ctx context.Context, q Q, userID int64, email, avatar string) error {
+func SetProfile(ctx context.Context, q Q, userID int64, email, avatar, bio string) error {
 	_, err := q.ExecContext(ctx,
-		`UPDATE users SET email = ?, email_folded = ?, avatar = ? WHERE id = ?`,
-		null(email), null(Fold(email)), null(avatar), userID)
+		`UPDATE users SET email = ?, email_folded = ?, avatar = ?, bio = ? WHERE id = ?`,
+		null(email), null(Fold(email)), null(avatar), null(bio), userID)
 	return err
 }
 

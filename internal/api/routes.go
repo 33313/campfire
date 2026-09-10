@@ -26,6 +26,7 @@ func (s *Server) routes() {
 
 	// Users and credentials.
 	s.handle("GET /api/users", s.listUsers)
+	s.handle("GET /api/users/{username}/profile", s.profile)
 	s.handle("POST /api/users", s.createUser)
 	s.handle("PATCH /api/users/{id}", s.updateUser)
 	s.handle("POST /api/users/{id}/reset", s.createReset)
@@ -242,11 +243,17 @@ func (s *Server) createReset(w http.ResponseWriter, r *http.Request, a core.Acto
 }
 
 func (s *Server) updateProfile(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
-	var in struct{ Email, Avatar string }
+	var in struct{ Email, Avatar, Bio string }
 	if err := decode(r, &in); err != nil {
 		return nil, err
 	}
-	return nil, s.svc.UpdateProfile(r.Context(), a, in.Email, in.Avatar)
+	return nil, s.svc.UpdateProfile(r.Context(), a, in.Email, in.Avatar, in.Bio)
+}
+
+// A user as everyone else sees them, addressed by the name in the URL rather
+// than an id: the address a profile link carries is /users/marta.
+func (s *Server) profile(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	return s.svc.Profile(r.Context(), a, r.PathValue("username"))
 }
 
 func (s *Server) createInvitation(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {

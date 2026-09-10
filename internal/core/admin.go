@@ -232,15 +232,24 @@ func validateAvatar(avatar string) error {
 	return invalidField("avatar", "a picture is an inline PNG, JPEG or WebP")
 }
 
-func (s *Service) UpdateProfile(ctx context.Context, a Actor, email, avatar string) error {
+// maxBio bounds the prose a profile carries. It is a paragraph about a person,
+// not a document: long enough to say how to reach them, short enough that a
+// profile page is still a profile page.
+const maxBio = 1000
+
+func (s *Service) UpdateProfile(ctx context.Context, a Actor, email, avatar, bio string) error {
 	if err := requireUser(a); err != nil {
 		return err
 	}
 	if err := validateAvatar(avatar); err != nil {
 		return err
 	}
+	bio = strings.TrimSpace(bio)
+	if len([]rune(bio)) > maxBio {
+		return invalidField("bio", "a bio is at most %d characters", maxBio)
+	}
 	return s.write(ctx, a, func(t *wtx) error {
-		if err := store.SetProfile(ctx, t.Tx, a.UserID, strings.TrimSpace(email), avatar); err != nil {
+		if err := store.SetProfile(ctx, t.Tx, a.UserID, strings.TrimSpace(email), avatar, bio); err != nil {
 			return err
 		}
 		return t.log(ctx, store.Event{Kind: store.EvUserUpdated, Entity: "user",
@@ -395,4 +404,56 @@ func (s *Service) Bootstrap(ctx context.Context, username, password string) (*Us
 func (s *Service) NeedsBootstrap(ctx context.Context) (bool, error) {
 	n, err := store.CountUsers(ctx, s.DB.R)
 	return n == 0, mapErr(err)
+}
+
+// Profile is a user as the rest of the instance sees them: who they are, the
+// teams they are in, when they were last here, and what they have been doing.
+//
+// Every authenticated user may read it. Reading is instance-wide and
+// permissions govern writing (SPEC.md §3.2), so there is nothing here to hide
+// from a colleague that GET /api/users does not already hand over.
+type Profile struct {
+	User     *User         `json:"user"`
+	Activity []store.Event `json:"activity"`
+}
+
+// recentActivity is how much of a person's trail a profile shows. It is a
+// glance, not the log: the log is where you go to read further (SPEC.md §10).
+const recentActivity = 30
+
+func (s *Service) Profile(ctx context.Context, a Actor, username string) (*Profile, error) {
+	if err := requireUser(a); err != nil {
+		return nil, err
+	}
+	u, err := store.UserByUsername(ctx, s.DB.R, username)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	out := publicUser(u)
+
+	badges, err := store.MembershipBadges(ctx, s.DB.R)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	out.Teams = badges[u.ID]
+
+	seen, err := store.LastSeen(ctx, s.DB.R)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	out.LastSeenAt = seen[u.ID]
+
+	// A team-scoped event is one every authenticated user can already read.
+	// An instance-level event carries no team and belongs to the global log,
+	// which is an administrator's to read — so a profile only shows those to
+	// an administrator (SPEC.md §10).
+	f := store.EventFilter{ActorID: u.ID, InAnyTeam: !a.IsAdmin}
+	events, err := store.ListEvents(ctx, s.DB.R, f, 0, recentActivity)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	if events == nil {
+		events = []store.Event{}
+	}
+	return &Profile{User: out, Activity: events}, nil
 }

@@ -300,7 +300,8 @@
         <div style="display:flex;align-items:center;gap:8px;margin:10px 0 18px">
           <Avatar name={item.reporterName} />
           <span style="font-size:12.5px;color:var(--muted)">
-            {item.reporterName} reported this on {when(item.createdAt, true)}
+            <a href="/users/{item.reporterName}">{item.reporterName}</a>
+            reported this on {when(item.createdAt, true)}
           </span>
         </div>
 
@@ -593,7 +594,7 @@
                 <Avatar name={c.authorName} size="comment" />
                 <div style="min-width:0;flex:1">
                   <div class="comment-meta">
-                    <b>{c.authorName}</b>
+                    <b><a href="/users/{c.authorName}">{c.authorName}</a></b>
                     <time>{when(c.createdAt, true)}</time>
                     {#if c.updatedAt > c.createdAt}<span class="explain">edited</span>{/if}
                     {#if c.authorId === app.user.id}

@@ -91,6 +91,9 @@ type EventFilter struct {
 	// AgentOnly restricts to actions that arrived on an agent token, which is
 	// the question §14.4 exists to answer.
 	AgentOnly bool
+	// InAnyTeam drops instance-level events, which carry no team and which
+	// only the global log shows (SPEC.md §10).
+	InAnyTeam bool
 }
 
 const eventColumns = `e.seq, e.at, e.actor_id, e.agent_token_id, e.kind, e.entity, e.entity_id,
@@ -135,6 +138,9 @@ func ListEvents(ctx context.Context, q Q, f EventFilter, beforeSeq int64, limit 
 	}
 	if f.AgentOnly {
 		where = append(where, "e.agent_token_id IS NOT NULL")
+	}
+	if f.InAnyTeam {
+		where = append(where, "e.team_id IS NOT NULL")
 	}
 	clause := ""
 	if len(where) > 0 {

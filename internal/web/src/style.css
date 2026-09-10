@@ -547,6 +547,22 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 .comment-meta b { font-weight: 500; font-size: 12.5px; color: var(--text); }
 .comment-meta time { font-family: var(--mono); font-size: 11px; color: var(--faint); }
 
+/* A profile: the picture at a size worth looking at, beside who they are. */
+.profile-head { display: flex; gap: 18px; align-items: flex-start; padding: 20px 20px 4px; }
+.profile-picture {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 96px; height: 96px; flex: 0 0 96px; object-fit: cover;
+  background: var(--border); color: var(--muted-soft);
+  font-family: var(--mono); font-size: 30px; letter-spacing: 0.02em;
+}
+.profile-facts { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.profile-facts h1 {
+  margin: 0; font-size: 23px; font-weight: 600; letter-spacing: -0.014em; color: var(--bright);
+}
+.profile-email { font-size: 12.5px; color: var(--accent); }
+.profile-meta { display: flex; align-items: baseline; gap: 8px; }
+.profile-bio { padding: 12px 20px 0; font-size: 15px; }
+
 /* Buckets --------------------------------------------------------------- */
 
 .bucket-grid {
