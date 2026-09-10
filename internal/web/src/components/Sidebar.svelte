@@ -6,7 +6,6 @@
   import { route, navigate } from "../lib/router.svelte.js";
   import { openModal, failure, toast } from "../lib/ui.svelte.js";
   import { api } from "../lib/api.js";
-  import PickDialog from "../dialogs/PickDialog.svelte";
   import SaveViewDialog from "../dialogs/SaveViewDialog.svelte";
   import { newTeam } from "../lib/teams.js";
 
@@ -25,23 +24,34 @@
     return `/t/${teamId}/${view.pinBacklog && !view.pinBoard ? "backlog" : "board"}?view=${view.id}`;
   }
 
-  async function switchTeam() {
-    const options = app.allTeams.map((t) => ({
-      value: t.id, label: `${t.shortCode}  ${t.name}`,
-      note: app.teams.some((m) => m.teamId === t.id) ? "member" : "read only",
-    }));
-    // An instance with no teams has nothing else to offer here, and the
-    // administration screen is not where a new administrator looks first.
-    if (app.user.isAdmin) options.push({ value: "new", label: "New team" });
-    const picked = await openModal(PickDialog, {
-      title: app.allTeams.length ? "Switch team" : "No teams yet",
-      options,
-      explain: app.allTeams.length ? null : app.user.isAdmin
-        ? "This instance has no teams. Create the first one to get a board."
-        : "You are not in a team yet. An instance administrator creates them.",
-    });
-    if (picked === "new") await newTeam().catch(failure);
-    else if (picked) navigate(`/t/${picked}/board`);
+  // Switching team is a drop-down under the name it changes, not a modal: a
+  // modal takes the whole screen away to answer a question about the sidebar,
+  // and there is nothing to confirm.
+  let open = $state(false);
+  let menu = $state(null);
+
+  // A drop-down closes when you look away from it. The pointer check is on the
+  // way down and ignores its own panel, or a click on an option would close the
+  // menu before the option was chosen.
+  //
+  // <details> would carry the open state for free, but only hides its panel
+  // through a user-agent rule that any display of ours overrides, so the panel
+  // is drawn when it is open and absent when it is not.
+  $effect(() => {
+    if (!open) return;
+    const away = (e) => { if (!menu?.contains(e.target)) open = false; };
+    addEventListener("pointerdown", away, true);
+    return () => removeEventListener("pointerdown", away, true);
+  });
+
+  function choose(id) {
+    open = false;
+    navigate(`/t/${id}/board`);
+  }
+
+  async function createTeam() {
+    open = false;
+    await newTeam().catch(failure);
   }
 
   // Saving from the sidebar saves the filter as it stands on the board — which,
@@ -60,11 +70,42 @@
 <aside class="sidebar">
   <div class="sidebar-head">
     <div class="wordmark">Campfire</div>
-    <button class="team-switch" onclick={switchTeam}>
-      <span class="code-badge">{known ? known.shortCode : "—"}</span>
-      <span class="team-name">{known ? known.name : "No team yet"}</span>
-      <Icon body={NAV.chevron} size={11} color="var(--faint)" />
-    </button>
+    <div class="team-menu" bind:this={menu}>
+      <button class="team-switch" class:on={open} aria-expanded={open} aria-haspopup="menu"
+              onclick={() => (open = !open)}
+              onkeydown={(e) => e.key === "Escape" && (open = false)}>
+        <span class="code-badge">{known ? known.shortCode : "—"}</span>
+        <span class="team-name">{known ? known.name : "No team yet"}</span>
+        <Icon body={NAV.chevron} size={11} color="var(--faint)" />
+      </button>
+      {#if open}
+        <div class="team-list" role="menu">
+          {#each app.allTeams as t}
+            <button class="team-option" class:on={t.id === teamId} onclick={() => choose(t.id)}>
+              <span class="code-badge">{t.shortCode}</span>
+              <span class="team-name">{t.name}</span>
+              <span class="note">
+                {app.teams.some((m) => m.teamId === t.id) ? "member" : "read only"}
+              </span>
+            </button>
+          {:else}
+            <p class="explain" style="margin:0;padding:8px 9px">
+              {app.user.isAdmin
+                ? "This instance has no teams. Create the first one to get a board."
+                : "You are not in a team yet. An instance administrator creates them."}
+            </p>
+          {/each}
+          <!-- An instance with no teams has nothing else to offer here, and the
+               administration screen is not where a new administrator looks first. -->
+          {#if app.user.isAdmin}
+            <button class="team-option" onclick={createTeam}>
+              <Icon body={NAV.plus} size={11} />
+              <span class="team-name">New team</span>
+            </button>
+          {/if}
+        </div>
+      {/if}
+    </div>
   </div>
 
   {#if teamId}
