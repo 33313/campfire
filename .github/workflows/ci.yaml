@@ -1,9 +1,15 @@
 name: ci
 
-on:
-  push:
-    branches: [main]
-  pull_request:
+# Pull requests only. Merging into main is gated on these checks passing on the
+# pull request, so running them again on the merge commit tests a tree that has
+# already been tested and delays nothing but the next run.
+on: pull_request
+
+# A push that supersedes an earlier one cancels it: the older run is testing a
+# tree nobody will merge.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -37,11 +43,27 @@ jobs:
       - name: Test
         run: go test -race ./...
 
+      # The browser is the slowest thing this workflow downloads, so it is
+      # cached against the Playwright version that asks for it. --with-deps
+      # installs system packages and is only needed when the cache misses.
+      - name: Playwright version
+        id: pw
+        run: echo "v=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.v }}
+
+      # One binary for both end-to-end steps: they exercise the same tree, and
+      # linking it twice is a minute of nothing.
+      - name: Build the binary
+        run: go build -o ./campfire .
+
       # The client's own tests drive the real binary in a browser.
       - name: End to end
         run: |
-          go build -o ./campfire .
-          npx playwright install --with-deps chromium
+          npx playwright install ${{ steps.pw-cache.outputs.cache-hit == 'true' && 'chromium' || '--with-deps chromium' }}
           npx playwright test
 
       # SPEC.md §13.3 rule 4: the restore path MUST be exercised in continuous
@@ -51,7 +73,6 @@ jobs:
       - name: Snapshot and restore, end to end
         run: |
           set -euxo pipefail
-          go build -o ./campfire .
           root=$(mktemp -d)
           cat > "$root/campfire.json" <<EOF
           {"addr":"127.0.0.1:8791","database":"$root/campfire.db",
@@ -104,9 +125,21 @@ jobs:
           fi
           kill $server; wait $server || true
 
+  # The image is a packaging concern: it only changes when the things that go
+  # into it do. It is not a required check, so a pull request that does not
+  # touch them is not waiting on it.
   image:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Does this change the image?
+        id: touched
+        run: |
+          base=${{ github.event.pull_request.base.sha }}
+          if git diff --name-only "$base"... | grep -qE '^(Dockerfile|go\.(mod|sum)|package(-lock)?\.json|build\.sh|main\.go|mcp\.go|backup\.go|internal/|api/)'; then
+            echo "yes=1" >> "$GITHUB_OUTPUT"
+          fi
       - name: Build the container image
+        if: steps.touched.outputs.yes
         run: docker build -t campfire:ci .
