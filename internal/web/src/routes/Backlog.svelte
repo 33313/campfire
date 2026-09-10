@@ -69,8 +69,10 @@
   $effect(() => onNotify(() => (paged ? (stale = true) : load())));
 
   async function fetchFocus(id) {
-    const [item, comments] = await Promise.all([api.getItem(id), api.listComments(id)]);
-    return { item, comments: comments || [] };
+    const [item, comments, history] = await Promise.all([
+      api.getItem(id), api.listComments(id), api.getLog({ item: id, limit: 50 }),
+    ]);
+    return { item, comments: comments || [], history: history.events || [] };
   }
 
   async function focus(item) {
@@ -205,7 +207,7 @@
       </div>
 
       {#if focused}
-        <ItemPreview item={focused.item} comments={focused.comments}
+        <ItemPreview item={focused.item} comments={focused.comments} history={focused.history}
                      rendering={team.iconRendering} onclose={() => (focused = null)}
                      onchange={load} />
       {/if}

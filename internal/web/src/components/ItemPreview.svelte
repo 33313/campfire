@@ -10,12 +10,30 @@
   import { api } from "../lib/api.js";
   import { openModal, failure } from "../lib/ui.svelte.js";
   import { assigneeOptions, priorityOptions, bucketOptions } from "../lib/options.js";
-  import { whenDay, plural } from "../lib/format.js";
+  import { loadBuckets, fieldName, eventValue } from "../lib/events.svelte.js";
+  import { when, plural } from "../lib/format.js";
   import { NAV, PRIORITY } from "../lib/icons.js";
   import PickDialog from "../dialogs/PickDialog.svelte";
   import MoveDialog from "../dialogs/MoveDialog.svelte";
 
-  let { item: it, comments = [], rendering = "mono", onclose, onchange } = $props();
+  let { item: it, comments = [], history = [], rendering = "mono", onclose, onchange } = $props();
+
+  // What was said and what happened, in the aside rather than only on the
+  // detail view. The counts alone said an argument had taken place without
+  // saying what it was.
+  let tab = $state("comments");
+  let newComment = $state("");
+  loadBuckets(); // the bucket ids history carries resolve against this
+
+  async function addComment() {
+    if (!newComment.trim()) return;
+    const body = newComment;
+    newComment = "";
+    try {
+      await api.addComment(it.id, body);
+      await onchange();
+    } catch (err) { failure(err); }
+  }
 
   // The title and the description are typed into where they are drawn; the
   // floppy beside them writes, the cross puts back what was there. Both only
@@ -179,8 +197,52 @@
       <span class="dash">—</span>
     {/each}
   </div>
-  <div style="display:flex;gap:14px">
-    <span class="ident">{plural(comments.length, "comment")}</span>
-    <span class="ident">{plural((it.relations || []).length, "relation")}</span>
+  <span class="ident">{plural((it.relations || []).length, "relation")}</span>
+
+  <div class="tabs aside-tabs">
+    <button class="tab" class:on={tab === "comments"} onclick={() => (tab = "comments")}>
+      <span>Comments</span><span class="count">{comments.length}</span>
+    </button>
+    <button class="tab" class:on={tab === "history"} onclick={() => (tab = "history")}>
+      <span>History</span><span class="count">{history.length}</span>
+    </button>
   </div>
+
+  {#if tab === "comments"}
+    <div class="aside-activity">
+      {#each comments as c}
+        <div class="aside-comment">
+          <div class="comment-meta">
+            <Avatar name={c.authorName} />
+            <b>{c.authorName}</b>
+            <time>{when(c.createdAt)}</time>
+          </div>
+          <div class="comment-body">{c.body}</div>
+        </div>
+      {:else}
+        <div class="explain">No comments yet.</div>
+      {/each}
+    </div>
+    <div>
+      <textarea class="input" rows="2" placeholder="Write a comment…" aria-label="Comment"
+                style="width:100%" bind:value={newComment}></textarea>
+      <button class="btn primary" style="margin-top:6px" onclick={addComment}>Comment</button>
+    </div>
+  {:else}
+    <div class="aside-activity">
+      <!-- The same two helpers the log and the detail view read events
+           through, so the three cannot drift. -->
+      {#each history as e}
+        <div class="aside-event">
+          <span class="field-label">{fieldName(e)}</span>
+          <span class="aside-event-value">
+            {e.oldValue ? `${eventValue(e, e.oldValue)} → ` : ""}{e.newValue ? eventValue(e, e.newValue) : ""}
+          </span>
+          <span class="ident">{e.actorName || "—"} · {when(e.at)}</span>
+        </div>
+      {:else}
+        <div class="explain">No history.</div>
+      {/each}
+    </div>
+  {/if}
 </aside>

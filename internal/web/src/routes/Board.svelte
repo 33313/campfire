@@ -69,8 +69,10 @@
   $effect(() => onNotify(load));
 
   async function fetchFocus(id) {
-    const [item, comments] = await Promise.all([api.getItem(id), api.listComments(id)]);
-    return { item, comments: comments || [] };
+    const [item, comments, history] = await Promise.all([
+      api.getItem(id), api.listComments(id), api.getLog({ item: id, limit: 50 }),
+    ]);
+    return { item, comments: comments || [], history: history.events || [] };
   }
 
   // A click previews the card beside the board rather than leaving it.
@@ -173,7 +175,7 @@
       </div>
 
       {#if focused}
-        <ItemPreview item={focused.item} comments={focused.comments}
+        <ItemPreview item={focused.item} comments={focused.comments} history={focused.history}
                      rendering={team.iconRendering} onclose={() => (focused = null)}
                      onchange={load} />
       {/if}

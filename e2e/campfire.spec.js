@@ -497,3 +497,23 @@ test("a bucket's progress separates what is done from what is under way", async 
   expect(doneNow).toBeGreaterThan(0);
   expect(underwayNow).toBe(0);
 });
+
+test("the preview carries the comments and the history, not just their counts", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  await page.locator(".card", { hasText: "Replace the boiler" }).click();
+
+  const preview = page.locator(".detail-aside");
+  await expect(preview.locator(".comment-body")).toContainText("The part is on order.");
+
+  // A comment is written from here, as every other field is edited from here.
+  await preview.getByPlaceholder("Write a comment…").fill("Fitted this morning.");
+  await preview.getByRole("button", { name: "Comment", exact: true }).click();
+  await expect(preview.locator(".comment-body").last()).toHaveText("Fitted this morning.");
+
+  // The history reads through the same helpers the log and the detail view
+  // read through, so an assignee is a name and not the id it is stored as.
+  await preview.getByRole("button", { name: /^History/ }).click();
+  await expect(preview.locator(".aside-event").first()).toBeVisible();
+  await expect(preview.locator(".aside-activity")).toContainText("state");
+});
