@@ -161,7 +161,8 @@
   <ScreenHeader title="Board"
                 sub="{board.team.shortCode} · {board.columns.length} of {states.length} states">
     {#snippet right()}
-      <SearchBox value={filter.text || ""} onsearch={(t) => setFilter({ ...filter, text: t })} />
+      <SearchBox value={filter.text || ""} {teamId}
+                 onsearch={(t) => setFilter({ ...filter, text: t })} />
       <button class="btn primary" onclick={create}>
         <Icon body={NAV.plus} size={13} />
         <span>Create</span>
