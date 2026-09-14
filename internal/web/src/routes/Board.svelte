@@ -22,6 +22,7 @@
   import SelectionBar from "../components/SelectionBar.svelte";
   import StatePip from "../components/StatePip.svelte";
   import Card from "../components/Card.svelte";
+  import CardMenu from "../components/CardMenu.svelte";
   import ItemPreview from "../components/ItemPreview.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
 
@@ -33,6 +34,7 @@
   let error = $state(null);
   let selected = $state([]);
   let focused = $state(null); // { item, comments } for the preview aside
+  let menu = $state(null);    // { item, ids, x, y } for the right-click menu
   let dragging = null;
 
   // A view preference, private to this browser: it decides what is drawn,
@@ -98,6 +100,13 @@
   }
 
   const create = () => createItem({ team, states, reload: load });
+
+  // Right-clicking a card outside the selection makes that card the selection:
+  // a menu that names one ticket and edits five others is a trap.
+  function openMenu(item, x, y) {
+    if (!selected.includes(item.id)) selected = [item.id];
+    menu = { item, ids: [...selected], x, y };
+  }
 
   // What the drag carries: the whole selection when the card under the pointer
   // is part of it, and that card alone otherwise. Dragging one of five selected
@@ -186,7 +195,8 @@
                 {#each col.items || [] as item (item.id)}
                   <Card {item} selected={selected.includes(item.id)}
                         focused={focused?.item.id === item.id} rendering={team.iconRendering}
-                        ontoggle={toggle} ondrag={(it) => (dragging = it)} onpreview={preview} />
+                        ontoggle={toggle} ondrag={(it) => (dragging = it)} onpreview={preview}
+                        onmenu={openMenu} />
                 {/each}
                 {#if !col.items?.length}
                   <div class="explain" style="padding:6px 2px">Nothing here.</div>
@@ -204,4 +214,10 @@
       {/if}
     </div>
   </div>
+
+  {#if menu}
+    <CardMenu ids={menu.ids} item={menu.item} {states} x={menu.x} y={menu.y}
+              onclose={() => (menu = null)}
+              onapplied={async () => { selected = []; await load(); }} />
+  {/if}
 {/if}

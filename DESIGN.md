@@ -258,6 +258,7 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | **Board column** | header (state pip, name in mono caps, count in a bordered box, right) over a `sunk` body. Drop target is a 74px dashed `border` box on `accent-tint-weak`. |
 | **Table row** | 42px, `rule-faint` underline. Focused row: `accent-tint` + 2px accent left border. Selected row: `accent-tint-weak`. Deprioritised row: `opacity: 0.32`. |
 | **Selection bar** | appears above a table or board when a selection is non-empty. Count in accent mono caps, then the actions of §6, then Clear on the right. |
+| **Card menu** | the right-click menu on a card. 186px, fixed at the pointer and kept inside the viewport, `surface` on 1px `border-strong` — the team drop-down's panel. An eyebrow head names what it will act on (the identifier, or "n selected"), then the selection bar's five actions, then Clone, Split and Open for a single ticket, separated by a 1px `border` rule. Closes on Escape, on a click away, and before any dialog it opens. |
 | **Dialog** | `surface`, 1px `border-strong` (1px `alert` when destructive). Title row, body at 16px padding, footer on `bar` with the consequence stated on the left in mono caps and the actions on the right. |
 | **Stream banner** | too-far-behind: 1px `alert`, alert pip, Reload button. Reconnecting: 1px `border`, `muted` pip, no action. |
 | **State role badge** | mono caps in a 1px box — `muted` for default/accepted, `ok` for final, `alert` for rejected. Intermediate has no box, just `ghost` text. |

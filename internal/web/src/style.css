@@ -432,6 +432,20 @@ img.avatar { object-fit: cover; }
   text-transform: uppercase; color: var(--accent);
 }
 
+/* The card menu: the selection bar's actions at the pointer. Same panel as the
+   team drop-down, so the two read as one kind of thing. */
+.card-menu {
+  position: fixed; z-index: 40; width: 186px; padding: 3px;
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border-strong);
+}
+.card-menu .menu-head {
+  padding: 6px 6px 5px; font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.13em; text-transform: uppercase; color: var(--faint);
+}
+.card-menu .team-option { font-size: 12.5px; padding: 6px; }
+.card-menu .menu-rule { height: 1px; margin: 3px 0; background: var(--border); }
+
 /* Item detail ----------------------------------------------------------- */
 
 .detail { display: flex; min-height: 100%; }

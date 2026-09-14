@@ -11,7 +11,7 @@
   // wears the bucket's colour where it has one: a column of cards is then
   // sorted by eye without reading a title on each.
   let { item, selected = false, focused = false, rendering = "mono",
-         ontoggle, ondrag, onpreview } = $props();
+         ontoggle, ondrag, onpreview, onmenu } = $props();
 
   let dragging = $state(false);
   let tint = $derived(BUCKET_COLOURS[item.bucketColor] || null);
@@ -26,6 +26,12 @@
     // A plain click previews the ticket beside the board; the identifier in
     // the preview is what opens the full view.
     else if (onpreview) { e.preventDefault(); onpreview(item); }
+  }}
+  oncontextmenu={(e) => {
+    // The browser's own menu is about a link; this one is about a ticket.
+    if (!onmenu) return;
+    e.preventDefault();
+    onmenu(item, e.clientX, e.clientY);
   }}
   ondragstart={(e) => {
     dragging = true;
