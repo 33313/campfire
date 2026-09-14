@@ -10,7 +10,7 @@
   import { onNotify } from "../lib/stream.svelte.js";
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
   import { userOptions } from "../lib/options.js";
-  import { loadBuckets, fieldName, eventValue } from "../lib/events.svelte.js";
+  import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
   import { clock } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
 
@@ -106,10 +106,6 @@
     toast(`${events.length} rows copied`);
   }
 
-  const DESCRIBE = {
-    "comment.created": "added a comment", "comment.updated": "edited a comment",
-    "comment.deleted": "deleted a comment", "item.created": "created", "item.deleted": "deleted",
-  };
 </script>
 
 {#if error}
@@ -194,14 +190,7 @@
               {/if}
             </td>
             <td class="field-label">{fieldName(e)}</td>
-            <td style="font-size:12.5px">
-              {#if e.oldValue}
-                <span class="dim">{eventValue(e, e.oldValue)}</span> →
-              {:else}
-                <span class="dash">— </span>
-              {/if}
-              <span>{e.newValue ? eventValue(e, e.newValue) : DESCRIBE[e.kind] || e.kind}</span>
-            </td>
+            <td style="font-size:12.5px">{eventChange(e)}</td>
             <td class="num">{e.teamShortCode || ""}</td>
           </tr>
         {/each}

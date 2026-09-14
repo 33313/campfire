@@ -10,7 +10,7 @@
   import { api } from "../lib/api.js";
   import { openModal, failure } from "../lib/ui.svelte.js";
   import { assigneeOptions, priorityOptions, bucketOptions } from "../lib/options.js";
-  import { loadBuckets, fieldName, eventValue } from "../lib/events.svelte.js";
+  import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
   import { when, plural } from "../lib/format.js";
   import { NAV, PRIORITY } from "../lib/icons.js";
   import PickDialog from "../dialogs/PickDialog.svelte";
@@ -236,7 +236,7 @@
         <div class="aside-event">
           <span class="field-label">{fieldName(e)}</span>
           <span class="aside-event-value">
-            {e.oldValue ? `${eventValue(e, e.oldValue)} → ` : ""}{e.newValue ? eventValue(e, e.newValue) : ""}
+            {eventChange(e)}
           </span>
           <span class="ident">{e.actorName || "—"} · {when(e.at)}</span>
         </div>

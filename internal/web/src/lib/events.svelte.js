@@ -17,6 +17,13 @@ export function loadBuckets() {
   return loading;
 }
 
+// The events that carry no before and no after: what happened is the fact,
+// and a dotted kind on screen is the log talking to itself.
+const DESCRIBE = {
+  "comment.created": "added a comment", "comment.updated": "edited a comment",
+  "comment.deleted": "deleted a comment", "item.created": "created", "item.deleted": "deleted",
+};
+
 /** What changed, rather than the event kind's dotted name. */
 export function fieldName(e) {
   if (e.field) return e.field.replaceAll("_", " ");
@@ -39,4 +46,20 @@ export function eventValue(e, raw) {
     return b ? `${b.identifier} ${b.title}` : raw;
   }
   return raw;
+}
+
+/** The change itself, as one phrase: old → new where both are known.
+ *
+ * A creation has no previous value, and a description change has neither — the
+ * prose is not worth two copies in the log (SPEC.md §10). Neither is a dash
+ * followed by the new value: an em dash standing for "there was nothing here
+ * before" is noise on every row that records something beginning.
+ */
+export function eventChange(e) {
+  const before = e.oldValue ? eventValue(e, e.oldValue) : "";
+  const after = e.newValue ? eventValue(e, e.newValue) : "";
+  if (before && after) return `${before} → ${after}`;
+  if (after) return after;
+  if (before) return `${before} removed`;
+  return DESCRIBE[e.kind] || `${fieldName(e)} updated`;
 }
