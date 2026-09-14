@@ -39,10 +39,16 @@
     };
   });
 
+  // The pointer arrives in viewport pixels, but this menu is inside #app,
+  // where a CSS length is multiplied by the zoom of a large panel (DESIGN.md
+  // §1) — written back raw, the menu opened a quarter of the screen away from
+  // the click. Everything below is in the app's own pixels.
+  //
   // Kept on screen: a card near the right edge or the bottom would otherwise
   // open a menu half of which cannot be reached.
-  const left = Math.min(x, innerWidth - 196);
-  const top = Math.min(y, innerHeight - (one ? 250 : 190));
+  const zoom = document.getElementById("app")?.currentCSSZoom ?? 1;
+  const left = Math.min(x / zoom, innerWidth / zoom - 196);
+  const top = Math.min(y / zoom, innerHeight / zoom - (one ? 250 : 190));
 
   // The menu goes before the dialog it opens: leaving it up behind a modal is
   // two things asking for the same answer.

@@ -464,6 +464,26 @@ test("right-clicking a card offers what the selection bar offers, and more", asy
   await expect(progress.locator(".card").first()).toBeVisible();
 });
 
+test("the menu opens at the pointer on a panel wide enough to zoom", async ({ page }) => {
+  // A client coordinate written straight back into a style inside #app is
+  // multiplied by the zoom, which opened the menu a quarter of a screen down
+  // and to the right of the click.
+  await page.setViewportSize({ width: 2560, height: 1440 });
+  await signIn(page);
+  await page.goto("/t/1/board");
+  await expect(page.locator("#app")).toHaveCSS("zoom", "1.25");
+
+  const card = page.locator(".card").first();
+  await expect(card).toBeVisible();
+  const box = await card.boundingBox();
+  const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.click(at.x, at.y, { button: "right" });
+
+  const menu = await page.locator(".card-menu").boundingBox();
+  expect(Math.abs(menu.x - at.x)).toBeLessThan(2);
+  expect(Math.abs(menu.y - at.y)).toBeLessThan(2);
+});
+
 test("a profile picture replaces the initials wherever the name appears", async ({ page }) => {
   await signIn(page);
   // The identity block at the foot of the sidebar goes to the profile, and the

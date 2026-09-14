@@ -141,6 +141,12 @@ dense panel from a merely wide one: every 1440p panel is 1440 tall however wide 
 4K is 2160. And each requires `resolution <= 1x`, so none of it stacks on top of a desktop that is
 already scaling. Zoom reflows; a transform would not.
 
+The zoom sits on `#app`, not `:root`. A zoomed subtree is a coordinate trap: `getBoundingClientRect`
+and `event.clientX` report viewport pixels, but a CSS length written back inside the zoom is
+multiplied by it. On `:root` that caught the whole page — including the overlays a password manager
+injects into `<body>` — so anything positioned from a client rect landed at 1.25x its target. Code
+that writes a client coordinate into a style inside `#app` divides by `currentCSSZoom` first.
+
 | Panel | zoom | Layout gets |
 |---|---|---|
 | 1920×1080 | 1 | 1920×1080 |
