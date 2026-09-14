@@ -53,72 +53,86 @@
     {/snippet}
   </ScreenHeader>
 
-  <div class="body measure">
-    <div class="profile-head">
-      {#if user.avatar}
-        <img class="profile-picture" src={user.avatar} alt="" />
-      {:else}
-        <span class="profile-picture">{initials(user.username)}</span>
-      {/if}
-      <div class="profile-facts">
-        <h1>{user.username}</h1>
-        <!-- Email is here because every authenticated user can already read it
-             from the user list: permissions govern writing, not reading
-             (SPEC.md §3.2). -->
-        {#if user.email}
-          <a class="profile-email" href="mailto:{user.email}">{user.email}</a>
+  <!-- Who they are stays on screen; only the activity scrolls. A profile that
+       scrolls as a whole buries the picture, the bio and the teams under a
+       list of events, which is the wrong way round. -->
+  <div class="body profile-body">
+    <div class="profile-top measure">
+      <div class="profile-head">
+        {#if user.avatar}
+          <img class="profile-picture" src={user.avatar} alt="" />
         {:else}
-          <span class="explain">No email address.</span>
+          <span class="profile-picture">{initials(user.username)}</span>
         {/if}
-        <div class="profile-meta">
-          <span class="field-label">Last seen</span>
-          <span class="ident">{user.lastSeenAt ? ago(user.lastSeenAt) : "never"}</span>
+        <div class="profile-facts">
+          <h1>{user.username}</h1>
+          <!-- Email is here because every authenticated user can already read it
+               from the user list: permissions govern writing, not reading
+               (SPEC.md §3.2). -->
+          {#if user.email}
+            <a class="profile-email" href="mailto:{user.email}">{user.email}</a>
+          {:else}
+            <span class="explain">No email address.</span>
+          {/if}
+          <div class="profile-meta">
+            <span class="field-label">Last seen</span>
+            <span class="ident">{user.lastSeenAt ? ago(user.lastSeenAt) : "never"}</span>
+          </div>
+          {#if user.bio}
+            <div class="prose profile-bio">{user.bio}</div>
+          {:else}
+            <span class="explain">No bio.</span>
+          {/if}
         </div>
       </div>
+
+      <Section title="Teams" sub={plural((user.teams || []).length, "membership")}>
+        {#snippet children()}
+          <!-- Side by side rather than stacked: the memberships are a fact
+               about a person, not a list to read down, and the page has to
+               finish above the fold. -->
+          <div class="profile-teams">
+            {#each user.teams || [] as t}
+              <div class="relation-row">
+                <span class="code-badge">{t.shortCode}</span>
+                <span style="flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis">
+                  {app.allTeams.find((x) => x.shortCode === t.shortCode)?.name || t.shortCode}
+                </span>
+                <span class="state-badge">{t.role}</span>
+              </div>
+            {:else}
+              <div class="explain">In no team yet. An instance administrator adds people to one.</div>
+            {/each}
+          </div>
+        {/snippet}
+      </Section>
     </div>
 
-    {#if user.bio}
-      <div class="prose profile-bio">{user.bio}</div>
-    {/if}
-
-    <Section title="Teams" sub={plural((user.teams || []).length, "membership")}>
-      {#snippet children()}
-        {#each user.teams || [] as t}
-          <div class="relation-row">
-            <span class="code-badge">{t.shortCode}</span>
-            <span style="flex:1;font-size:12.5px">
-              {app.allTeams.find((x) => x.shortCode === t.shortCode)?.name || t.shortCode}
-            </span>
-            <span class="state-badge">{t.role}</span>
-          </div>
-        {:else}
-          <div class="explain">In no team yet. An instance administrator adds people to one.</div>
-        {/each}
-      {/snippet}
-    </Section>
-
-    <Section title="Recent activity" sub="{profile.activity.length} newest first">
+    <Section class="profile-activity measure" title="Recent activity"
+             sub="{profile.activity.length} newest first">
       {#snippet children()}
         <!-- The same two helpers the log, the detail view and the preview read
              events through, so the four cannot drift. -->
-        {#each profile.activity as e}
-          <div class="relation-row">
-            <span class="ident" style="width:74px;flex:0 0 74px">
-              {#if e.itemIdentifier}
-                <a href="/{e.itemIdentifier}">{e.itemIdentifier}</a>
-              {:else}
-                —
-              {/if}
-            </span>
-            <span class="field-label" style="width:90px;flex:0 0 90px">{fieldName(e)}</span>
-            <span style="flex:1;min-width:0;font-size:12.5px;overflow-wrap:anywhere">
-              {e.oldValue ? `${eventValue(e, e.oldValue)} → ` : ""}{e.newValue ? eventValue(e, e.newValue) : ""}
-            </span>
-            <span class="ident">{when(e.at, true)}</span>
-          </div>
-        {:else}
-          <div class="explain">Nothing yet.</div>
-        {/each}
+        <div class="profile-activity-rows">
+          {#each profile.activity as e}
+            <div class="relation-row">
+              <span class="ident" style="width:74px;flex:0 0 74px">
+                {#if e.itemIdentifier}
+                  <a href="/{e.itemIdentifier}">{e.itemIdentifier}</a>
+                {:else}
+                  —
+                {/if}
+              </span>
+              <span class="field-label" style="width:90px;flex:0 0 90px">{fieldName(e)}</span>
+              <span style="flex:1;min-width:0;font-size:12.5px;overflow-wrap:anywhere">
+                {e.oldValue ? `${eventValue(e, e.oldValue)} → ` : ""}{e.newValue ? eventValue(e, e.newValue) : ""}
+              </span>
+              <span class="ident">{when(e.at, true)}</span>
+            </div>
+          {:else}
+            <div class="explain">Nothing yet.</div>
+          {/each}
+        </div>
         <p class="explain" style="margin:10px 0 0">
           A glance, not the log. <a href="/log">The log</a> is where you read further.
         </p>

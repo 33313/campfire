@@ -565,6 +565,12 @@ test("a profile is a page at a name, and the bio is written from the account", a
     el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight));
   expect(lines).toBeGreaterThan(1.5);
 
+  // The page fits: only the activity panel scrolls, so the picture, the bio
+  // and the teams stay on screen however long the trail gets.
+  const scrolls = (sel) => page.locator(sel).evaluate((el) => el.scrollHeight > el.clientHeight + 1);
+  expect(await scrolls(".profile-body")).toBe(false);
+  await expect(page.locator(".profile-activity-rows")).toBeVisible();
+
   // A comment author is a way through to their profile.
   await page.goto("/SOL-1");
   await page.locator(".comment-meta a").first().click();
