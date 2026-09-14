@@ -364,9 +364,14 @@ img.avatar { object-fit: cover; }
   background: var(--surface); border: 1px solid var(--border); cursor: pointer;
 }
 .card:hover { border-color: var(--border-strong); }
+/* Selected and previewed are two different facts about a card, so they are two
+   different marks: the accent border says "in the selection", the inset left
+   edge says "this is the one in the preview". Sharing the border made a card
+   that had been deselected go on looking selected. */
 .card.selected { border-color: var(--accent); }
 .card.selected .card-title { color: var(--bright); }
-.card.focused { border-color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
+.card.focused { border-color: var(--border-strong); box-shadow: inset 2px 0 0 var(--accent); }
+.card.focused.selected { border-color: var(--accent); }
 .card.dragging { opacity: 0.4; }
 /* The bucket chip in a card's foot. It wears the bucket's colour where it has
    one, and an uncoloured bucket keeps the plain border it always had. */
