@@ -4,6 +4,7 @@
   import Dialog from "../components/Dialog.svelte";
   import BucketIcon from "../components/BucketIcon.svelte";
   import Icon from "../components/Icon.svelte";
+  import LabelEditor from "../components/LabelEditor.svelte";
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
   import { BUCKET_ICONS, BUCKET_COLOURS, PRIORITY, NAV } from "../lib/icons.js";
@@ -31,12 +32,12 @@
     .catch(() => {});
 
   // Labels are created by typing them: there is no separate label registry to
-  // pick from first (SPEC.md §8.1). The datalist offers the ones that exist so
-  // a second spelling of an existing label is not the easiest thing to do.
-  function addLabel() {
-    const name = labelDraft.trim();
+  // pick from first (SPEC.md §8.1). The editor is the ticket page's, so the two
+  // look and behave the same.
+  function addLabel(name) {
+    const value = (name ?? labelDraft).trim();
     labelDraft = "";
-    if (name && !labels.includes(name)) labels.push(name);
+    if (value && !labels.includes(value)) labels.push(value);
   }
 
   // A refusal marks the field it names and keeps the form up. Closing on a
@@ -162,26 +163,8 @@
     {/if}
     <div class="field">
       <span class="field-label">Labels</span>
-      {#if labels.length}
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          {#each labels as name}
-            <span class="label-chip">
-              <span>{name}</span>
-              <button class="btn quiet" style="padding:0;height:auto;border:0"
-                      aria-label="Remove {name}"
-                      onclick={() => labels.splice(labels.indexOf(name), 1)}>
-                <Icon body={NAV.close} size={9} />
-              </button>
-            </span>
-          {/each}
-        </div>
-      {/if}
-      <input class="input" list="label-names" placeholder="Type to create" bind:value={labelDraft}
-             aria-label="Labels"
-             onkeydown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLabel(); } }} />
-      <datalist id="label-names">
-        {#each app.labels as l}<option value={l.name}></option>{/each}
-      </datalist>
+      <LabelEditor {labels} bind:draft={labelDraft} onadd={addLabel}
+                   onremove={(name) => labels.splice(labels.indexOf(name), 1)} />
     </div>
     <label style="display:flex;gap:8px;align-items:center">
       <input class="check" type="checkbox" bind:checked={accepted} />

@@ -285,6 +285,26 @@ select.input {
   border: 1px solid var(--border); color: var(--muted-soft); font-size: 12px;
 }
 
+/* Labels: the chips and the box that makes them on one line, with the existing
+   ones offered under it. The box is small because a label is short. */
+.label-editor { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.label-input {
+  width: 104px; height: 24px; padding: 0 6px; background: var(--sunk);
+  border: 1px solid var(--border); color: var(--text); font-size: 12px; font-family: inherit;
+}
+.label-input:focus { outline: none; border-color: var(--accent); color: var(--bright); }
+.label-suggestions {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; min-width: 160px;
+  display: flex; flex-direction: column; padding: 3px;
+  background: var(--surface); border: 1px solid var(--border-strong);
+}
+.label-suggestion {
+  padding: 5px 6px; background: none; border: 0; text-align: left; cursor: pointer;
+  color: var(--muted); font-size: 12px;
+}
+.label-suggestion:hover, .label-suggestion.on { background: var(--sunk); color: var(--text); }
+.label-suggestion b { font-weight: 500; color: var(--accent); }
+
 .toggle {
   display: inline-flex; align-items: center; width: 30px; height: 17px; padding: 2px;
   background: var(--sunk); border: 1px solid var(--border); cursor: pointer;

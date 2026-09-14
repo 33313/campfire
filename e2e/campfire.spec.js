@@ -144,15 +144,45 @@ test("a label is added on the detail view and nowhere else", async ({ page }) =>
   await signIn(page);
   await page.goto("/SOL-1");
 
-  await page.getByRole("button", { name: "Label" }).click();
-  await page.getByPlaceholder("Type to create").fill("heating");
-  await page.getByPlaceholder("Type to create").press("Enter");
-
+  // One box, inline with the chips it makes, always there.
+  const box = page.getByLabel("Labels");
+  await box.fill("heating");
+  await box.press("Enter");
   await expect(page.locator(".label-chip", { hasText: "heating" })).toBeVisible();
+  await expect(box).toBeVisible(); // it does not come and go with the chips
 
   // SPEC.md §8.1: a card never carries a label.
   await page.goto("/t/1/board");
   await expect(page.locator(".card")).not.toContainText("heating");
+});
+
+test("a label that exists is offered before it is spelled a second way", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+
+  // The create dialog adds labels through the ticket page's editor, not a
+  // second one of its own.
+  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+  const form = page.getByRole("dialog");
+  await expect(form.locator(".label-editor")).toBeVisible();
+
+  const box = form.getByLabel("Labels");
+  await box.fill("he");
+
+  // The typed part is shown as typed, so it is clear how much of the offered
+  // label is already there.
+  const suggestion = form.locator(".label-suggestion").first();
+  await expect(suggestion).toHaveText("heating");
+  await expect(suggestion.locator("b")).toHaveText("he");
+
+  await box.press("Enter");
+  await expect(form.locator(".label-chip", { hasText: "heating" })).toBeVisible();
+
+  // A label already picked is not offered back.
+  await box.fill("he");
+  await expect(form.locator(".label-suggestion")).toHaveCount(0);
+
+  await form.getByRole("button", { name: "Cancel" }).click();
 });
 
 test("a bucket carries an icon and its tickets", async ({ page }) => {
