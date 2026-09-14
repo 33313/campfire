@@ -16,7 +16,7 @@
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
   import { assigneeOptions, bucketOptions, priorityOptions } from "../lib/options.js";
   import { when, whenDay, plural } from "../lib/format.js";
-  import { loadBuckets, fieldName, eventValue } from "../lib/events.svelte.js";
+  import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
   import { NAV, PRIORITY, RELATION_LABELS, BUCKET_COLOURS } from "../lib/icons.js";
 
   import Icon from "../components/Icon.svelte";
@@ -612,7 +612,7 @@
                 </span>
                 <span class="field-label" style="width:90px">{fieldName(e)}</span>
                 <span style="flex:1;font-size:12.5px">
-                  {e.oldValue ? `${eventValue(e, e.oldValue)} → ` : ""}{e.newValue ? eventValue(e, e.newValue) : ""}
+                  {eventChange(e)}
                 </span>
                 <span class="ident">{when(e.at, true)}</span>
               </div>

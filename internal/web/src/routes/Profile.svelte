@@ -15,7 +15,7 @@
   import { api } from "../lib/api.js";
   import { app, reloadContext } from "../lib/state.svelte.js";
   import { toast, failure } from "../lib/ui.svelte.js";
-  import { loadBuckets, fieldName, eventValue } from "../lib/events.svelte.js";
+  import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
   import { when, ago, initials, plural } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
 
@@ -245,7 +245,7 @@
               </span>
               <span class="field-label" style="width:90px;flex:0 0 90px">{fieldName(e)}</span>
               <span style="flex:1;min-width:0;font-size:12.5px;overflow-wrap:anywhere">
-                {e.oldValue ? `${eventValue(e, e.oldValue)} → ` : ""}{e.newValue ? eventValue(e, e.newValue) : ""}
+                {eventChange(e)}
               </span>
               <span class="ident">{when(e.at, true)}</span>
             </div>

@@ -240,6 +240,29 @@ test("the log records what happened, newest first", async ({ page }) => {
   await expect(page.locator(".table tbody td.field-label").first()).toHaveText("bucket");
 });
 
+test("the log says what changed in words, and nothing where there was nothing", async ({ page }) => {
+  await signIn(page);
+
+  // A description change records that it changed and not the prose itself
+  // (SPEC.md §10) — which used to reach the screen as "item.updated".
+  await page.goto("/SOL-1");
+  await page.getByRole("banner").getByRole("button", { name: "Edit" }).click();
+  await page.getByLabel("Description").fill("Rewritten, so the log has something to say.");
+  await page.getByRole("banner").getByRole("button", { name: "Save" }).click();
+
+  await page.goto("/log");
+  const change = (field) => page.locator(".table tbody tr")
+    .filter({ has: page.locator("td.field-label", { hasText: field }) })
+    .first().locator("td").nth(5);
+
+  await expect(change("description")).toHaveText("description updated");
+
+  // A row with no previous value starts with the new one: an em dash standing
+  // for "there was nothing before" is on every creation and says nothing.
+  await expect(change("created")).not.toContainText("—");
+  await expect(change("state")).toContainText("→");
+});
+
 test("the filter bar narrows the board and clears again", async ({ page }) => {
   await signIn(page);
   await page.goto("/t/1/board");
