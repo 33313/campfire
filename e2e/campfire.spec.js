@@ -314,6 +314,24 @@ test("the previewed card joins the selection a modifier-click starts", async ({ 
   await expect(page.locator(".selection-bar .count")).toContainText("2");
 });
 
+test("a card dropped from the selection stops looking selected", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+
+  const cards = page.locator(".card");
+  await cards.first().click(); // previews it, and anchors the selection
+  await cards.nth(1).click({ modifiers: ["Control"] });
+  await cards.first().click({ modifiers: ["Control"] }); // and out again
+
+  await expect(page.locator(".selection-bar .count")).toContainText("1");
+  // The first card is still the one in the preview, which is a different fact
+  // and a different mark: it must not go on wearing the selection's border.
+  await expect(cards.first()).toHaveClass(/focused/);
+  await expect(cards.first()).not.toHaveClass(/selected/);
+  const border = (c) => c.evaluate((el) => getComputedStyle(el).borderTopColor);
+  expect(await border(cards.first())).not.toBe(await border(cards.nth(1)));
+});
+
 test("a profile picture replaces the initials wherever the name appears", async ({ page }) => {
   await signIn(page);
   await page.goto("/account");
