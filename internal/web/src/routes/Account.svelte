@@ -1,12 +1,14 @@
 <script>
   // Your own account: password, second factor, and the tokens that act as you.
+  //
+  // How you appear — picture, email, bio — is edited on your profile, which is
+  // where it is read. This page is the settings that are not about that.
 
   import { api } from "../lib/api.js";
-  import { app, reloadContext } from "../lib/state.svelte.js";
+  import { app } from "../lib/state.svelte.js";
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
   import { when } from "../lib/format.js";
 
-  import Avatar from "../components/Avatar.svelte";
   import Section from "../components/Section.svelte";
   import ScreenHeader from "../components/ScreenHeader.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
@@ -39,68 +41,6 @@
   const guard = async (fn) => {
     try { await fn(); await load(); } catch (err) { failure(err); }
   };
-
-  // A picture is scaled here and stored inline: an instance with no object
-  // store and no third party to fetch from is the whole point.
-  //
-  // 512 is the size the profile page draws at on a dense screen; anything
-  // smaller was being scaled up there and looked it. A square that size in
-  // WebP is tens of kilobytes, which is what the server's cap allows for.
-  const AVATAR = 512;
-
-  // What core.maxAvatar will store. A photograph at 512px is tens of kilobytes
-  // in WebP, but a busy one can run past this, and one step down in quality is
-  // better than an upload the server refuses.
-  const MAX_AVATAR = 256 * 1024;
-
-  function encode(canvas) {
-    const data = canvas.toDataURL("image/webp", 0.85);
-    return data.length <= MAX_AVATAR ? data : canvas.toDataURL("image/webp", 0.6);
-  }
-
-  async function saveAvatar(dataUrl) {
-    await api.updateProfile(me.email || "", dataUrl, me.bio || "");
-    await reloadContext(app.team?.id); // the user list is where avatars are read from
-  }
-
-  // Email and bio are one write: the endpoint takes the profile as a whole, so
-  // saving either without the other would clear it.
-  const BIO = 1000;
-  let email = $state("");
-  let bio = $state("");
-  let profileLoaded = null;
-  $effect(() => {
-    if (me && profileLoaded !== me.id) {
-      profileLoaded = me.id;
-      email = me.email || "";
-      bio = me.bio || "";
-    }
-  });
-  const saveProfile = () =>
-    guard(async () => {
-      await api.updateProfile(email, me.avatar || "", bio);
-      toast("Saved");
-    });
-
-  function pickPicture(e) {
-    const file = e.currentTarget.files?.[0];
-    e.currentTarget.value = "";
-    if (!file) return;
-    const img = new Image();
-    img.onload = () => {
-      // Square crop from the centre, then scale: a picture is drawn at 20px
-      // beside a name, and letterboxing it there reads as a mistake.
-      const side = Math.min(img.width, img.height);
-      const canvas = Object.assign(document.createElement("canvas"),
-        { width: AVATAR, height: AVATAR });
-      canvas.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2,
-        side, side, 0, 0, AVATAR, AVATAR);
-      URL.revokeObjectURL(img.src);
-      guard(() => saveAvatar(encode(canvas)));
-    };
-    img.onerror = () => failure("that file is not an image");
-    img.src = URL.createObjectURL(file);
-  }
 
   async function changePassword() {
     guard(async () => {
@@ -166,45 +106,6 @@
   </ScreenHeader>
 
   <div class="body measure">
-    <Section title="Picture" sub={me.avatar ? "set" : "initials"}>
-      {#snippet children()}
-        <div style="display:flex;align-items:center;gap:14px">
-          <Avatar name={app.user.username} size="big" />
-          <input class="input" type="file" accept="image/*" aria-label="Picture"
-                 style="height:auto;padding:6px 8px" onchange={pickPicture} />
-          {#if me.avatar}
-            <button class="btn small" onclick={() => guard(() => saveAvatar(""))}>Remove</button>
-          {/if}
-        </div>
-        <p class="explain" style="margin:10px 0 0">
-          Scaled to a {AVATAR}px square and stored with your account. Nothing is fetched from
-          anywhere else to draw it.
-        </p>
-      {/snippet}
-    </Section>
-
-    <Section title="About you" sub="on your profile">
-      {#snippet children()}
-        <p class="explain">
-          Everyone signed in can read this, as they can read every item and
-          comment in the instance. It is on <a href="/users/{app.user.username}">your profile</a>.
-        </p>
-        <label class="field" style="margin-top:10px">
-          <span class="field-label">Email</span>
-          <input class="input" type="email" bind:value={email} />
-        </label>
-        <label class="field" style="max-width:none">
-          <span class="field-label">Bio</span>
-          <textarea class="input" rows="4" style="width:100%;max-width:62ch"
-                    placeholder="How to reach you, what you work on — anything you like."
-                    bind:value={bio}></textarea>
-        </label>
-        <p class="explain">{bio.length} / {BIO}</p>
-        <button class="btn primary" style="margin-top:10px;align-self:flex-start"
-                disabled={bio.length > BIO} onclick={saveProfile}>Save</button>
-      {/snippet}
-    </Section>
-
     <Section title="Password">
       {#snippet children()}
         <label class="field">

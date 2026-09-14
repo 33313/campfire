@@ -390,7 +390,11 @@ test("right-clicking a card offers what the selection bar offers, and more", asy
 
 test("a profile picture replaces the initials wherever the name appears", async ({ page }) => {
   await signIn(page);
-  await page.goto("/account");
+  // The identity block at the foot of the sidebar goes to the profile, and the
+  // profile is where the picture is changed.
+  await page.locator(".whoami").click();
+  await expect(page).toHaveURL(/\/users\/root$/);
+  await page.getByRole("button", { name: "Edit profile" }).click();
 
   // A 2x2 PNG, scaled and re-encoded by the client before it is stored.
   await page.getByLabel("Picture").setInputFiles({
@@ -406,7 +410,7 @@ test("a profile picture replaces the initials wherever the name appears", async 
   await expect(picture).toHaveAttribute("src", /^data:image\//);
 
   // Removing it puts the initials back.
-  await page.getByRole("button", { name: "Remove" }).click();
+  await page.getByRole("button", { name: "Remove picture" }).click();
   await expect(page.locator("img.avatar")).toHaveCount(0);
   await expect(page.locator(".whoami .avatar")).toHaveText("RO");
 });
@@ -491,7 +495,8 @@ test("a description is read back with the line breaks it was typed with", async 
 
 test("a comment shows its author's picture, not just their initials", async ({ page }) => {
   await signIn(page);
-  await page.goto("/account");
+  await page.goto("/users/root");
+  await page.getByRole("button", { name: "Edit profile" }).click();
   await page.getByLabel("Picture").setInputFiles({
     name: "me.png",
     mimeType: "image/png",
@@ -499,6 +504,7 @@ test("a comment shows its author's picture, not just their initials", async ({ p
       "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGP8z8Dwn4GBgYkBBv" +
       "5DGAAmYgML8Ck1FQAAAABJRU5ErkJggg==", "base64"),
   });
+  await expect(page.locator("img.profile-picture")).toBeVisible(); // stored before we leave
 
   await page.goto("/SOL-1");
   const picture = page.locator(".comment img").first();
@@ -515,8 +521,9 @@ test("a comment shows its author's picture, not just their initials", async ({ p
   });
   expect(drawn).toBeGreaterThan(20);
 
-  await page.goto("/account");
-  await page.getByRole("button", { name: "Remove" }).click();
+  await page.goto("/users/root");
+  await page.getByRole("button", { name: "Edit profile" }).click();
+  await page.getByRole("button", { name: "Remove picture" }).click();
 });
 
 test("the account page is a column at a measure, not a stretched page", async ({ page }) => {
@@ -613,15 +620,22 @@ test("the preview carries the comments and the history, not just their counts", 
   await expect(preview.locator(".aside-activity")).toContainText("state");
 });
 
-test("a profile is a page at a name, and the bio is written from the account", async ({ page }) => {
+test("a profile is a page at a name, and it is edited where it is read", async ({ page }) => {
   await signIn(page);
-  await page.goto("/account");
+  await page.goto("/users/root");
 
+  await page.getByRole("button", { name: "Edit profile" }).click();
   await page.getByLabel("Email").fill("root@example.invalid");
   await page.getByLabel("Bio").fill("Keeps the boiler running.\nIn the workshop, most mornings.");
-  await page.locator(".body").getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("banner").getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".toast")).toHaveText(/Saved/);
+  await expect(page).toHaveURL(/\/users\/root$/);
 
+  // Settings is its own page, reached from the profile and not the other way
+  // about: the sidebar's identity block is the profile.
+  await page.getByRole("banner").getByRole("link", { name: "Settings" }).click();
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(page.getByRole("heading", { name: "Password" })).toBeVisible();
   await page.getByRole("banner").getByRole("link", { name: "Your profile" }).click();
   await expect(page).toHaveURL(/\/users\/root$/);
 
