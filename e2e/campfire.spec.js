@@ -224,6 +224,29 @@ test("the filter bar narrows the board and clears again", async ({ page }) => {
   await expect(page.locator(".card")).toHaveCount(1);
 });
 
+test("search suggests as you type, without a request per keystroke", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+
+  let asked = 0;
+  await page.route("**/api/items?*", (route) => { asked++; return route.continue(); });
+  await page.waitForTimeout(300); // let the screen finish loading before counting
+  asked = 0;
+
+  const box = page.getByRole("banner").getByPlaceholder("Title and description");
+  await box.pressSequentially("boiler", { delay: 25 });
+
+  const hit = page.locator(".search-suggestion").first();
+  await expect(hit).toContainText("SOL-1");
+  // Six keystrokes is not six requests: one per pause in the typing, and
+  // nothing at all under two characters.
+  expect(asked).toBeLessThan(3);
+
+  // A suggestion is a way through to the item, not a second filter.
+  await hit.click();
+  await expect(page).toHaveURL(/\/SOL-1$/);
+});
+
 test("a saved view is stored as clauses and appears in the sidebar", async ({ page }) => {
   await signIn(page);
   await page.goto("/t/1/board");

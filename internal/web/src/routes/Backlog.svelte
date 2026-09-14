@@ -121,7 +121,8 @@
 {:else if column}
   <ScreenHeader title="Backlog" sub="{team.shortCode} · {column.count} items">
     {#snippet right()}
-      <SearchBox value={filter.text || ""} onsearch={(t) => setFilter({ ...filter, text: t })} />
+      <SearchBox value={filter.text || ""} {teamId}
+                 onsearch={(t) => setFilter({ ...filter, text: t })} />
       <button class="btn primary" onclick={create}>
         <Icon body={NAV.plus} size={13} />
         <span>Create</span>

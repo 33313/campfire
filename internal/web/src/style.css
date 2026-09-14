@@ -242,6 +242,22 @@ select.input {
 .search-box { position: relative; display: inline-flex; align-items: center; }
 .search-box > svg { position: absolute; left: 9px; color: var(--faint); pointer-events: none; }
 .search-box > .input { padding-left: 29px; width: 250px; height: 28px; }
+/* What matches, offered as you type. A way through to one item; the search
+   itself still runs on Enter. */
+.search-suggestions {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30;
+  display: flex; flex-direction: column; padding: 3px;
+  background: var(--surface); border: 1px solid var(--border-strong);
+}
+.search-suggestion {
+  display: flex; align-items: baseline; gap: 8px; padding: 6px;
+  background: none; border: 0; text-align: left; cursor: pointer; color: var(--muted);
+}
+.search-suggestion:hover, .search-suggestion.on { background: var(--sunk); color: var(--text); }
+.search-suggestion .title {
+  flex: 1; min-width: 0; font-size: 12.5px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
 
 .chip {
   display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px;
