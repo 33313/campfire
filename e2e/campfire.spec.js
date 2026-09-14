@@ -359,6 +359,35 @@ test("a drag carries the whole selection, not just the card under the pointer", 
   await expect(progress.locator(".card")).toHaveCount(before + 2);
 });
 
+test("right-clicking a card offers what the selection bar offers, and more", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+
+  const card = page.locator(".card").first();
+  await expect(card).toBeVisible();
+  await card.click({ button: "right" });
+
+  const menu = page.locator(".card-menu");
+  await expect(menu).toBeVisible();
+  // One card: the bulk actions plus the two that only mean anything alone.
+  for (const name of ["Move to…", "Reject…", "Assignee…", "Priority…", "Bucket…",
+                      "Clone", "Split…", "Open"]) {
+    await expect(menu.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+  // It acts on what it names, so the card it was opened on is the selection.
+  await expect(page.locator(".selection-bar .count")).toContainText("1");
+
+  // Move to… writes through the same bulk endpoint the bar uses.
+  await menu.getByRole("button", { name: "Move to…" }).click();
+  await expect(menu).toHaveCount(0); // the menu goes before the dialog it opened
+  const dialog = page.getByRole("dialog");
+  await dialog.locator(".option-row", { hasText: "In Progress" }).click();
+  await dialog.getByRole("button", { name: "Move" }).click();
+
+  const progress = page.locator(".column", { has: page.getByRole("heading", { name: "In Progress" }) });
+  await expect(progress.locator(".card").first()).toBeVisible();
+});
+
 test("a profile picture replaces the initials wherever the name appears", async ({ page }) => {
   await signIn(page);
   await page.goto("/account");
