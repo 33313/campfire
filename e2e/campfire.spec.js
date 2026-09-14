@@ -144,15 +144,45 @@ test("a label is added on the detail view and nowhere else", async ({ page }) =>
   await signIn(page);
   await page.goto("/SOL-1");
 
-  await page.getByRole("button", { name: "Label" }).click();
-  await page.getByPlaceholder("Type to create").fill("heating");
-  await page.getByPlaceholder("Type to create").press("Enter");
-
+  // One box, inline with the chips it makes, always there.
+  const box = page.getByLabel("Labels");
+  await box.fill("heating");
+  await box.press("Enter");
   await expect(page.locator(".label-chip", { hasText: "heating" })).toBeVisible();
+  await expect(box).toBeVisible(); // it does not come and go with the chips
 
   // SPEC.md §8.1: a card never carries a label.
   await page.goto("/t/1/board");
   await expect(page.locator(".card")).not.toContainText("heating");
+});
+
+test("a label that exists is offered before it is spelled a second way", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+
+  // The create dialog adds labels through the ticket page's editor, not a
+  // second one of its own.
+  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+  const form = page.getByRole("dialog");
+  await expect(form.locator(".label-editor")).toBeVisible();
+
+  const box = form.getByLabel("Labels");
+  await box.fill("he");
+
+  // The typed part is shown as typed, so it is clear how much of the offered
+  // label is already there.
+  const suggestion = form.locator(".label-suggestion").first();
+  await expect(suggestion).toHaveText("heating");
+  await expect(suggestion.locator("b")).toHaveText("he");
+
+  await box.press("Enter");
+  await expect(form.locator(".label-chip", { hasText: "heating" })).toBeVisible();
+
+  // A label already picked is not offered back.
+  await box.fill("he");
+  await expect(form.locator(".label-suggestion")).toHaveCount(0);
+
+  await form.getByRole("button", { name: "Cancel" }).click();
 });
 
 test("a bucket carries an icon and its tickets", async ({ page }) => {
@@ -247,6 +277,29 @@ test("the filter bar narrows the board and clears again", async ({ page }) => {
   await expect(page.locator(".card")).toHaveCount(1);
 });
 
+test("search suggests as you type, without a request per keystroke", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+
+  let asked = 0;
+  await page.route("**/api/items?*", (route) => { asked++; return route.continue(); });
+  await page.waitForTimeout(300); // let the screen finish loading before counting
+  asked = 0;
+
+  const box = page.getByRole("banner").getByPlaceholder("Title and description");
+  await box.pressSequentially("boiler", { delay: 25 });
+
+  const hit = page.locator(".search-suggestion").first();
+  await expect(hit).toContainText("SOL-1");
+  // Six keystrokes is not six requests: one per pause in the typing, and
+  // nothing at all under two characters.
+  expect(asked).toBeLessThan(3);
+
+  // A suggestion is a way through to the item, not a second filter.
+  await hit.click();
+  await expect(page).toHaveURL(/\/SOL-1$/);
+});
+
 test("a saved view is stored as clauses and appears in the sidebar", async ({ page }) => {
   await signIn(page);
   await page.goto("/t/1/board");
@@ -337,9 +390,87 @@ test("the previewed card joins the selection a modifier-click starts", async ({ 
   await expect(page.locator(".selection-bar .count")).toContainText("2");
 });
 
+test("a card dropped from the selection stops looking selected", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+
+  const cards = page.locator(".card");
+  await cards.first().click(); // previews it, and anchors the selection
+  await cards.nth(1).click({ modifiers: ["Control"] });
+  await cards.first().click({ modifiers: ["Control"] }); // and out again
+
+  await expect(page.locator(".selection-bar .count")).toContainText("1");
+  // The first card is still the one in the preview, which is a different fact
+  // and a different mark: it must not go on wearing the selection's border.
+  await expect(cards.first()).toHaveClass(/focused/);
+  await expect(cards.first()).not.toHaveClass(/selected/);
+  const border = (c) => c.evaluate((el) => getComputedStyle(el).borderTopColor);
+  expect(await border(cards.first())).not.toBe(await border(cards.nth(1)));
+});
+
+test("a drag carries the whole selection, not just the card under the pointer", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+
+  const todo = page.locator(".column", { has: page.getByRole("heading", { name: "To Do" }) });
+  const progress = page.locator(".column", { has: page.getByRole("heading", { name: "In Progress" }) });
+  const cards = todo.locator(".card");
+  await expect(cards.first()).toBeVisible(); // the board is drawn before it is counted
+  const before = await progress.locator(".card").count();
+  const start = await cards.count();
+  for (const title of ["Sweep the chimney", "Order the kindling"]) {
+    await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+    const form = page.getByRole("dialog");
+    await form.getByLabel("Title").fill(title);
+    await form.getByLabel("Mark as accepted").check();
+    await form.getByRole("button", { name: "Create" }).click();
+  }
+  await expect(cards).toHaveCount(start + 2);
+
+  await cards.first().click({ modifiers: ["Control"] });
+  await cards.nth(1).click({ modifiers: ["Control"] });
+  await expect(page.locator(".selection-bar .count")).toContainText("2");
+
+  await cards.first().dragTo(progress.locator(".column-body"));
+  await expect(progress.locator(".card")).toHaveCount(before + 2);
+});
+
+test("right-clicking a card offers what the selection bar offers, and more", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+
+  const card = page.locator(".card").first();
+  await expect(card).toBeVisible();
+  await card.click({ button: "right" });
+
+  const menu = page.locator(".card-menu");
+  await expect(menu).toBeVisible();
+  // One card: the bulk actions plus the two that only mean anything alone.
+  for (const name of ["Move to…", "Reject…", "Assignee…", "Priority…", "Bucket…",
+                      "Clone", "Split…", "Open"]) {
+    await expect(menu.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+  // It acts on what it names, so the card it was opened on is the selection.
+  await expect(page.locator(".selection-bar .count")).toContainText("1");
+
+  // Move to… writes through the same bulk endpoint the bar uses.
+  await menu.getByRole("button", { name: "Move to…" }).click();
+  await expect(menu).toHaveCount(0); // the menu goes before the dialog it opened
+  const dialog = page.getByRole("dialog");
+  await dialog.locator(".option-row", { hasText: "In Progress" }).click();
+  await dialog.getByRole("button", { name: "Move" }).click();
+
+  const progress = page.locator(".column", { has: page.getByRole("heading", { name: "In Progress" }) });
+  await expect(progress.locator(".card").first()).toBeVisible();
+});
+
 test("a profile picture replaces the initials wherever the name appears", async ({ page }) => {
   await signIn(page);
-  await page.goto("/account");
+  // The identity block at the foot of the sidebar goes to the profile, and the
+  // profile is where the picture is changed.
+  await page.locator(".whoami").click();
+  await expect(page).toHaveURL(/\/users\/root$/);
+  await page.getByRole("button", { name: "Edit profile" }).click();
 
   // A 2x2 PNG, scaled and re-encoded by the client before it is stored.
   await page.getByLabel("Picture").setInputFiles({
@@ -355,9 +486,30 @@ test("a profile picture replaces the initials wherever the name appears", async 
   await expect(picture).toHaveAttribute("src", /^data:image\//);
 
   // Removing it puts the initials back.
-  await page.getByRole("button", { name: "Remove" }).click();
+  await page.getByRole("button", { name: "Remove picture" }).click();
   await expect(page.locator("img.avatar")).toHaveCount(0);
   await expect(page.locator(".whoami .avatar")).toHaveText("RO");
+});
+
+test("a 512px picture still fits inside what the server will store", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/account");
+
+  // The client's own encode, on noise — the worst case, compressing no better
+  // than a photograph does — in the browser that does the scaling. What the
+  // client sends must fit what core.maxAvatar stores, at any picture.
+  const encoded = await page.evaluate(() => {
+    const canvas = Object.assign(document.createElement("canvas"), { width: 512, height: 512 });
+    const ctx = canvas.getContext("2d");
+    const pixels = ctx.createImageData(512, 512);
+    for (let i = 0; i < pixels.data.length; i++) {
+      pixels.data[i] = i % 4 === 3 ? 255 : Math.floor(Math.random() * 256);
+    }
+    ctx.putImageData(pixels, 0, 0);
+    const data = canvas.toDataURL("image/webp", 0.85);
+    return (data.length <= 256 * 1024 ? data : canvas.toDataURL("image/webp", 0.6)).length;
+  });
+  expect(encoded).toBeLessThan(256 * 1024);
 });
 
 test("the detail page edits behind Edit; the preview edits in place", async ({ page }) => {
@@ -419,7 +571,8 @@ test("a description is read back with the line breaks it was typed with", async 
 
 test("a comment shows its author's picture, not just their initials", async ({ page }) => {
   await signIn(page);
-  await page.goto("/account");
+  await page.goto("/users/root");
+  await page.getByRole("button", { name: "Edit profile" }).click();
   await page.getByLabel("Picture").setInputFiles({
     name: "me.png",
     mimeType: "image/png",
@@ -427,6 +580,7 @@ test("a comment shows its author's picture, not just their initials", async ({ p
       "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGP8z8Dwn4GBgYkBBv" +
       "5DGAAmYgML8Ck1FQAAAABJRU5ErkJggg==", "base64"),
   });
+  await expect(page.locator("img.profile-picture")).toBeVisible(); // stored before we leave
 
   await page.goto("/SOL-1");
   const picture = page.locator(".comment img").first();
@@ -443,8 +597,9 @@ test("a comment shows its author's picture, not just their initials", async ({ p
   });
   expect(drawn).toBeGreaterThan(20);
 
-  await page.goto("/account");
-  await page.getByRole("button", { name: "Remove" }).click();
+  await page.goto("/users/root");
+  await page.getByRole("button", { name: "Edit profile" }).click();
+  await page.getByRole("button", { name: "Remove picture" }).click();
 });
 
 test("the account page is a column at a measure, not a stretched page", async ({ page }) => {
@@ -541,15 +696,22 @@ test("the preview carries the comments and the history, not just their counts", 
   await expect(preview.locator(".aside-activity")).toContainText("state");
 });
 
-test("a profile is a page at a name, and the bio is written from the account", async ({ page }) => {
+test("a profile is a page at a name, and it is edited where it is read", async ({ page }) => {
   await signIn(page);
-  await page.goto("/account");
+  await page.goto("/users/root");
 
+  await page.getByRole("button", { name: "Edit profile" }).click();
   await page.getByLabel("Email").fill("root@example.invalid");
   await page.getByLabel("Bio").fill("Keeps the boiler running.\nIn the workshop, most mornings.");
-  await page.locator(".body").getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("banner").getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".toast")).toHaveText(/Saved/);
+  await expect(page).toHaveURL(/\/users\/root$/);
 
+  // Settings is its own page, reached from the profile and not the other way
+  // about: the sidebar's identity block is the profile.
+  await page.getByRole("banner").getByRole("link", { name: "Settings" }).click();
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(page.getByRole("heading", { name: "Password" })).toBeVisible();
   await page.getByRole("banner").getByRole("link", { name: "Your profile" }).click();
   await expect(page).toHaveURL(/\/users\/root$/);
 
@@ -566,6 +728,12 @@ test("a profile is a page at a name, and the bio is written from the account", a
   const lines = await page.locator(".profile-bio").evaluate((el) =>
     el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight));
   expect(lines).toBeGreaterThan(1.5);
+
+  // The page fits: only the activity panel scrolls, so the picture, the bio
+  // and the teams stay on screen however long the trail gets.
+  const scrolls = (sel) => page.locator(sel).evaluate((el) => el.scrollHeight > el.clientHeight + 1);
+  expect(await scrolls(".profile-body")).toBe(false);
+  await expect(page.locator(".profile-activity-rows")).toBeVisible();
 
   // A comment author is a way through to their profile.
   await page.goto("/SOL-1");

@@ -149,7 +149,9 @@
         <span class="label">Administration</span>
       </a>
     {/if}
-    <a class="whoami" href="/account" style="text-decoration:none">
+    <!-- Your profile, not your settings: the block shows who you are, and that
+         is the page it goes to. Settings is a button on the profile. -->
+    <a class="whoami" href="/users/{app.user.username}" style="text-decoration:none">
       <Avatar name={app.user.username} size="big" />
       <span class="who">
         <b>{app.user.username}</b>

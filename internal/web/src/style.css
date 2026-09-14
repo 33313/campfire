@@ -242,6 +242,22 @@ select.input {
 .search-box { position: relative; display: inline-flex; align-items: center; }
 .search-box > svg { position: absolute; left: 9px; color: var(--faint); pointer-events: none; }
 .search-box > .input { padding-left: 29px; width: 250px; height: 28px; }
+/* What matches, offered as you type. A way through to one item; the search
+   itself still runs on Enter. */
+.search-suggestions {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30;
+  display: flex; flex-direction: column; padding: 3px;
+  background: var(--surface); border: 1px solid var(--border-strong);
+}
+.search-suggestion {
+  display: flex; align-items: baseline; gap: 8px; padding: 6px;
+  background: none; border: 0; text-align: left; cursor: pointer; color: var(--muted);
+}
+.search-suggestion:hover, .search-suggestion.on { background: var(--sunk); color: var(--text); }
+.search-suggestion .title {
+  flex: 1; min-width: 0; font-size: 12.5px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
 
 .chip {
   display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px;
@@ -268,6 +284,26 @@ select.input {
   display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px;
   border: 1px solid var(--border); color: var(--muted-soft); font-size: 12px;
 }
+
+/* Labels: the chips and the box that makes them on one line, with the existing
+   ones offered under it. The box is small because a label is short. */
+.label-editor { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.label-input {
+  width: 104px; height: 24px; padding: 0 6px; background: var(--sunk);
+  border: 1px solid var(--border); color: var(--text); font-size: 12px; font-family: inherit;
+}
+.label-input:focus { outline: none; border-color: var(--accent); color: var(--bright); }
+.label-suggestions {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; min-width: 160px;
+  display: flex; flex-direction: column; padding: 3px;
+  background: var(--surface); border: 1px solid var(--border-strong);
+}
+.label-suggestion {
+  padding: 5px 6px; background: none; border: 0; text-align: left; cursor: pointer;
+  color: var(--muted); font-size: 12px;
+}
+.label-suggestion:hover, .label-suggestion.on { background: var(--sunk); color: var(--text); }
+.label-suggestion b { font-weight: 500; color: var(--accent); }
 
 .toggle {
   display: inline-flex; align-items: center; width: 30px; height: 17px; padding: 2px;
@@ -364,9 +400,14 @@ img.avatar { object-fit: cover; }
   background: var(--surface); border: 1px solid var(--border); cursor: pointer;
 }
 .card:hover { border-color: var(--border-strong); }
+/* Selected and previewed are two different facts about a card, so they are two
+   different marks: the accent border says "in the selection", the inset left
+   edge says "this is the one in the preview". Sharing the border made a card
+   that had been deselected go on looking selected. */
 .card.selected { border-color: var(--accent); }
 .card.selected .card-title { color: var(--bright); }
-.card.focused { border-color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
+.card.focused { border-color: var(--border-strong); box-shadow: inset 2px 0 0 var(--accent); }
+.card.focused.selected { border-color: var(--accent); }
 .card.dragging { opacity: 0.4; }
 /* The bucket chip in a card's foot. It wears the bucket's colour where it has
    one, and an uncoloured bucket keeps the plain border it always had. */
@@ -426,6 +467,20 @@ img.avatar { object-fit: cover; }
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.13em;
   text-transform: uppercase; color: var(--accent);
 }
+
+/* The card menu: the selection bar's actions at the pointer. Same panel as the
+   team drop-down, so the two read as one kind of thing. */
+.card-menu {
+  position: fixed; z-index: 40; width: 186px; padding: 3px;
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border-strong);
+}
+.card-menu .menu-head {
+  padding: 6px 6px 5px; font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.13em; text-transform: uppercase; color: var(--faint);
+}
+.card-menu .team-option { font-size: 12.5px; padding: 6px; }
+.card-menu .menu-rule { height: 1px; margin: 3px 0; background: var(--border); }
 
 /* Item detail ----------------------------------------------------------- */
 
@@ -547,7 +602,20 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 .comment-meta b { font-weight: 500; font-size: 12.5px; color: var(--text); }
 .comment-meta time { font-family: var(--mono); font-size: 11px; color: var(--faint); }
 
-/* A profile: the picture at a size worth looking at, beside who they are. */
+/* A profile: the picture at a size worth looking at, beside who they are.
+
+   The page does not scroll as a whole. Who someone is — picture, name, bio,
+   teams — stays on screen, and the activity below it gets the leftover height
+   and its own scrollbar. Scrolling the page instead buries the person under a
+   list of events. */
+.profile-body { overflow: hidden; display: flex; flex-direction: column; }
+.profile-top { flex: 0 0 auto; }
+.profile-activity { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* Grows with the trail, then stops at the height that is left and scrolls
+   inside itself; a short trail keeps its footnote next to it rather than
+   pinned to the bottom of the screen. */
+.profile-activity-rows { flex: 0 1 auto; min-height: 0; overflow: auto; }
+
 .profile-head { display: flex; gap: 18px; align-items: flex-start; padding: 20px 20px 4px; }
 .profile-picture {
   display: inline-flex; align-items: center; justify-content: center;
@@ -555,13 +623,26 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
   background: var(--border); color: var(--muted-soft);
   font-family: var(--mono); font-size: 30px; letter-spacing: 0.02em;
 }
+/* In edit mode the picture is the control: it is where anyone would click to
+   change it, so that is what clicking it does. */
+.profile-picture-pick { position: relative; display: inline-flex; cursor: pointer; }
+.profile-picture-pick .hint {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 0;
+  background: var(--sunk); color: var(--muted-soft); text-align: center;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase;
+}
+.profile-picture-pick:hover .hint { color: var(--accent); }
 .profile-facts { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .profile-facts h1 {
   margin: 0; font-size: 23px; font-weight: 600; letter-spacing: -0.014em; color: var(--bright);
 }
 .profile-email { font-size: 12.5px; color: var(--accent); }
 .profile-meta { display: flex; align-items: baseline; gap: 8px; }
-.profile-bio { padding: 12px 20px 0; font-size: 15px; }
+.profile-bio { margin-top: 4px; font-size: 14px; }
+/* Memberships side by side: a fact about a person, not a list to read down. */
+.profile-teams {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0 16px;
+}
 
 /* Buckets --------------------------------------------------------------- */
 
