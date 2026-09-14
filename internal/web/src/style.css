@@ -751,10 +751,20 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
  * The height conditions are what sort a dense panel from a merely wide one:
  * every 1440p panel is 1440 tall however wide it gets, and a real 4K is 2160.
  * Keyed on width alone, a 3440x1440 ultrawide took the 1.5 step meant for 4K
- * and was left shorter than a 1080p panel. */
-@media (resolution <= 1x) and (min-width: 2400px) and (min-height: 1000px) { :root { zoom: 1.25; } }
-@media (resolution <= 1x) and (min-width: 3000px) and (min-height: 1500px) { :root { zoom: 1.5; } }
-@media (resolution <= 1x) and (min-width: 3800px) and (min-height: 1500px) { :root { zoom: 2; } }
+ * and was left shorter than a 1080p panel.
+ *
+ * The zoom sits on #app rather than :root because a zoomed subtree is a
+ * coordinate trap: getBoundingClientRect and event.clientX report viewport
+ * pixels, but a CSS length written back inside the zoom is multiplied by it.
+ * On :root that caught everything on the page, including the overlays a
+ * password manager injects into <body> from a client rect, which landed at
+ * 1.25x their input. Outside #app they are now unzoomed and correct; inside
+ * it, the one place that writes a client coordinate back is .card-menu, which
+ * divides. #app still fills the viewport exactly: percentages, insets and
+ * fixed offsets all resolve against the zoom. */
+@media (resolution <= 1x) and (min-width: 2400px) and (min-height: 1000px) { #app { zoom: 1.25; } }
+@media (resolution <= 1x) and (min-width: 3000px) and (min-height: 1500px) { #app { zoom: 1.5; } }
+@media (resolution <= 1x) and (min-width: 3800px) and (min-height: 1500px) { #app { zoom: 2; } }
 
 /* A card is an anchor to its item, so the link colour and underline that
  * every other anchor carries are turned off on it. */
