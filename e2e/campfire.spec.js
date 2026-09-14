@@ -332,6 +332,33 @@ test("a card dropped from the selection stops looking selected", async ({ page }
   expect(await border(cards.first())).not.toBe(await border(cards.nth(1)));
 });
 
+test("a drag carries the whole selection, not just the card under the pointer", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+
+  const todo = page.locator(".column", { has: page.getByRole("heading", { name: "To Do" }) });
+  const progress = page.locator(".column", { has: page.getByRole("heading", { name: "In Progress" }) });
+  const cards = todo.locator(".card");
+  await expect(cards.first()).toBeVisible(); // the board is drawn before it is counted
+  const before = await progress.locator(".card").count();
+  const start = await cards.count();
+  for (const title of ["Sweep the chimney", "Order the kindling"]) {
+    await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+    const form = page.getByRole("dialog");
+    await form.getByLabel("Title").fill(title);
+    await form.getByLabel("Mark as accepted").check();
+    await form.getByRole("button", { name: "Create" }).click();
+  }
+  await expect(cards).toHaveCount(start + 2);
+
+  await cards.first().click({ modifiers: ["Control"] });
+  await cards.nth(1).click({ modifiers: ["Control"] });
+  await expect(page.locator(".selection-bar .count")).toContainText("2");
+
+  await cards.first().dragTo(progress.locator(".column-body"));
+  await expect(progress.locator(".card")).toHaveCount(before + 2);
+});
+
 test("a profile picture replaces the initials wherever the name appears", async ({ page }) => {
   await signIn(page);
   await page.goto("/account");

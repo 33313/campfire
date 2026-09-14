@@ -99,13 +99,27 @@
 
   const create = () => createItem({ team, states, reload: load });
 
+  // What the drag carries: the whole selection when the card under the pointer
+  // is part of it, and that card alone otherwise. Dragging one of five selected
+  // cards to another column and watching four stay behind is the bug this
+  // answers; a card outside the selection still travels on its own.
+  //
+  // Board order, not selection order, so a run of cards lands the way it was
+  // read rather than the way it was clicked.
+  function dragged() {
+    if (!dragging) return [];
+    if (!selected.includes(dragging.id)) return [dragging.id];
+    return (board?.columns || []).flatMap((c) => c.items || [])
+      .map((i) => i.id).filter((id) => selected.includes(id));
+  }
+
   // The card the pointer is above, so a drop lands in front of it rather than
-  // always at the end of the column. The dragged card is not its own
-  // neighbour: measuring against it would rank the card before itself.
-  function neighbourAt(container, y) {
+  // always at the end of the column. A card being dragged is not its own
+  // neighbour: measuring against one would rank a card before itself.
+  function neighbourAt(container, y, moving) {
     for (const el of container.querySelectorAll(".card[data-id]")) {
       const id = +el.dataset.id;
-      if (id === dragging?.id) continue;
+      if (moving.includes(id)) continue;
       const box = el.getBoundingClientRect();
       if (y < box.top + box.height / 2) return id;
     }
@@ -115,9 +129,18 @@
   async function drop(e, col) {
     e.preventDefault();
     e.currentTarget.classList.remove("over");
-    if (!dragging) return;
+    const moving = dragged();
+    if (!moving.length) return;
+    const before = neighbourAt(e.currentTarget, e.clientY, moving);
     try {
-      await api.rankItem(dragging.id, col.state.id, 0, neighbourAt(e.currentTarget, e.clientY));
+      // One call per card, each ranked after the one before it, so the run
+      // keeps its order instead of reversing into the gap. A refusal stops the
+      // run: the ones already moved stay moved, and the toast says why.
+      let after = 0;
+      for (const id of moving) {
+        await api.rankItem(id, col.state.id, after, before);
+        after = id;
+      }
       await load();
     } catch (err) { failure(err); }
   }
