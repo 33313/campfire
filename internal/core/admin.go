@@ -201,9 +201,12 @@ func (s *Service) ListUsers(ctx context.Context, a Actor, afterID int64, limit i
 }
 
 // maxAvatar bounds the picture a profile carries. It is stored inline on the
-// user row and ships with every user list, so it is a small square the client
-// has already scaled down — not an upload.
-const maxAvatar = 64 * 1024
+// user row and ships with every user list, so it is a square the client has
+// already scaled down — not an upload.
+//
+// The client scales to 512px and encodes as WebP, which lands in the tens of
+// kilobytes; the cap is the headroom over that, not a target to fill.
+const maxAvatar = 256 * 1024
 
 var avatarPrefixes = []string{
 	"data:image/png;base64,", "data:image/jpeg;base64,", "data:image/webp;base64,",

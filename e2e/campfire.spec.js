@@ -337,6 +337,27 @@ test("a profile picture replaces the initials wherever the name appears", async 
   await expect(page.locator(".whoami .avatar")).toHaveText("RO");
 });
 
+test("a 512px picture still fits inside what the server will store", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/account");
+
+  // The client's own encode, on noise — the worst case, compressing no better
+  // than a photograph does — in the browser that does the scaling. What the
+  // client sends must fit what core.maxAvatar stores, at any picture.
+  const encoded = await page.evaluate(() => {
+    const canvas = Object.assign(document.createElement("canvas"), { width: 512, height: 512 });
+    const ctx = canvas.getContext("2d");
+    const pixels = ctx.createImageData(512, 512);
+    for (let i = 0; i < pixels.data.length; i++) {
+      pixels.data[i] = i % 4 === 3 ? 255 : Math.floor(Math.random() * 256);
+    }
+    ctx.putImageData(pixels, 0, 0);
+    const data = canvas.toDataURL("image/webp", 0.85);
+    return (data.length <= 256 * 1024 ? data : canvas.toDataURL("image/webp", 0.6)).length;
+  });
+  expect(encoded).toBeLessThan(256 * 1024);
+});
+
 test("the detail page edits behind Edit; the preview edits in place", async ({ page }) => {
   await signIn(page);
   await page.goto("/SOL-1");
