@@ -42,7 +42,21 @@
 
   // A picture is scaled here and stored inline: an instance with no object
   // store and no third party to fetch from is the whole point.
-  const AVATAR = 96;
+  //
+  // 512 is the size the profile page draws at on a dense screen; anything
+  // smaller was being scaled up there and looked it. A square that size in
+  // WebP is tens of kilobytes, which is what the server's cap allows for.
+  const AVATAR = 512;
+
+  // What core.maxAvatar will store. A photograph at 512px is tens of kilobytes
+  // in WebP, but a busy one can run past this, and one step down in quality is
+  // better than an upload the server refuses.
+  const MAX_AVATAR = 256 * 1024;
+
+  function encode(canvas) {
+    const data = canvas.toDataURL("image/webp", 0.85);
+    return data.length <= MAX_AVATAR ? data : canvas.toDataURL("image/webp", 0.6);
+  }
 
   async function saveAvatar(dataUrl) {
     await api.updateProfile(me.email || "", dataUrl, me.bio || "");
@@ -82,7 +96,7 @@
       canvas.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2,
         side, side, 0, 0, AVATAR, AVATAR);
       URL.revokeObjectURL(img.src);
-      guard(() => saveAvatar(canvas.toDataURL("image/webp", 0.85)));
+      guard(() => saveAvatar(encode(canvas)));
     };
     img.onerror = () => failure("that file is not an image");
     img.src = URL.createObjectURL(file);
