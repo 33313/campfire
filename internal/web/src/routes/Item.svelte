@@ -25,6 +25,7 @@
   import BucketIcon from "../components/BucketIcon.svelte";
   import StatePip from "../components/StatePip.svelte";
   import StateBadge from "../components/StateBadge.svelte";
+  import LabelEditor from "../components/LabelEditor.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
   import MoveDialog from "../dialogs/MoveDialog.svelte";
   import SplitDialog from "../dialogs/SplitDialog.svelte";
@@ -46,7 +47,6 @@
   let draftDescription = $state("");
   let newComment = $state("");
   let labelDraft = $state("");
-  let addingLabel = $state(false);
 
   async function load() {
     try {
@@ -84,6 +84,15 @@
   const guard = async (fn) => {
     try { await fn(); await load(); } catch (err) { failure(err); }
   };
+
+  // Labels are instance-wide, and the editor offers the ones that exist. A
+  // ticket that makes a new one — or retires the last use of an old one —
+  // changes that list, so it is re-read here rather than going stale until the
+  // next reload.
+  const withLabels = (fn) => guard(async () => {
+    await fn();
+    app.labels = (await api.listLabels()) || [];
+  });
 
   function startEditing() {
     draftTitle = item.title;
@@ -224,13 +233,6 @@
     guard(() => api.addComment(item.id, body));
   }
 
-  async function addLabel() {
-    if (!labelDraft.trim()) return;
-    const name = labelDraft.trim();
-    labelDraft = "";
-    addingLabel = false;
-    guard(() => api.addLabel(item.id, name));
-  }
 
 </script>
 
@@ -463,30 +465,9 @@
                mechanism, and cards carrying them become unreadable (SPEC.md §8.1). -->
           <div class="aside-field" style="grid-column:1/-1">
             <span class="field-label">Labels</span>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-              {#each item.labels || [] as name}
-                <span class="label-chip">
-                  <span>{name}</span>
-                  <button class="btn quiet" style="padding:0;height:auto;border:0"
-                          aria-label="Remove {name}"
-                          onclick={() => guard(() => api.removeLabel(item.id, name))}>
-                    <Icon body={NAV.close} size={9} />
-                  </button>
-                </span>
-              {/each}
-              {#if !addingLabel}
-                <button class="label-chip" style="cursor:pointer;background:none;border-style:dashed"
-                        onclick={() => (addingLabel = true)}>
-                  <Icon body={NAV.plus} size={9} /><span>Label</span>
-                </button>
-              {/if}
-            </div>
-            {#if addingLabel}
-              <!-- svelte-ignore a11y_autofocus -->
-              <input class="input" style="height:26px;max-width:240px" placeholder="Type to create"
-                     autofocus bind:value={labelDraft}
-                     onkeydown={(e) => e.key === "Enter" && addLabel()} />
-            {/if}
+            <LabelEditor labels={item.labels || []} bind:draft={labelDraft}
+                         onadd={(name) => withLabels(() => api.addLabel(item.id, name))}
+                         onremove={(name) => withLabels(() => api.removeLabel(item.id, name))} />
           </div>
         </div>
 

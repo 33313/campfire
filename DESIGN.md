@@ -243,6 +243,7 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | **Radio** | 14px square, 1px accent, 6px square accent dot. Square by design. |
 | **Toggle** | 30×17px. On: `accent-tint` field, 1px accent, 11px accent knob, right. Off: `sunk`, 1px `border`, `ghost` knob, left. |
 | **Label chip** | 1px `border`, `muted-soft`, 3px 8px. Not clickable, not coloured, never on a card. |
+| **Label editor** | one component wherever labels are added — the item detail and the create dialog. Chips and a 104px × 24px `sunk` box on one wrapping line, the box always present and carrying no placeholder; 1px `accent` when focused. Existing labels that start with what has been typed drop under it in the drop-down panel (`surface`, 1px `border-strong`), the typed prefix in `accent`; ↑↓ move, Enter takes the highlighted one or what was typed, Backspace on an empty box takes back the last chip. A label already on the item is never offered. |
 | **Filter chip** | 26px, 1px `border`, `muted`, chevron. Active chip carries the accent treatment and an × to clear. |
 | **Avatar** | square. A person's picture where they have one, cropped square from the centre and `object-fit: cover`; otherwise `border` fill with `muted-soft` mono initials. Unassigned is a 1px dashed `border-strong` square of the same size — never a person glyph. |
 | **State pip** | 5px circle. `ghost` for a plain state, `ok` for the final state, `alert` for rejected. |
