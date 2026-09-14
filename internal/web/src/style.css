@@ -568,6 +568,15 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
   background: var(--border); color: var(--muted-soft);
   font-family: var(--mono); font-size: 30px; letter-spacing: 0.02em;
 }
+/* In edit mode the picture is the control: it is where anyone would click to
+   change it, so that is what clicking it does. */
+.profile-picture-pick { position: relative; display: inline-flex; cursor: pointer; }
+.profile-picture-pick .hint {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 0;
+  background: var(--sunk); color: var(--muted-soft); text-align: center;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase;
+}
+.profile-picture-pick:hover .hint { color: var(--accent); }
 .profile-facts { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .profile-facts h1 {
   margin: 0; font-size: 23px; font-weight: 600; letter-spacing: -0.014em; color: var(--bright);

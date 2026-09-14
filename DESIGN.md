@@ -278,8 +278,8 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | `TeamSettings.dc.html` | Team settings | Work states, Members, Identity, Archive. Identity carries the icon-rendering switch (mono / colour). **No ticket types tab.** |
 | `Admin.dc.html` | Administration | Users, backup/restore, agent access. |
 | `Components.dc.html` | Foundations | The token and component reference this document describes. |
-| *(none)* | Account | Your own account: picture, password, second factor, and the tokens that act as you. Reached from the identity block at the foot of the sidebar. Never drawn. |
-| *(none)* | Profile | A person at `/users/<name>`. Fits the viewport: the picture, name, email, last seen, bio and teams are fixed at the top, and only the activity panel below them scrolls. Memberships sit side by side in a 230px-minimum grid, not stacked. Never drawn. |
+| *(none)* | Account | Settings that are not about how you appear: password, second factor, and the tokens that act as you. Reached from Settings on your own profile, not from the sidebar. Never drawn. |
+| *(none)* | Profile | A person at `/users/<name>`, and where the identity block at the foot of the sidebar goes. Fits the viewport: the picture, name, email, last seen, bio and teams are fixed at the top, and only the activity panel below them scrolls. Memberships sit side by side in a 230px-minimum grid, not stacked. Your own carries Edit profile and Settings; in edit mode the picture *is* the file control (a mono-caps `Change` strip across its foot) and the email and bio are inputs in place, with Save and Cancel in the screen header. Never drawn. |
 | `Dialogs.dc.html` | Dialogs and states | Create item · Reject · New bucket · Split · Bulk move · Bulk edit · delete confirms · second factor · stream banners. |
 
 The sidebar also lists the saved views of `SPEC.md` §9.3 under a `Views` section heading, between
