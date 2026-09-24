@@ -902,7 +902,7 @@ test("a card shows its deadline on a row under the bucket, and only when it has 
   await expect(page.locator(".card", { hasText: "Short" }).locator(".card-deadline")).toHaveCount(0);
 });
 
-test("a deadline three days away or less turns amber", async ({ page }) => {
+test("a deadline three days away or less turns amber, and red once past", async ({ page }) => {
   await signIn(page);
   const day = (n) => {
     const d = new Date();
@@ -919,6 +919,6 @@ test("a deadline three days away or less turns amber", async ({ page }) => {
   const due = (title) => page.locator(".card", { hasText: title }).locator(".card-deadline");
   const amber = "rgb(217, 160, 91)";
   await expect(due("Due in three")).toHaveCSS("color", amber);
-  await expect(due("Overdue by one")).toHaveCSS("color", amber);
+  await expect(due("Overdue by one")).toHaveCSS("color", "rgb(196, 103, 92)");
   await expect(due("Due in four")).not.toHaveCSS("color", amber);
 });
