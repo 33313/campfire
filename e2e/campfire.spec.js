@@ -878,3 +878,57 @@ test("the sidebar's backlog count follows a new ticket without a reload", async 
   await form.getByRole("button", { name: "Create" }).click();
   await expect(count).toHaveText(String(before + 1));
 });
+
+test("a card shows its deadline on a row under the bucket, and only when it has one", async ({ page }) => {
+  await signIn(page);
+  const bucket = await (await page.request.post("/api/items", { data: {
+    kind: "bucket", teamId: 1, title: "Spring clean",
+  } })).json();
+  await page.request.post("/api/items", { data: {
+    kind: "ticket", teamId: 1, title: "Clear the gutters", bucketId: bucket.id,
+    plannedEnd: "2026-03-05", accepted: true,
+  } });
+
+  await page.goto("/t/1/board");
+  const card = page.locator(".card", { hasText: "Clear the gutters" });
+  await expect(card.locator(".card-deadline")).toHaveText("05 Mar 2026");
+  await expect(card.locator(".card-deadline svg")).toBeVisible();
+  const [row, due, foot] = await Promise.all([".card-bucket", ".card-deadline", ".card-foot"]
+    .map((sel) => card.locator(sel).boundingBox()));
+  expect(row.y + row.height).toBeLessThanOrEqual(due.y);
+  expect(due.y + due.height).toBeLessThanOrEqual(foot.y);
+
+  // A card with no planned end has no deadline row at all.
+  await expect(page.locator(".card", { hasText: "Short" }).locator(".card-deadline")).toHaveCount(0);
+});
+
+test("a deadline three days away or less turns amber, and red once past", async ({ page }) => {
+  await signIn(page);
+  const day = (n) => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-` +
+      String(d.getDate()).padStart(2, "0");
+  };
+  for (const [title, n] of [["Due in three", 3], ["Due in four", 4], ["Overdue by one", -1]]) {
+    await page.request.post("/api/items", { data: {
+      kind: "ticket", teamId: 1, title, plannedEnd: day(n), accepted: true,
+    } });
+  }
+  await page.goto("/t/1/board");
+  const due = (title) => page.locator(".card", { hasText: title }).locator(".card-deadline");
+  const amber = "rgb(217, 160, 91)";
+  await expect(due("Due in three")).toHaveCSS("color", amber);
+  await expect(due("Overdue by one")).toHaveCSS("color", "rgb(196, 103, 92)");
+  await expect(due("Due in four")).not.toHaveCSS("color", amber);
+
+  // A done ticket's deadline is greyed out, however late it was.
+  const done = (await (await page.request.get("/api/teams/1/states")).json())
+    .find((s) => s.role === "final");
+  const late = await (await page.request.post("/api/items", { data: {
+    kind: "ticket", teamId: 1, title: "Done but late", plannedEnd: day(-1), accepted: true,
+  } })).json();
+  await page.request.post(`/api/items/${late.id}/move`, { data: { stateId: done.id } });
+  await page.reload();
+  await expect(due("Done but late")).toHaveCSS("color", "rgb(107, 97, 87)");
+});
