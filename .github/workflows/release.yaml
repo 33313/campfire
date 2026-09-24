@@ -29,7 +29,7 @@ jobs:
     steps:
       # main as it is now, not the commit that started this run: a run that
       # queued behind another releases on top of that one's release commit.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           ssh-key: ${{ secrets.GH_DK }}
@@ -54,12 +54,12 @@ jobs:
           fi
           echo "Nothing to release."
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         if: steps.plan.outputs.go
         with:
           go-version: "1.27"
           check-latest: true
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.plan.outputs.go
         with:
           node-version: "22"
@@ -93,18 +93,18 @@ jobs:
 
       # The image goes before the GitHub release: a published release is what
       # marks the whole thing done.
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
         if: steps.plan.outputs.go
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
         if: steps.plan.outputs.go
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         if: steps.plan.outputs.go
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         if: steps.plan.outputs.go
         with:
           context: git
@@ -115,7 +115,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},value=${{ env.VERSION }}
             type=semver,pattern={{major}},value=${{ env.VERSION }}
       - name: Build and push the image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         if: steps.plan.outputs.go
         with:
           context: .
