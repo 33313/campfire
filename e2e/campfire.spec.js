@@ -878,3 +878,25 @@ test("the sidebar's backlog count follows a new ticket without a reload", async 
   await form.getByRole("button", { name: "Create" }).click();
   await expect(count).toHaveText(String(before + 1));
 });
+
+test("a card shows its deadline on a row under the bucket, and only when it has one", async ({ page }) => {
+  await signIn(page);
+  const bucket = await (await page.request.post("/api/items", { data: {
+    kind: "bucket", teamId: 1, title: "Spring clean",
+  } })).json();
+  await page.request.post("/api/items", { data: {
+    kind: "ticket", teamId: 1, title: "Clear the gutters", bucketId: bucket.id,
+    plannedEnd: "2026-03-05", accepted: true,
+  } });
+
+  await page.goto("/t/1/board");
+  const card = page.locator(".card", { hasText: "Clear the gutters" });
+  await expect(card.locator(".card-deadline")).toHaveText("Due 05 Mar 2026");
+  const [row, due, foot] = await Promise.all([".card-bucket", ".card-deadline", ".card-foot"]
+    .map((sel) => card.locator(sel).boundingBox()));
+  expect(row.y + row.height).toBeLessThanOrEqual(due.y);
+  expect(due.y + due.height).toBeLessThanOrEqual(foot.y);
+
+  // A card with no planned end has no deadline row at all.
+  await expect(page.locator(".card", { hasText: "Short" }).locator(".card-deadline")).toHaveCount(0);
+});

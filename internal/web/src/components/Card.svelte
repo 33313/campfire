@@ -3,11 +3,13 @@
   import BucketIcon from "./BucketIcon.svelte";
   import Avatar from "./Avatar.svelte";
   import { BUCKET_COLOURS } from "../lib/icons.js";
+  import { whenDay } from "../lib/format.js";
 
-  // A card carries five fields and no sixth: bucket, title, priority,
-  // identifier, assignee. Labels never appear on one (SPEC.md §8.1).
+  // A card carries six fields and no seventh: bucket, title, deadline,
+  // priority, identifier, assignee. Labels never appear on one (SPEC.md §8.1).
   //
-  // Three rows: the title, the bucket, then the identifier and the assignee.
+  // Rows: the title, the bucket, the deadline, then the identifier and the
+  // assignee. The bucket and the deadline are drawn only when there is one.
   // The bucket wears its colour where it has one, so a column of cards is
   // sorted by eye without reading a title on each.
   let { item, selected = false, focused = false, rendering = "mono",
@@ -49,6 +51,9 @@
       <BucketIcon name={item.bucketIcon} size={10} {rendering} color={item.bucketColor} />
       <span class="name">{item.bucketTitle}</span>
     </span>
+  {/if}
+  {#if item.plannedEnd}
+    <span class="card-deadline ident">Due {whenDay(item.plannedEnd)}</span>
   {/if}
   <div class="card-foot">
     <PriorityGlyph level={item.priority} />
