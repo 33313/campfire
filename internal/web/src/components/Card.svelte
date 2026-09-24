@@ -7,8 +7,8 @@
   // A card carries five fields and no sixth: bucket, title, priority,
   // identifier, assignee. Labels never appear on one (SPEC.md §8.1).
   //
-  // The bucket sits in the foot between the identifier and the assignee, and
-  // wears the bucket's colour where it has one: a column of cards is then
+  // Three rows: the title, the bucket, then the identifier and the assignee.
+  // The bucket wears its colour where it has one, so a column of cards is
   // sorted by eye without reading a title on each.
   let { item, selected = false, focused = false, rendering = "mono",
          ontoggle, ondrag, onpreview, onmenu } = $props();
@@ -42,17 +42,17 @@
   ondragend={() => { dragging = false; ondrag(null); }}>
 
   <p class="card-title">{item.title}</p>
+  {#if item.bucketIdentifier}
+    <span class="card-bucket" title="{item.bucketIdentifier}  {item.bucketTitle}"
+          style={tint ? `border-color:${tint};color:${tint};` +
+            `background:color-mix(in srgb, ${tint} 13%, transparent)` : ""}>
+      <BucketIcon name={item.bucketIcon} size={10} {rendering} color={item.bucketColor} />
+      <span class="name">{item.bucketTitle}</span>
+    </span>
+  {/if}
   <div class="card-foot">
     <PriorityGlyph level={item.priority} />
     <span class="ident">{item.identifier}</span>
-    {#if item.bucketIdentifier}
-      <span class="card-bucket" title="{item.bucketIdentifier}  {item.bucketTitle}"
-            style={tint ? `border-color:${tint};color:${tint};` +
-              `background:color-mix(in srgb, ${tint} 13%, transparent)` : ""}>
-        <BucketIcon name={item.bucketIcon} size={10} {rendering} color={item.bucketColor} />
-        <span class="name">{item.bucketTitle}</span>
-      </span>
-    {/if}
     <span style="margin-left:auto"><Avatar name={item.assigneeName} /></span>
   </div>
 </a>
