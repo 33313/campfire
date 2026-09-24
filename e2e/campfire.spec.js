@@ -836,3 +836,26 @@ test("a long bucket name makes the card taller, not wider", async ({ page }) => 
   expect(b.height).toBeGreaterThan(20);
   expect(await chip.locator(".name").evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
 });
+
+test("starting a selection moves nothing on the screen", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  const card = page.locator(".card").first();
+  const filter = page.locator(".filter-bar");
+  const top = async () => (await card.boundingBox()).y;
+  const before = await top();
+
+  await card.click({ modifiers: ["Control"] });
+  const bar = page.locator(".selection-bar");
+  await expect(bar).toBeVisible();
+  // The bar is where the filter bar was, and the filters behind it are out of
+  // reach until the selection ends.
+  expect(await bar.boundingBox()).toEqual(await filter.boundingBox());
+  await expect(page.locator(".toolbar > [inert]")).toHaveCount(1);
+  expect(await top()).toBe(before);
+
+  await bar.getByRole("button", { name: "Clear" }).click();
+  await expect(bar).toHaveCount(0);
+  await expect(page.locator(".toolbar > [inert]")).toHaveCount(0);
+  expect(await top()).toBe(before);
+});
