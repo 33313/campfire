@@ -2,9 +2,9 @@
 # its file with `go tool changie new`; merging it into main releases it.
 changesDir: .changes
 unreleasedDir: unreleased
-# Microseconds: to the second, two files written in the same second share a
+# Milliseconds: to the second, two files written in the same second share a
 # name and the second overwrites the first.
-fragmentFileFormat: '{{.Kind}}-{{.Time.Format "20060102-150405.000000"}}'
+fragmentFileFormat: '{{.Kind}}-{{.Time.Format "20060102-150405.000"}}'
 headerPath: header.tpl.md
 changelogPath: CHANGELOG.md
 versionExt: md
