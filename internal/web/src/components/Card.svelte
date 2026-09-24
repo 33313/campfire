@@ -19,8 +19,10 @@
   let dragging = $state(false);
   let tint = $derived(BUCKET_COLOURS[item.bucketColor] || null);
   // A deadline three days away or less is drawn in the accent so it is seen
-  // before it is missed, and one already past in the alert colour.
-  let days = $derived(item.plannedEnd ? daysUntil(item.plannedEnd) : null);
+  // before it is missed, and one already past in the alert colour. A done
+  // ticket's deadline is greyed out: there is nothing left to be late for.
+  let done = $derived(item.stateRole === "final");
+  let days = $derived(item.plannedEnd && !done ? daysUntil(item.plannedEnd) : null);
   let soon = $derived(days !== null && days >= 0 && days <= 3);
   let overdue = $derived(days !== null && days < 0);
 </script>
@@ -59,7 +61,7 @@
     </span>
   {/if}
   {#if item.plannedEnd}
-    <span class="card-deadline" class:soon class:overdue title="Planned end">
+    <span class="card-deadline" class:soon class:overdue class:done title="Planned end">
       <Icon body={NAV.calendar} size={12} /><span>{whenDay(item.plannedEnd)}</span>
     </span>
   {/if}

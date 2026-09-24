@@ -921,4 +921,14 @@ test("a deadline three days away or less turns amber, and red once past", async 
   await expect(due("Due in three")).toHaveCSS("color", amber);
   await expect(due("Overdue by one")).toHaveCSS("color", "rgb(196, 103, 92)");
   await expect(due("Due in four")).not.toHaveCSS("color", amber);
+
+  // A done ticket's deadline is greyed out, however late it was.
+  const done = (await (await page.request.get("/api/teams/1/states")).json())
+    .find((s) => s.role === "final");
+  const late = await (await page.request.post("/api/items", { data: {
+    kind: "ticket", teamId: 1, title: "Done but late", plannedEnd: day(-1), accepted: true,
+  } })).json();
+  await page.request.post(`/api/items/${late.id}/move`, { data: { stateId: done.id } });
+  await page.reload();
+  await expect(due("Done but late")).toHaveCSS("color", "rgb(107, 97, 87)");
 });
