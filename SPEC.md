@@ -148,7 +148,7 @@ Three roles exist. Others WILL NOT be added in v1.
 | Role | Can |
 |---|---|
 | **Instance administrator** | Create users and teams, issue invitations and password resets, read the global log, reassign bucket ownership, act as a team administrator anywhere. |
-| **Team administrator** | Manage one team: membership, work states, bucket icon rendering, team name, archival of the team's items. |
+| **Team administrator** | Manage one team: membership, work states, bucket icon rendering, team name, picture and description, archival of the team's items. |
 | **Member** | Create and edit tickets in teams they belong to. |
 
 Any authenticated user may comment on any item, regardless of team membership.
@@ -157,8 +157,9 @@ A user may belong to any number of teams, with a different role in each.
 
 ### 5.3 Teams
 
-A team owns a name, a short code, members, work states ([§7](#7-work-states-and-lifecycle)), and the
-rendering it uses for bucket icons ([§6.2](#62-buckets)).
+A team owns a name, a short code, members, work states ([§7](#7-work-states-and-lifecycle)), the
+rendering it uses for bucket icons ([§6.2](#62-buckets)), and an optional picture and description.
+The picture and description are presentation: nothing derives from them.
 
 A team WILL NOT own a list of ticket types. A ticket is described by the bucket it sits in, its title
 and its description, and a type field adds a taxonomy to administer without adding anything the three

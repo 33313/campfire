@@ -138,6 +138,10 @@
 
   <div class="sidebar-foot">
     {#if teamId}
+      <a class="nav-item" class:on={route.path === `/t/${teamId}/profile`} href="/t/{teamId}/profile">
+        <Icon body={NAV.team} size={15} />
+        <span class="label">Team</span>
+      </a>
       <a class="nav-item" class:on={route.path === `/t/${teamId}/settings`} href="/t/{teamId}/settings">
         <Icon body={NAV.settings} size={15} />
         <span class="label">Team settings</span>

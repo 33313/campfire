@@ -11,21 +11,27 @@ type Team struct {
 	Name          string `json:"name"`
 	ShortCode     string `json:"shortCode"`
 	IconRendering string `json:"iconRendering"` // "mono" or "colour"
+	Avatar        string `json:"avatar,omitempty"`
+	Description   string `json:"description,omitempty"`
 	NextNumber    int64  `json:"-"`
 	ArchivedAt    int64  `json:"archivedAt,omitempty"`
 	CreatedAt     int64  `json:"createdAt"`
 }
 
-const teamColumns = `id, name, short_code, icon_rendering, next_number, archived_at, created_at`
+const teamColumns = `id, name, short_code, icon_rendering, avatar, description, next_number,
+	archived_at, created_at`
 
 func scanTeam(row interface{ Scan(...any) error }) (Team, error) {
 	var t Team
 	var archived sql.NullInt64
-	err := row.Scan(&t.ID, &t.Name, &t.ShortCode, &t.IconRendering, &t.NextNumber, &archived, &t.CreatedAt)
+	var avatar, description sql.NullString
+	err := row.Scan(&t.ID, &t.Name, &t.ShortCode, &t.IconRendering, &avatar, &description,
+		&t.NextNumber, &archived, &t.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Team{}, ErrNotFound
 	}
 	t.ArchivedAt = num(archived)
+	t.Avatar, t.Description = text(avatar), text(description)
 	return t, err
 }
 
@@ -82,6 +88,12 @@ func RenameTeam(ctx context.Context, q Q, id int64, name string) error {
 
 func SetIconRendering(ctx context.Context, q Q, id int64, rendering string) error {
 	_, err := q.ExecContext(ctx, `UPDATE teams SET icon_rendering = ? WHERE id = ?`, rendering, id)
+	return err
+}
+
+func SetTeamProfile(ctx context.Context, q Q, id int64, avatar, description string) error {
+	_, err := q.ExecContext(ctx, `UPDATE teams SET avatar = ?, description = ? WHERE id = ?`,
+		null(avatar), null(description), id)
 	return err
 }
 

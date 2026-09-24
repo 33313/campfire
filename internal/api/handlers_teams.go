@@ -27,8 +27,9 @@ func (s *Server) getTeam(w http.ResponseWriter, r *http.Request, a core.Actor) (
 	return s.svc.Team(r.Context(), a, id)
 }
 
-// updateTeam changes the name and the icon rendering. The short code is not
-// here: it is set at creation and MUST NOT change (SPEC.md §5.3).
+// updateTeam changes the name, the icon rendering, the picture and the
+// description. The short code is not here: it is set at creation and MUST NOT
+// change (SPEC.md §5.3).
 func (s *Server) updateTeam(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
 	id, err := pathID(r, "id")
 	if err != nil {
@@ -37,6 +38,8 @@ func (s *Server) updateTeam(w http.ResponseWriter, r *http.Request, a core.Actor
 	var in struct {
 		Name          *string
 		IconRendering *string
+		Avatar        *string
+		Description   *string
 	}
 	if err := decode(r, &in); err != nil {
 		return nil, err
@@ -48,6 +51,23 @@ func (s *Server) updateTeam(w http.ResponseWriter, r *http.Request, a core.Actor
 	}
 	if in.IconRendering != nil {
 		if err := s.svc.SetIconRendering(r.Context(), a, id, *in.IconRendering); err != nil {
+			return nil, err
+		}
+	}
+	// The picture and the description are written together; one left out of
+	// the body keeps what the team has.
+	if in.Avatar != nil || in.Description != nil {
+		t, err := s.svc.Team(r.Context(), a, id)
+		if err != nil {
+			return nil, err
+		}
+		if in.Avatar != nil {
+			t.Avatar = *in.Avatar
+		}
+		if in.Description != nil {
+			t.Description = *in.Description
+		}
+		if err := s.svc.SetTeamProfile(r.Context(), a, id, t.Avatar, t.Description); err != nil {
 			return nil, err
 		}
 	}

@@ -17,6 +17,7 @@
   import Buckets from "./routes/Buckets.svelte";
   import Log from "./routes/Log.svelte";
   import TeamSettings from "./routes/TeamSettings.svelte";
+  import TeamProfile from "./routes/TeamProfile.svelte";
   import Admin from "./routes/Admin.svelte";
   import Account from "./routes/Account.svelte";
   import Profile from "./routes/Profile.svelte";
@@ -94,6 +95,7 @@
     if ((m = path.match(/^\/t\/(\d+)\/board$/))) return { c: Board, p: { teamId: +m[1] } };
     if ((m = path.match(/^\/t\/(\d+)\/backlog$/))) return { c: Backlog, p: { teamId: +m[1] } };
     if ((m = path.match(/^\/t\/(\d+)\/settings$/))) return { c: TeamSettings, p: { teamId: +m[1] } };
+    if ((m = path.match(/^\/t\/(\d+)\/profile$/))) return { c: TeamProfile, p: { teamId: +m[1] } };
     if (path === "/buckets") return { c: Buckets, p: {} };
     if (path === "/log") return { c: Log, p: {} };
     if (path === "/admin") return { c: Admin, p: {} };
