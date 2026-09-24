@@ -212,12 +212,17 @@ test("a bucket carries an icon and its tickets", async ({ page }) => {
   await page.locator(".aside-control").last().click();
   await expect(page).toHaveURL(/\/SOL-2$/);
 
-  // The bucket's colour rides on its tickets' cards, in the foot beside the
-  // identifier rather than above the title.
+  // The bucket's colour rides on its tickets' cards, on a row of its own
+  // between the title and the identifier.
   await page.goto("/t/1/board");
-  const chip = page.locator(".card-foot .card-bucket");
+  const card = page.locator(".card", { has: page.locator(".card-bucket") }).first();
+  const chip = card.locator(":scope > .card-bucket");
   await expect(chip).toContainText("Winter readiness");
   await expect(chip).toHaveCSS("border-color", "rgb(196, 103, 92)");
+  const [title, row, foot] = await Promise.all([".card-title", ".card-bucket", ".card-foot"]
+    .map((sel) => card.locator(sel).boundingBox()));
+  expect(title.y + title.height).toBeLessThanOrEqual(row.y);
+  expect(row.y + row.height).toBeLessThanOrEqual(foot.y);
 
   await page.goto("/SOL-2");
   await expect(page.getByRole("link", { name: "SOL-1" })).toBeVisible();
