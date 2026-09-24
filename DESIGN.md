@@ -264,7 +264,7 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | **Toast** | bottom right, `surface`, 1px `border`, max 420px; 1px `alert` when it reports a failure. Stacks upward. |
 | **Board column** | header (state pip, name in mono caps, count in a bordered box, right) over a `sunk` body. Drop target is a 74px dashed `border` box on `accent-tint-weak`. |
 | **Table row** | 42px, `rule-faint` underline. Focused row: `accent-tint` + 2px accent left border. Selected row: `accent-tint-weak`. Deprioritised row: `opacity: 0.32`. |
-| **Selection bar** | appears above a table or board when a selection is non-empty. Count in accent mono caps, then the actions of §6, then Clear on the right. |
+| **Selection bar** | takes the filter bar's place while a selection is non-empty, fading in and out over it (120ms, none under reduced motion) so nothing below moves; a 1px `accent` underline marks the mode. Count in accent mono caps, then the actions of §6, then Clear on the right. |
 | **Card menu** | the right-click menu on a card. 186px, fixed at the pointer and kept inside the viewport, `surface` on 1px `border-strong` — the team drop-down's panel. An eyebrow head names what it will act on (the identifier, or "n selected"), then the selection bar's five actions, then Clone, Split and Open for a single ticket, separated by a 1px `border` rule. Closes on Escape, on a click away, and before any dialog it opens. |
 | **Dialog** | `surface`, 1px `border-strong` (1px `alert` when destructive). Title row, body at 16px padding, footer on `bar` with the consequence stated on the left in mono caps and the actions on the right. |
 | **Stream banner** | too-far-behind: 1px `alert`, alert pip, Reload button. Reconnecting: 1px `border`, `muted` pip, no action. |
@@ -322,7 +322,7 @@ Ask rather than invent:
 - Mobile and narrow layouts. The rails are fixed; the board columns flex and an unscaled large panel
   is zoomed (§1), and that is the whole of it. Narrower than the rails allow, the interface scrolls
   rather than reflows.
-- Motion. No transition, easing or duration is specified anywhere.
+- Motion, beyond the selection bar's fade (§5). No other transition, easing or duration is specified.
 - Empty states beyond the board's empty column, the log's end-of-list, and the one-line `empty-note`
   a list falls back to.
 - Error and validation copy beyond the input error state, the per-field message under a refused

@@ -130,13 +130,18 @@
     {/snippet}
   </ScreenHeader>
 
-  <FilterBar {teamId} {filter} {setFilter} {showBuckets} {setShowBuckets} />
-
-  {#if selected.length}
-    <SelectionBar ids={selected} {states}
-                  onapplied={async () => { selected = []; await load(); }}
-                  onclear={() => (selected = [])} />
-  {/if}
+  <!-- The selection bar takes the filter bar's place rather than a row of
+       its own, so starting a selection moves nothing on the screen. -->
+  <div class="toolbar">
+    <div inert={selected.length > 0}>
+      <FilterBar {teamId} {filter} {setFilter} {showBuckets} {setShowBuckets} />
+    </div>
+    {#if selected.length}
+      <SelectionBar ids={selected} {states}
+                    onapplied={async () => { selected = []; await load(); }}
+                    onclear={() => (selected = [])} />
+    {/if}
+  </div>
 
   <div class="body">
     <div class="backlog-layout">
