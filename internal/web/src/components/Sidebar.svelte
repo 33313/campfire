@@ -67,8 +67,9 @@
   }
 </script>
 
-<!-- The team's picture, or a blank square holding its place so the names
-     line up either way. The switch and every option in it draw the same. -->
+<!-- The team's picture stands for it in the picker, or a blank square where
+     it has none, so the names line up either way. The switch and every option
+     draw the same. -->
 {#snippet teamAvatar(t)}
   {#if t?.avatar}
     <img class="team-avatar" src={t.avatar} alt="" />
@@ -85,7 +86,6 @@
               onclick={() => (open = !open)}
               onkeydown={(e) => e.key === "Escape" && (open = false)}>
         {@render teamAvatar(known)}
-        <span class="code-badge">{known ? known.shortCode : "—"}</span>
         <span class="team-name">{known ? known.name : "No team yet"}</span>
         <Icon body={NAV.chevron} size={11} color="var(--faint)" />
       </button>
@@ -94,7 +94,6 @@
           {#each app.allTeams as t}
             <button class="team-option" class:on={t.id === teamId} onclick={() => choose(t.id)}>
               {@render teamAvatar(t)}
-              <span class="code-badge">{t.shortCode}</span>
               <span class="team-name">{t.name}</span>
               <span class="note">
                 {app.teams.some((m) => m.teamId === t.id) ? "member" : "read only"}
