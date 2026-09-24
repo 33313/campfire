@@ -82,6 +82,13 @@
         <div class="team-list" role="menu">
           {#each app.allTeams as t}
             <button class="team-option" class:on={t.id === teamId} onclick={() => choose(t.id)}>
+              <!-- The team's picture, or a blank square holding its place so
+                   the names line up either way. -->
+              {#if t.avatar}
+                <img class="team-avatar" src={t.avatar} alt="" />
+              {:else}
+                <span class="team-avatar"></span>
+              {/if}
               <span class="code-badge">{t.shortCode}</span>
               <span class="team-name">{t.name}</span>
               <span class="note">

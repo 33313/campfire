@@ -787,6 +787,16 @@ test("a team has a profile: its picture, what it does, who is in it", async ({ p
   await expect(page.locator(".profile-bio")).toHaveText("Keeps the building warm.");
   await expect(page.locator("img.profile-picture")).toBeVisible();
 
+  // The team picker shows it; a team without one gets a blank square.
+  await page.request.post("/api/teams", { data: { name: "Umbra", shortCode: "UMB" } });
+  await page.reload();
+  await page.locator(".team-switch").click();
+  const option = (code) => page.locator(".team-option", { hasText: code }).locator(".team-avatar");
+  await expect(option("SOL")).toHaveAttribute("src", /^data:image\//);
+  await expect(option("UMB")).toBeEmpty();
+  expect(await option("UMB").evaluate((el) => el.tagName)).toBe("SPAN");
+  await page.locator(".team-switch").click();
+
   // The members, each a way through to their own profile, and the trail.
   await page.locator(".profile-teams").getByRole("link", { name: "root" }).click();
   await expect(page).toHaveURL(/\/users\/root$/);
