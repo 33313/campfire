@@ -67,6 +67,16 @@
   }
 </script>
 
+<!-- The team's picture, or a blank square holding its place so the names
+     line up either way. The switch and every option in it draw the same. -->
+{#snippet teamAvatar(t)}
+  {#if t?.avatar}
+    <img class="team-avatar" src={t.avatar} alt="" />
+  {:else}
+    <span class="team-avatar"></span>
+  {/if}
+{/snippet}
+
 <aside class="sidebar">
   <div class="sidebar-head">
     <div class="wordmark">Campfire</div>
@@ -74,6 +84,7 @@
       <button class="team-switch" class:on={open} aria-expanded={open} aria-haspopup="menu"
               onclick={() => (open = !open)}
               onkeydown={(e) => e.key === "Escape" && (open = false)}>
+        {@render teamAvatar(known)}
         <span class="code-badge">{known ? known.shortCode : "—"}</span>
         <span class="team-name">{known ? known.name : "No team yet"}</span>
         <Icon body={NAV.chevron} size={11} color="var(--faint)" />
@@ -82,13 +93,7 @@
         <div class="team-list" role="menu">
           {#each app.allTeams as t}
             <button class="team-option" class:on={t.id === teamId} onclick={() => choose(t.id)}>
-              <!-- The team's picture, or a blank square holding its place so
-                   the names line up either way. -->
-              {#if t.avatar}
-                <img class="team-avatar" src={t.avatar} alt="" />
-              {:else}
-                <span class="team-avatar"></span>
-              {/if}
+              {@render teamAvatar(t)}
               <span class="code-badge">{t.shortCode}</span>
               <span class="team-name">{t.name}</span>
               <span class="note">

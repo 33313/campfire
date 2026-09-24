@@ -796,6 +796,8 @@ test("a team has a profile: its picture, what it does, who is in it", async ({ p
   await expect(option("UMB")).toBeEmpty();
   expect(await option("UMB").evaluate((el) => el.tagName)).toBe("SPAN");
   await page.locator(".team-switch").click();
+  // ...and so does the switch, for the team it shows.
+  await expect(page.locator(".team-switch .team-avatar")).toHaveAttribute("src", /^data:image\//);
 
   // The members, each a way through to their own profile, and the trail.
   await page.locator(".profile-teams").getByRole("link", { name: "root" }).click();
