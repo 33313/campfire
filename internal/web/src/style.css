@@ -380,6 +380,9 @@ img.avatar { object-fit: cover; }
 .column {
   display: flex; flex-direction: column; flex: 1 0 280px; max-width: 420px;
   background: var(--sunk); border: 1px solid var(--border); min-height: 0;
+  /* What is on a card never sets the column's width: a flex item grows to
+     its content by default, and one long bucket name widened a column. */
+  min-width: 0;
 }
 .column-head {
   display: flex; align-items: center; gap: 8px; padding: 10px 11px;
@@ -411,13 +414,16 @@ img.avatar { object-fit: cover; }
 .card.focused.selected { border-color: var(--accent); }
 .card.dragging { opacity: 0.4; }
 /* The bucket chip in a card's foot. It wears the bucket's colour where it has
-   one, and an uncoloured bucket keeps the plain border it always had. */
+   one, and an uncoloured bucket keeps the plain border it always had.
+
+   A long name wraps inside the chip, as a title does: the card grows taller,
+   never wider, and the name is never cut. */
 .card-bucket {
-  display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 58%;
+  display: inline-flex; align-items: center; gap: 5px; min-width: 0;
   padding: 1px 6px; border: 1px solid var(--border); font-family: var(--mono); font-size: 9.5px;
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim);
 }
-.card-bucket .name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.card-bucket .name { min-width: 0; overflow-wrap: anywhere; }
 .card-title { margin: 0; font-size: 13px; line-height: 1.42; color: var(--text); text-wrap: pretty; }
 .card-foot { display: flex; align-items: center; gap: 8px; }
 /* The identifier is the one thing on a card that must never wrap or shorten;

@@ -809,3 +809,30 @@ test("a team has a profile: its picture, what it does, who is in it", async ({ p
   await expect(page).toHaveURL(/\/t\/1\/profile$/);
   await expect(page.locator(".profile-activity-rows .relation-row").first()).toContainText("root");
 });
+
+test("a long bucket name makes the card taller, not wider", async ({ page }) => {
+  await signIn(page);
+  const bucket = await (await page.request.post("/api/items", { data: {
+    kind: "bucket", teamId: 1, title: "Campfire - Post-release improvements, and then some more",
+  } })).json();
+  await page.request.post("/api/items", { data: {
+    kind: "ticket", teamId: 1, title: "Short", bucketId: bucket.id, accepted: true,
+  } });
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/t/1/board");
+  const card = page.locator(".card", { hasText: "Short" });
+  const chip = card.locator(".card-bucket");
+  await expect(chip).toBeVisible();
+
+  // Every column keeps the width it shares with the others.
+  const widths = await page.locator(".column").evaluateAll((cols) =>
+    cols.map((c) => Math.round(c.getBoundingClientRect().width)));
+  expect(new Set(widths).size, `column widths ${widths}`).toBe(1);
+
+  // The name wraps inside the card, as a title does, rather than being cut.
+  const [c, b] = [await card.boundingBox(), await chip.boundingBox()];
+  expect(b.x + b.width).toBeLessThanOrEqual(c.x + c.width);
+  expect(b.height).toBeGreaterThan(20);
+  expect(await chip.locator(".name").evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+});
