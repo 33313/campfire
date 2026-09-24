@@ -3,21 +3,20 @@
 A self-hosted kanban work tracker for individuals and small teams. One binary, one data file.
 Backup is copying that file; recovery is putting it back.
 
-- [Run it](#run-it)
+- [Install](#install)
+- [First run](#first-run)
 - [Commands](#commands)
 - [Configuration](#configuration)
 - [Agents (MCP)](#agents-mcp)
-- [Backup and recovery](#backup-and-recovery)
 - [Behind a proxy](#behind-a-proxy)
-- [Container image](#container-image)
+- [Backup and recovery](#backup-and-recovery)
 - [Scale](#scale)
-- [Working on it](#working-on-it)
-- [Releases](#releases)
+- [Contributing](#contributing)
 
-## Run it
+## Install
 
 Download the binary for your platform from the
-[latest release](https://github.com/33313/campfire/releases/latest) and run it:
+[latest release](https://github.com/33313/campfire/releases/latest):
 
 ```
 curl -fLo campfire https://github.com/33313/campfire/releases/latest/download/campfire-linux-amd64
@@ -31,20 +30,31 @@ chmod +x campfire
 | macOS | `campfire-darwin-arm64` (Apple silicon), `campfire-darwin-amd64` (Intel) |
 | Windows | `campfire-windows-amd64.exe`, `campfire-windows-arm64.exe` |
 
-`SHA256SUMS` in the release has every file's checksum: `sha256sum --ignore-missing -c SHA256SUMS`.
+`SHA256SUMS` in the release checks the download: `sha256sum --ignore-missing -c SHA256SUMS`.
 
-Linux is the platform Campfire is run and tested on. The binaries are not signed, so elsewhere the
-first run needs one more step:
+Linux is the primary platform. The binaries are not signed, so elsewhere the first run takes one
+more step:
 
-- **macOS** quarantines a binary downloaded in a browser and refuses to run it. Download with
-  `curl` as above, or clear the quarantine once: `xattr -d com.apple.quarantine campfire-darwin-arm64`.
-- **Windows** SmartScreen warns about an unrecognised app: choose *More info*, then *Run anyway*.
+- **macOS** refuses a binary downloaded in a browser. Download with `curl` as above, or run
+  `xattr -d com.apple.quarantine <file>` once.
+- **Windows** SmartScreen warns about an unrecognised app: *More info*, then *Run anyway*.
 
-To build it yourself, run `./build.sh && ./campfire`. `build.sh` compiles the Svelte client into
-`internal/web/app`, then builds the binary that embeds it. Node is needed for that step and nothing
-else — the binary carries the client inside it.
+Or run the container image, for `linux/amd64` and `linux/arm64`:
 
-It prints an address. Open it and create the first account: that account is an instance
+```
+docker run -p 8080:8080 -v campfire-data:/data ghcr.io/33313/campfire
+```
+
+The image binds `0.0.0.0:8080`, since loopback inside a container reaches nobody, and keeps the
+database and snapshots in `/data`. Otherwise it is the same application, configured the same way.
+
+**Upgrading** is replacing the binary, or pulling the image, and restarting. Versions follow
+[Semantic Versioning](https://semver.org); image tags are the version (`1.4.2`), its minor (`1.4`),
+its major (`1`), and `latest`. [`CHANGELOG.md`](CHANGELOG.md) lists what each release changes.
+
+## First run
+
+Campfire prints an address. Open it and create the first account: that account is an instance
 administrator. There is no setup wizard, no database to install, and no open registration
 afterwards — an administrator creates accounts or hands out an invitation link.
 
@@ -90,8 +100,8 @@ Three defaults are worth knowing:
 
 - **`addr` binds to loopback.** A binary run on a laptop must not silently serve the network it is
   attached to. Change it deliberately, and put a reverse proxy in front when you do.
-- **`snapshots.enabled` is true**, including for one person who has never considered backups.
-  Snapshots are online: no locking, no downtime, each verified as it is written.
+- **`snapshots.enabled` is true.** Snapshots are online: no locking, no downtime, each verified as
+  it is written.
 - **`mcp.enabled` is false.** While it is off, `/mcp` is not served and an agent token
   authenticates nothing.
 
@@ -102,7 +112,7 @@ elsewhere, point `snapshots.shipTo` there and leave the live file local.
 
 ## Agents (MCP)
 
-The server is the MCP server — same origin, same port, nothing to package and no second process.
+The server is the MCP server — same origin, same port, no second process.
 
 1. **Enable it.** Set `mcp.enabled` to `true` and restart. The log line
    `agent interface (MCP) on /mcp` confirms it.
@@ -132,7 +142,7 @@ A client configured with JSON wants the same three facts:
 }
 ```
 
-A stdio-only client needs a bridge; Campfire ships none of its own. Use
+A stdio-only client needs a bridge:
 `npx -y mcp-remote https://your-instance/mcp --header "Authorization: Bearer <token>"`.
 
 An agent acts as the person who issued the token, with exactly that person's permissions, resolved
@@ -146,28 +156,10 @@ agents did.
 An instance bound to loopback is reachable only from its own machine, by an agent as much as by a
 browser.
 
-## Backup and recovery
-
-- **Snapshots** run on `snapshots.interval` into `snapshots.dir`, keeping `snapshots.keep`. Each is
-  a complete, self-contained database file, verified when written and again whenever the
-  administration screen lists it.
-- **Off-host copies.** Set `snapshots.shipTo` to a second directory — a mount of another machine, an
-  object-store gateway — and every snapshot is copied there as it is taken. The recovery point is
-  the last snapshot, so shorten the interval if you need a tighter one.
-- **Restoring** replaces the data file, which the running process holds open. Stop the server, run
-  `campfire restore <snapshot>`, start it again. The replaced file is moved aside rather than
-  deleted, so restoring the wrong snapshot is itself recoverable.
-- **Integrity** is checked at startup and hourly. On corruption at startup the server refuses to
-  start and names the snapshot to restore from.
-
-There is no failover, no rolling deployment, no high availability: recovery from total host loss is
-restore time, in minutes. Restarts take seconds, and sessions live in the database, so a restart
-logs nobody out.
-
 ## Behind a proxy
 
-The board updates in place over server-sent events. Three things must hold for that long-lived
-response to survive an intervening proxy:
+The board updates in place over server-sent events. For that long-lived response to survive a
+proxy:
 
 1. **Response buffering off** for `/api/stream`. The server sends `X-Accel-Buffering: no`, which
    nginx honours; other proxies need it said explicitly.
@@ -196,19 +188,22 @@ location / {
 Serve it over TLS. The session cookie is marked `Secure` only when the server knows it is on HTTPS,
 so terminate TLS at the proxy and keep the instance on loopback behind it.
 
-## Container image
+## Backup and recovery
 
-```
-docker run -p 8080:8080 -v campfire-data:/data ghcr.io/33313/campfire
-```
+- **Snapshots** run on `snapshots.interval` into `snapshots.dir`, keeping `snapshots.keep`. Each is
+  a complete database file, verified when written and again whenever the administration screen
+  lists it.
+- **Off-host copies.** Set `snapshots.shipTo` to a second directory — a mount of another machine, an
+  object-store gateway — and every snapshot is copied there as it is taken. The recovery point is
+  the last snapshot, so shorten the interval if you need a tighter one.
+- **Restoring** replaces the data file, which the running process holds open. Stop the server, run
+  `campfire restore <snapshot>`, start it again. The replaced file is moved aside rather than
+  deleted, so restoring the wrong snapshot is itself recoverable.
+- **Integrity** is checked at startup and hourly. On corruption at startup the server refuses to
+  start and names the snapshot to restore from.
 
-Every release is tagged four ways: `1.4.2` exactly, `1.4` for the newest patch release of 1.4, `1`
-for the newest release that needs no action to upgrade to, and `latest`. Below 1.0.0, `0` is no
-safer than `latest`: a minor release there may break. The image is built for `linux/amd64` and
-`linux/arm64`; `docker build -t campfire .` builds it from this tree.
-
-The image binds `0.0.0.0:8080` because loopback inside a container reaches nobody. Everything else
-is the same application, configured the same way; `/data` holds the database and the snapshots.
+There is no failover and no high availability: recovery from total host loss is restore time, in
+minutes. Restarts take seconds, and sessions live in the database, so a restart logs nobody out.
 
 ## Scale
 
@@ -218,73 +213,54 @@ included. One ordinary machine handles this with room to spare. Sharding, read r
 tier and a job queue are not built, and should not be introduced without measurements contradicting
 that.
 
-## Working on it
+## Contributing
+
+```
+./build.sh && ./campfire
+```
+
+`build.sh` compiles the Svelte client into `internal/web/app`, then builds the binary that embeds
+it; Node is needed for that step only. `./build.sh release <version>` builds every released platform
+into `dist/`. `go test ./...` covers the server; `npx playwright test` drives the built binary in a
+browser.
 
 | Path | What is there |
 |---|---|
-| `main.go`, `backup.go`, `mcp.go` | The command: serve, init, check, snapshot, restore. |
+| `main.go`, `backup.go`, `mcp.go` | The command: serve, init, check, snapshot, restore, version. |
 | `internal/store` | The schema, the migrations, and every query. One SQLite file behind a single writer and a read pool. |
 | `internal/core` | The application. Every operation exists here exactly once, behind one permission check and one validation. |
 | `internal/api` | The HTTP interface described by [`api/openapi.yaml`](api/openapi.yaml), plus the event stream. |
 | `internal/mcp` | The agent interface: a second interface over the same handlers. |
 | `internal/web` | The client — Svelte, built by Vite into `app/`, embedded and served by the server. |
 | `internal/auth`, `internal/backup`, `internal/config`, `internal/stream` | Credentials, snapshots, the configuration file, and the fan-out hub. |
-| `.changes`, `CHANGELOG.md` | Release notes: the unreleased changes, and one file per release. See [Releases](#releases). |
-| `e2e` | The Playwright suite. It builds nothing: it runs the real binary against a throwaway data directory and drives it in a browser. |
-
-`go test ./...` covers the server; `npx playwright test` drives the built binary in a browser.
+| `e2e` | The Playwright suite. It runs the real binary against a throwaway data directory and drives it in a browser. |
+| `.changes` | Release notes: unreleased change files, and one file per release. |
 
 Two documents are normative, and the tests cite them. [`SPEC.md`](SPEC.md) fixes behaviour — the
-entities, permissions, lifecycle, API, storage and agent interface — and says nothing about
-appearance. [`DESIGN.md`](DESIGN.md) fixes appearance — colour and type tokens, geometry, component
-states, icon paths — and says nothing about behaviour. Where they appear to disagree, `SPEC.md`
-wins on behaviour and `DESIGN.md` on appearance.
+entities, permissions, lifecycle, API, storage and agent interface. [`DESIGN.md`](DESIGN.md) fixes
+appearance — colour and type tokens, geometry, component states, icon paths. Where they appear to
+disagree, `SPEC.md` wins on behaviour and `DESIGN.md` on appearance. The mockups `DESIGN.md`
+describes are not in this repository; they live in `~/dev/.design/kanban/`, and `DESIGN.md`
+supersedes them.
 
-The mockups `DESIGN.md` describes are **not in this repository**: they live in `~/dev/.design/kanban/`
-as one `.dc.html` file per screen plus `canvas.json`. They are the drawings that came first, and
-`DESIGN.md` supersedes them wherever the two disagree.
+### Releases
 
-## Releases
+Every merge into main that carries a change file is a release; nobody bumps a version or pushes a
+tag by hand. A pull request adds one with `go tool changie new` (or, without prompts,
+`go tool changie new --kind Fixed --body "…"`). changie is pinned in `go.mod`, so there is nothing
+to install. The kind sets the bump:
 
-Every merge into main that carries a change file is a release. Nobody bumps a version or pushes a
-tag by hand.
-
-A pull request describes its change for the people who run Campfire in a change file:
-
-```
-go tool changie new
-```
-
-It asks for a kind and one line of text, and writes `.changes/unreleased/<kind>-<time>.yaml` to
-commit with the change. `go tool changie new --kind Fixed --body "…"` does the same without asking.
-There is nothing to install: changie is pinned in `go.mod` as a tool.
-
-| Kind | Release | For |
-|---|---|---|
-| Breaking | major | A change an operator must act on to upgrade. The text says what to do. |
-| Added | minor | Something new. |
-| Changed | minor | Existing behaviour, different. |
-| Deprecated | minor | Still works, and will be removed. |
-| Removed | minor | Gone. |
-| Fixed | patch | A bug. |
-| Security | patch | A vulnerability. |
-
-A release takes the largest bump among its change files. Below 1.0.0 nothing is Breaking except the
-change that makes 1.0.0; until then a breaking change is Changed or Removed.
+| Kind | Bump |
+|---|---|
+| Breaking, Removed | major |
+| Added, Changed, Deprecated | minor |
+| Fixed, Security | patch |
 
 A pull request that changes nothing for the people who run Campfire — tests, CI, contributor docs —
 carries the `skip-changeset` label instead. The `changeset` check requires one or the other, and its
-summary shows the version and notes the merge would release.
+summary previews the release.
 
-On the merge, [`release.yaml`](.github/workflows/release.yaml):
-
-1. turns the change files into `.changes/vX.Y.Z.md` and `CHANGELOG.md`, then commits
-   `Release vX.Y.Z` and tags it;
-2. builds every platform — `./build.sh release vX.Y.Z` makes the same `dist/` locally;
-3. pushes the commit and tag to main with the deploy key in the `GH_DK` secret, then the image to
-   ghcr.io;
-4. publishes the GitHub release: the binaries, `SHA256SUMS`, and the notes.
-
-If a step after the push fails, rerun the workflow: it finishes a release commit whose GitHub
-release is missing. To correct a release's notes, edit `.changes/vX.Y.Z.md`, run
-`go tool changie merge`, and edit the GitHub release to match.
+On the merge, [`release.yaml`](.github/workflows/release.yaml) writes `CHANGELOG.md`, commits and
+tags `Release vX.Y.Z` with the deploy key in the `GH_DK` secret, pushes the image to ghcr.io, and
+publishes the GitHub release with the binaries and `SHA256SUMS`. If it fails after the tag is
+pushed, rerun it: it finishes a release that has no published GitHub release.

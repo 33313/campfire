@@ -58,7 +58,7 @@ jobs:
           notes=$(go tool changie batch auto --dry-run)
           echo "::notice title=Releases $next::Merging this releases $next (now $latest)."
           if [ "${next%%.*}" != "${latest%%.*}" ]; then
-            echo "::warning title=Major release::$latest → $next. Breaking is for changes an operator must act on to upgrade; its notes must say what to do."
+            echo "::warning title=Major release::$latest → $next."
           fi
           {
             echo "Merging this releases **$next** (now $latest):"

@@ -13,13 +13,8 @@ kindFormat: '### {{.Kind}}'
 changeFormat: '- {{.Body}}'
 body:
   minLength: 3
-# The kind sets the version bump when the change is released. Several changes
-# released together take the largest bump among them.
-#
-# Breaking is for a change an operator must act on to upgrade: a configuration
-# key renamed, a command removed, an API response reshaped. Below 1.0.0 nothing
-# is Breaking but the change that makes 1.0.0 (DEV-6); a breaking change before
-# then is released as Changed or Removed.
+# The kind sets the version bump, per Semantic Versioning. Changes released
+# together take the largest bump among them.
 kinds:
   - label: Breaking
     auto: major
@@ -30,7 +25,7 @@ kinds:
   - label: Deprecated
     auto: minor
   - label: Removed
-    auto: minor
+    auto: major
   - label: Fixed
     auto: patch
   - label: Security
