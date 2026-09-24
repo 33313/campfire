@@ -30,6 +30,32 @@ func TestSubcommandIsReadOnEitherSideOfTheFlags(t *testing.T) {
 	}
 }
 
+// The version is asked for most when something is wrong, so a configuration
+// file that does not parse must not stand in the way of it.
+func TestVersionNeedsNoConfiguration(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "campfire.json")
+	if err := os.WriteFile(path, []byte("{not json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{
+		{"version", "-config", path},
+		{"-config", path, "version"},
+		{"-version", "-config", path},
+	} {
+		if err := run(args); err != nil {
+			t.Fatalf("%v: %v", args, err)
+		}
+	}
+}
+
+func TestAReleaseVersionOutranksTheBuildStamp(t *testing.T) {
+	defer func(v string) { version = v }(version)
+	version = "v1.2.3"
+	if got := buildVersion(); got != "v1.2.3" {
+		t.Fatalf("got %q, want the version set at link time", got)
+	}
+}
+
 func TestAnArgumentNothingReadsIsRefused(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "campfire.json")
 	err := run([]string{"init", "-config", path, "wat"})

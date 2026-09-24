@@ -1,0 +1,67 @@
+name: changeset
+
+# Every pull request says what it changes for the people who run Campfire, in a
+# change file, or carries the skip-changeset label to say it changes nothing
+# for them (README "Releases"). Merging a change file into main releases it.
+#
+# This is its own workflow so that adding or removing the label reruns this,
+# not the test suite.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+concurrency:
+  group: changeset-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changeset:
+    runs-on: ubuntu-latest
+    steps:
+      # The pull request's merge commit, and its first parent: main.
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+
+      - name: Change file or label
+        id: check
+        env:
+          SKIP: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changeset') }}
+        run: |
+          added=$(git diff --name-only --diff-filter=A HEAD^1 HEAD -- '.changes/unreleased/*.yaml')
+          if [ "$SKIP" = true ] && [ -n "$added" ]; then
+            echo "::error title=Change file and skip-changeset::This adds $added, which merging would release. Remove the file or the label."
+            exit 1
+          fi
+          if [ "$SKIP" = true ]; then
+            echo "::notice title=No release::skip-changeset: merging this releases nothing."
+            exit 0
+          fi
+          if [ -z "$added" ]; then
+            echo "::error title=No change file::Run \`go tool changie new\` and commit the file it writes. If this changes nothing for the people who run Campfire, add the skip-changeset label instead."
+            exit 1
+          fi
+          echo "preview=1" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-go@v5
+        if: steps.check.outputs.preview
+        with:
+          go-version: "1.27"
+          check-latest: true
+
+      # What merging this would release, if nothing else merges first. The
+      # dry run also refuses a change file changie cannot read.
+      - name: Preview the release
+        if: steps.check.outputs.preview
+        run: |
+          latest=$(go tool changie latest)
+          next=$(go tool changie next auto)
+          notes=$(go tool changie batch auto --dry-run)
+          echo "::notice title=Releases $next::Merging this releases $next (now $latest)."
+          if [ "${next%%.*}" != "${latest%%.*}" ]; then
+            echo "::warning title=Major release::$latest → $next. Breaking is for changes an operator must act on to upgrade; its notes must say what to do."
+          fi
+          {
+            echo "Merging this releases **$next** (now $latest):"
+            echo
+            echo "$notes"
+          } >> "$GITHUB_STEP_SUMMARY"

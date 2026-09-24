@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -25,6 +26,22 @@ import (
 	"github.com/campfire/campfire/internal/stream"
 	"github.com/campfire/campfire/internal/web"
 )
+
+// version is set when a release is built: -ldflags "-X main.version=v1.2.3".
+var version string
+
+// buildVersion falls back to what the Go toolchain stamps from the git
+// checkout it built: a pseudo-version such as v0.1.1-0.20260924…-abc123, with
+// +dirty when the tree had uncommitted changes.
+func buildVersion() string {
+	if version != "" {
+		return version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	return "dev"
+}
 
 func main() {
 	log.SetFlags(log.Ltime)
@@ -43,9 +60,11 @@ usage:
   campfire snapshot             take a snapshot now and exit
   campfire restore <snapshot>   replace the data file with a snapshot
   campfire check                verify the database's integrity and exit
+  campfire version              print the version and exit
 
 flags:
   -config <path>   configuration file (default: the data directory)
+  -version         print the version and exit
 `
 }
 
@@ -57,6 +76,7 @@ func run(args []string) error {
 
 	fs := flag.NewFlagSet("campfire", flag.ContinueOnError)
 	configPath := fs.String("config", config.DefaultPath(), "configuration file")
+	showVersion := fs.Bool("version", false, "print the version and exit")
 	fs.Usage = func() { fmt.Fprint(os.Stderr, usage()) }
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -70,6 +90,16 @@ func run(args []string) error {
 	rest := fs.Args()
 	if command == "serve" && len(rest) > 0 {
 		command, rest = rest[0], rest[1:]
+	}
+
+	// Read before the configuration: the version is asked for most when
+	// something is wrong, and that may be the configuration.
+	if command == "version" || *showVersion {
+		if err := requireNoArgs("version", rest); err != nil {
+			return err
+		}
+		fmt.Println(buildVersion())
+		return nil
 	}
 
 	cfg, err := config.Load(*configPath)
@@ -206,7 +236,7 @@ func serve(cfg config.Config) error {
 		srv.Shutdown(shutdown)
 	}()
 
-	log.Printf("campfire listening on http://%s (data: %s)", cfg.Addr, cfg.Database)
+	log.Printf("campfire %s listening on http://%s (data: %s)", buildVersion(), cfg.Addr, cfg.Database)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

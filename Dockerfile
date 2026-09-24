@@ -3,7 +3,12 @@
 
 # The client is compiled by Vite and embedded by the Go build, so it is built
 # first and copied into place.
-FROM node:22-alpine AS client
+#
+# Both build stages run on the builder's own platform and cross-compile, so a
+# multi-platform image (docker buildx --platform linux/amd64,linux/arm64) is not
+# built under emulation. The client is JavaScript: one build serves every
+# platform.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS client
 WORKDIR /src
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -11,7 +16,7 @@ COPY internal/web ./internal/web
 COPY vite.config.js ./
 RUN npm run build
 
-FROM golang:1.27-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -19,7 +24,12 @@ COPY . .
 COPY --from=client /src/internal/web/app ./internal/web/app
 # CGO off: the SQLite driver is pure Go, so the binary is static and the
 # runtime image needs nothing but a certificate bundle.
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/campfire .
+#
+# VERSION is set by the release workflow. The image has no git to stamp one
+# from, so without it the binary reports "dev".
+ARG TARGETOS TARGETARCH VERSION
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o /out/campfire .
 
 FROM alpine:3.20
 RUN adduser -D -u 10001 campfire && mkdir -p /data && chown campfire /data

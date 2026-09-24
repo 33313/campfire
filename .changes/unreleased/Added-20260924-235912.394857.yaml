@@ -1,0 +1,3 @@
+kind: Added
+body: '`campfire version` prints the version, and the server logs it when it starts.'
+time: 2026-09-24T23:59:12.394857432+02:00
