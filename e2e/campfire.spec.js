@@ -859,3 +859,17 @@ test("starting a selection moves nothing on the screen", async ({ page }) => {
   await expect(page.locator(".toolbar > [inert]")).toHaveCount(0);
   expect(await top()).toBe(before);
 });
+
+test("the sidebar's backlog count follows a new ticket without a reload", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  const count = page.locator(".sidebar .nav-item", { hasText: "Backlog" }).locator(".count");
+  await expect(page.locator(".card").first()).toBeVisible(); // booted
+  const before = (await count.count()) ? +(await count.textContent()) : 0; // 0 is not drawn
+
+  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+  const form = page.getByRole("dialog");
+  await form.getByLabel("Title").fill("Bleed the radiators");
+  await form.getByRole("button", { name: "Create" }).click();
+  await expect(count).toHaveText(String(before + 1));
+});
