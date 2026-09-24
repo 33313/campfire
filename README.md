@@ -12,16 +12,37 @@ Backup is copying that file; recovery is putting it back.
 - [Container image](#container-image)
 - [Scale](#scale)
 - [Working on it](#working-on-it)
+- [Releases](#releases)
 
 ## Run it
 
+Download the binary for your platform from the
+[latest release](https://github.com/33313/campfire/releases/latest) and run it:
+
 ```
-./build.sh && ./campfire
+curl -fLo campfire https://github.com/33313/campfire/releases/latest/download/campfire-linux-amd64
+chmod +x campfire
+./campfire
 ```
 
-`build.sh` compiles the Svelte client into `internal/web/app`, then builds the binary that embeds
-it. Node is needed for that step and nothing else — the released binary carries the client inside
-it.
+| Platform | File |
+|---|---|
+| Linux | `campfire-linux-amd64`, `campfire-linux-arm64` |
+| macOS | `campfire-darwin-arm64` (Apple silicon), `campfire-darwin-amd64` (Intel) |
+| Windows | `campfire-windows-amd64.exe`, `campfire-windows-arm64.exe` |
+
+`SHA256SUMS` in the release has every file's checksum: `sha256sum --ignore-missing -c SHA256SUMS`.
+
+Linux is the platform Campfire is run and tested on. The binaries are not signed, so elsewhere the
+first run needs one more step:
+
+- **macOS** quarantines a binary downloaded in a browser and refuses to run it. Download with
+  `curl` as above, or clear the quarantine once: `xattr -d com.apple.quarantine campfire-darwin-arm64`.
+- **Windows** SmartScreen warns about an unrecognised app: choose *More info*, then *Run anyway*.
+
+To build it yourself, run `./build.sh && ./campfire`. `build.sh` compiles the Svelte client into
+`internal/web/app`, then builds the binary that embeds it. Node is needed for that step and nothing
+else — the binary carries the client inside it.
 
 It prints an address. Open it and create the first account: that account is an instance
 administrator. There is no setup wizard, no database to install, and no open registration
@@ -35,6 +56,7 @@ campfire init            # write a configuration file with every setting in it
 campfire check           # verify the database's integrity and exit
 campfire snapshot        # take a snapshot now and exit
 campfire restore <path>  # replace the data file with a snapshot
+campfire version         # print the version and exit
 ```
 
 `-config <path>` points at a configuration file other than the default.
@@ -177,9 +199,13 @@ so terminate TLS at the proxy and keep the instance on loopback behind it.
 ## Container image
 
 ```
-docker build -t campfire .
-docker run -p 8080:8080 -v campfire-data:/data campfire
+docker run -p 8080:8080 -v campfire-data:/data ghcr.io/33313/campfire
 ```
+
+Every release is tagged three ways: `0.4.2` exactly, `0.4` for the newest patch release of 0.4, and
+`latest`. From 1.0.0 on, `1` follows the newest release that needs no action to upgrade to. The
+image is built for `linux/amd64` and `linux/arm64`; `docker build -t campfire .` builds it from this
+tree.
 
 The image binds `0.0.0.0:8080` because loopback inside a container reaches nobody. Everything else
 is the same application, configured the same way; `/data` holds the database and the snapshots.
@@ -203,6 +229,7 @@ that.
 | `internal/mcp` | The agent interface: a second interface over the same handlers. |
 | `internal/web` | The client — Svelte, built by Vite into `app/`, embedded and served by the server. |
 | `internal/auth`, `internal/backup`, `internal/config`, `internal/stream` | Credentials, snapshots, the configuration file, and the fan-out hub. |
+| `.changes`, `CHANGELOG.md` | Release notes: the unreleased changes, and one file per release. See [Releases](#releases). |
 | `e2e` | The Playwright suite. It builds nothing: it runs the real binary against a throwaway data directory and drives it in a browser. |
 
 `go test ./...` covers the server; `npx playwright test` drives the built binary in a browser.
@@ -216,3 +243,48 @@ wins on behaviour and `DESIGN.md` on appearance.
 The mockups `DESIGN.md` describes are **not in this repository**: they live in `~/dev/.design/kanban/`
 as one `.dc.html` file per screen plus `canvas.json`. They are the drawings that came first, and
 `DESIGN.md` supersedes them wherever the two disagree.
+
+## Releases
+
+Every merge into main that carries a change file is a release. Nobody bumps a version or pushes a
+tag by hand.
+
+A pull request describes its change for the people who run Campfire in a change file:
+
+```
+go tool changie new
+```
+
+It asks for a kind and one line of text, and writes `.changes/unreleased/<kind>-<time>.yaml` to
+commit with the change. `go tool changie new --kind Fixed --body "…"` does the same without asking.
+There is nothing to install: changie is pinned in `go.mod` as a tool.
+
+| Kind | Release | For |
+|---|---|---|
+| Breaking | major | A change an operator must act on to upgrade. The text says what to do. |
+| Added | minor | Something new. |
+| Changed | minor | Existing behaviour, different. |
+| Deprecated | minor | Still works, and will be removed. |
+| Removed | minor | Gone. |
+| Fixed | patch | A bug. |
+| Security | patch | A vulnerability. |
+
+A release takes the largest bump among its change files. Below 1.0.0 nothing is Breaking except the
+change that makes 1.0.0; until then a breaking change is Changed or Removed.
+
+A pull request that changes nothing for the people who run Campfire — tests, CI, contributor docs —
+carries the `skip-changeset` label instead. The `changeset` check requires one or the other, and its
+summary shows the version and notes the merge would release.
+
+On the merge, [`release.yaml`](.github/workflows/release.yaml):
+
+1. turns the change files into `.changes/vX.Y.Z.md` and `CHANGELOG.md`, then commits
+   `Release vX.Y.Z` and tags it;
+2. builds every platform — `./build.sh release vX.Y.Z` makes the same `dist/` locally;
+3. pushes the commit and tag to main with the deploy key in the `GH_DK` secret, then the image to
+   ghcr.io;
+4. publishes the GitHub release: the binaries, `SHA256SUMS`, and the notes.
+
+If a step after the push fails, rerun the workflow: it finishes a release commit whose GitHub
+release is missing. To correct a release's notes, edit `.changes/vX.Y.Z.md`, run
+`go tool changie merge`, and edit the GitHub release to match.

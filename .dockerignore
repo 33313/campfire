@@ -1,0 +1,8 @@
+# The build copies the tree in; none of this belongs in it. The client is
+# rebuilt inside the image, and dist/ holds the release's own binaries.
+.git
+node_modules
+dist
+test-results
+playwright-report
+internal/web/app

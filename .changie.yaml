@@ -1,0 +1,42 @@
+# Release notes, one file per change (README "Releases"). A pull request adds
+# its file with `go tool changie new`; merging it into main releases it.
+changesDir: .changes
+unreleasedDir: unreleased
+# Milliseconds: to the second, two files written in the same second share a
+# name and the second overwrites the first.
+fragmentFileFormat: '{{.Kind}}-{{.Time.Format "20060102-150405.000"}}'
+headerPath: header.tpl.md
+changelogPath: CHANGELOG.md
+versionExt: md
+versionFormat: '## {{.Version}} - {{.Time.Format "2006-01-02"}}'
+kindFormat: '### {{.Kind}}'
+changeFormat: '- {{.Body}}'
+body:
+  minLength: 3
+# The kind sets the version bump when the change is released. Several changes
+# released together take the largest bump among them.
+#
+# Breaking is for a change an operator must act on to upgrade: a configuration
+# key renamed, a command removed, an API response reshaped. Below 1.0.0 nothing
+# is Breaking but the change that makes 1.0.0 (DEV-6); a breaking change before
+# then is released as Changed or Removed.
+kinds:
+  - label: Breaking
+    auto: major
+  - label: Added
+    auto: minor
+  - label: Changed
+    auto: minor
+  - label: Deprecated
+    auto: minor
+  - label: Removed
+    auto: minor
+  - label: Fixed
+    auto: patch
+  - label: Security
+    auto: patch
+newlines:
+  beforeChangelogVersion: 1
+  beforeKind: 1
+  afterKind: 1
+  endOfVersion: 1

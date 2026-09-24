@@ -1,0 +1,137 @@
+name: release
+
+# A merge into main that carries change files is a release (README "Releases").
+# The change files' kinds set the version. The release is a commit that turns
+# them into CHANGELOG.md, its tag, the binaries on a GitHub release, and the
+# container image.
+on:
+  push:
+    branches: [main]
+
+# One release at a time, never cancelled halfway. Merges that land during a run
+# queue behind it, and GitHub keeps only the newest queued run. That loses
+# nothing: a run releases every change file on main, not only its own merge's.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # The release commit is pushed with the deploy key, and a push with a
+    # deploy key starts workflows. It has nothing left to release.
+    if: ${{ !startsWith(github.event.head_commit.message, 'Release v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # the GitHub release
+      packages: write # the image on ghcr.io
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      # main as it is now, not the commit that started this run: a run that
+      # queued behind another releases on top of that one's release commit.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          ssh-key: ${{ secrets.GH_DK }}
+
+      - name: Anything to release?
+        id: plan
+        run: |
+          if compgen -G '.changes/unreleased/*.yaml' >/dev/null; then
+            echo "cut=1" >> "$GITHUB_OUTPUT"
+            echo "go=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # A release commit whose GitHub release is missing, or still a draft,
+          # is one whose publishing failed. Rerunning this workflow finishes it.
+          v=$(ls .changes | sed -n 's/^\(v.*\)\.md$/\1/p' | sort -V | tail -1)
+          if [ -n "$v" ] && [ "$(git log -1 --format=%s)" = "Release $v" ] &&
+             [ "$(gh release view "$v" --json isDraft -q .isDraft 2>/dev/null)" != false ]; then
+            echo "Finishing $v: tagged, not published."
+            echo "VERSION=$v" >> "$GITHUB_ENV"
+            echo "go=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Nothing to release."
+
+      - uses: actions/setup-go@v5
+        if: steps.plan.outputs.go
+        with:
+          go-version: "1.27"
+          check-latest: true
+      - uses: actions/setup-node@v4
+        if: steps.plan.outputs.go
+        with:
+          node-version: "22"
+          cache: npm
+
+      # Committed and tagged here, pushed only once the binaries have built: a
+      # build that fails leaves main as it was, and a rerun starts over.
+      - name: Version and changelog
+        if: steps.plan.outputs.cut
+        run: |
+          go tool changie batch auto
+          go tool changie merge
+          v=$(go tool changie latest)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add -A .changes CHANGELOG.md
+          git commit -m "Release $v"
+          git tag -a "$v" -m "Release $v"
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      - name: Build the binaries
+        if: steps.plan.outputs.go
+        run: ./build.sh release "$VERSION"
+
+      # The commit and its tag land together or not at all. If main moved
+      # while this ran, the push is refused, and the run the move queued
+      # releases these change files along with its own.
+      - name: Push the release commit
+        if: steps.plan.outputs.cut
+        run: git push --atomic origin HEAD:main "refs/tags/$VERSION"
+
+      # The image goes before the GitHub release: a published release is what
+      # marks the whole thing done.
+      - uses: docker/setup-qemu-action@v3
+        if: steps.plan.outputs.go
+      - uses: docker/setup-buildx-action@v3
+        if: steps.plan.outputs.go
+      - uses: docker/login-action@v3
+        if: steps.plan.outputs.go
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        if: steps.plan.outputs.go
+        with:
+          context: git
+          images: ghcr.io/${{ github.repository }}
+          flavor: latest=true
+          tags: |
+            type=semver,pattern={{version}},value=${{ env.VERSION }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.VERSION }}
+            type=semver,pattern={{major}},value=${{ env.VERSION }}
+      - name: Build and push the image
+        uses: docker/build-push-action@v6
+        if: steps.plan.outputs.go
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          build-args: VERSION=${{ env.VERSION }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Publish the GitHub release
+        if: steps.plan.outputs.go
+        run: |
+          # A draft is what a failed upload leaves behind.
+          gh release delete "$VERSION" --yes 2>/dev/null || true
+          tail -n +2 ".changes/$VERSION.md" > "$RUNNER_TEMP/notes.md"
+          gh release create "$VERSION" dist/* --verify-tag --title "$VERSION" \
+            --notes-file "$RUNNER_TEMP/notes.md"
