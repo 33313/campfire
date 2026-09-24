@@ -44,7 +44,7 @@ test("an administrator creates the first team", async ({ page }) => {
   await team.getByRole("button", { name: "Create" }).click();
 
   await expect(page.getByRole("heading", { name: "Board" })).toBeVisible();
-  await expect(page.locator(".code-badge").first()).toHaveText("SOL");
+  await expect(page.locator(".team-switch")).toContainText("Solstice");
 });
 
 test("a new ticket lands in the backlog and leaves you where you were", async ({ page }) => {
@@ -664,7 +664,6 @@ test("switching team is a drop-down, and the name follows the switch", async ({ 
   await page.locator(".team-option", { hasText: "Solstice" }).click();
   await expect(page).toHaveURL(/\/t\/1\/board$/);
   await expect(page.locator(".team-switch")).toContainText("Solstice");
-  await expect(page.locator(".team-switch .code-badge")).toHaveText("SOL");
 });
 
 test("a bucket's progress separates what is done from what is under way", async ({ page }) => {
@@ -759,4 +758,54 @@ test("a profile is a page at a name, and it is edited where it is read", async (
   await page.goto("/SOL-1");
   await page.locator(".comment-meta a").first().click();
   await expect(page).toHaveURL(/\/users\/root$/);
+});
+
+test("a team has a profile: its picture, what it does, who is in it", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  await page.locator(".sidebar-foot").getByRole("link", { name: "Team", exact: true }).click();
+  await expect(page).toHaveURL(/\/t\/1\/profile$/);
+
+  // Without a picture the short code stands in for one.
+  await expect(page.locator("span.profile-picture")).toHaveText("SOL");
+
+  await page.getByRole("button", { name: "Edit profile" }).click();
+  await page.getByLabel("Picture").setInputFiles({
+    name: "team.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGP8z8Dwn4GBgYkBBv" +
+      "5DGAAmYgML8Ck1FQAAAABJRU5ErkJggg==", "base64"),
+  });
+  await expect(page.locator("img.profile-picture")).toHaveAttribute("src", /^data:image\//);
+  await page.getByLabel("Description").fill("Keeps the building warm.");
+  await page.getByRole("banner").getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator(".toast")).toHaveText(/Saved/);
+
+  await page.reload();
+  await expect(page.locator(".profile-bio")).toHaveText("Keeps the building warm.");
+  await expect(page.locator("img.profile-picture")).toBeVisible();
+
+  // The team picker shows it in place of the short code; a team without one
+  // gets a blank square.
+  await page.request.post("/api/teams", { data: { name: "Umbra", shortCode: "UMB" } });
+  await page.reload();
+  await page.locator(".team-switch").click();
+  const option = (code) => page.locator(".team-option", { hasText: code }).locator(".team-avatar");
+  await expect(page.locator(".team-list .code-badge")).toHaveCount(0);
+  await expect(option("Solstice")).toHaveAttribute("src", /^data:image\//);
+  await expect(option("Umbra")).toBeEmpty();
+  expect(await option("Umbra").evaluate((el) => el.tagName)).toBe("SPAN");
+  await page.locator(".team-switch").click();
+  // ...and so does the switch, for the team it shows.
+  await expect(page.locator(".team-switch .team-avatar")).toHaveAttribute("src", /^data:image\//);
+  await expect(page.locator(".team-switch .code-badge")).toHaveCount(0);
+
+  // The members, each a way through to their own profile, and the trail.
+  await page.locator(".profile-teams").getByRole("link", { name: "root" }).click();
+  await expect(page).toHaveURL(/\/users\/root$/);
+  // ...and a person's teams lead back.
+  await page.locator(".profile-teams a[href='/t/1/profile']").click();
+  await expect(page).toHaveURL(/\/t\/1\/profile$/);
+  await expect(page.locator(".profile-activity-rows .relation-row").first()).toContainText("root");
 });

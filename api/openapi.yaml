@@ -246,7 +246,7 @@ paths:
         "200": { $ref: "#/components/responses/Ok" }
     patch:
       operationId: updateTeam
-      summary: Rename a team or change its icon rendering
+      summary: Rename a team, change its icon rendering, picture or description
       x-agent: false
       parameters: [{ $ref: "#/components/parameters/Id" }]
       requestBody: { $ref: "#/components/requestBodies/Json" }

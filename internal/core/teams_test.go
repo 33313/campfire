@@ -162,3 +162,27 @@ func TestIconRenderingIsPerTeam(t *testing.T) {
 	}
 	requireCode(t, f.SetIconRendering(f.ctx, f.admin, sol.ID, "rainbow"), CodeInvalid)
 }
+
+// A team's picture and description are a team administrator's to write, and
+// anyone's to read (DEV-36).
+func TestTeamProfileIsTheTeamAdministrators(t *testing.T) {
+	w := newWorld(t)
+	if err := w.SetTeamProfile(w.ctx, w.marta, w.sol.ID, "", "we fix boilers"); err == nil {
+		t.Fatal("a member wrote the team's profile")
+	} else {
+		requireCode(t, err, CodeForbidden)
+	}
+	if err := w.SetTeamProfile(w.ctx, w.admin, w.sol.ID, "", "  We fix boilers.  "); err != nil {
+		t.Fatal(err)
+	}
+	team, err := w.Team(w.ctx, w.sam, w.sol.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if team.Description != "We fix boilers." {
+		t.Fatalf("description %q", team.Description)
+	}
+	if err := w.SetTeamProfile(w.ctx, w.admin, w.sol.ID, "data:text/html,<b>", ""); err == nil {
+		t.Fatal("a non-image picture was accepted")
+	}
+}

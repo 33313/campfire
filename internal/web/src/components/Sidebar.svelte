@@ -67,6 +67,17 @@
   }
 </script>
 
+<!-- The team's picture stands for it in the picker, or a blank square where
+     it has none, so the names line up either way. The switch and every option
+     draw the same. -->
+{#snippet teamAvatar(t)}
+  {#if t?.avatar}
+    <img class="team-avatar" src={t.avatar} alt="" />
+  {:else}
+    <span class="team-avatar"></span>
+  {/if}
+{/snippet}
+
 <aside class="sidebar">
   <div class="sidebar-head">
     <div class="wordmark">Campfire</div>
@@ -74,7 +85,7 @@
       <button class="team-switch" class:on={open} aria-expanded={open} aria-haspopup="menu"
               onclick={() => (open = !open)}
               onkeydown={(e) => e.key === "Escape" && (open = false)}>
-        <span class="code-badge">{known ? known.shortCode : "—"}</span>
+        {@render teamAvatar(known)}
         <span class="team-name">{known ? known.name : "No team yet"}</span>
         <Icon body={NAV.chevron} size={11} color="var(--faint)" />
       </button>
@@ -82,7 +93,7 @@
         <div class="team-list" role="menu">
           {#each app.allTeams as t}
             <button class="team-option" class:on={t.id === teamId} onclick={() => choose(t.id)}>
-              <span class="code-badge">{t.shortCode}</span>
+              {@render teamAvatar(t)}
               <span class="team-name">{t.name}</span>
               <span class="note">
                 {app.teams.some((m) => m.teamId === t.id) ? "member" : "read only"}
@@ -138,6 +149,10 @@
 
   <div class="sidebar-foot">
     {#if teamId}
+      <a class="nav-item" class:on={route.path === `/t/${teamId}/profile`} href="/t/{teamId}/profile">
+        <Icon body={NAV.team} size={15} />
+        <span class="label">Team</span>
+      </a>
       <a class="nav-item" class:on={route.path === `/t/${teamId}/settings`} href="/t/{teamId}/settings">
         <Icon body={NAV.settings} size={15} />
         <span class="label">Team settings</span>

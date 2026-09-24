@@ -122,6 +122,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .team-option:hover { background: var(--sunk); color: var(--text); }
 .team-option.on { color: var(--accent); }
+.team-avatar { width: 22px; height: 22px; flex: 0 0 22px; background: var(--border); object-fit: cover; }
 .team-option .note { font-family: var(--mono); font-size: 9.5px; color: var(--faint); }
 .code-badge {
   display: flex; align-items: center; justify-content: center;

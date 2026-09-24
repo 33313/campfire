@@ -18,6 +18,7 @@
   import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
   import { when, ago, initials, plural } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
+  import { pickPicture, AVATAR } from "../lib/picture.js";
 
   import Icon from "../components/Icon.svelte";
   import ScreenHeader from "../components/ScreenHeader.svelte";
@@ -83,41 +84,13 @@
     }
   }
 
-  // A picture is scaled here and stored inline: an instance with no object
-  // store and no third party to fetch from is the whole point.
-  //
-  // 512 is the size this page draws at on a dense screen; anything smaller was
-  // being scaled up here and looked it.
-  const AVATAR = 512;
-
-  // What core.maxAvatar will store. A photograph at 512px is tens of kilobytes
-  // in WebP, but a busy one can run past this, and one step down in quality is
-  // better than an upload the server refuses.
-  const MAX_AVATAR = 256 * 1024;
-
-  function encode(canvas) {
-    const data = canvas.toDataURL("image/webp", 0.85);
-    return data.length <= MAX_AVATAR ? data : canvas.toDataURL("image/webp", 0.6);
-  }
-
-  function pickPicture(e) {
-    const file = e.currentTarget.files?.[0];
-    e.currentTarget.value = "";
-    if (!file) return;
-    const img = new Image();
-    img.onload = () => {
-      // Square crop from the centre, then scale: a picture is drawn at 20px
-      // beside a name, and letterboxing it there reads as a mistake.
-      const side = Math.min(img.width, img.height);
-      const canvas = Object.assign(document.createElement("canvas"),
-        { width: AVATAR, height: AVATAR });
-      canvas.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2,
-        side, side, 0, 0, AVATAR, AVATAR);
-      URL.revokeObjectURL(img.src);
-      write(encode(canvas));
-    };
-    img.onerror = () => failure("that file is not an image");
-    img.src = URL.createObjectURL(file);
+  async function choosePicture(e) {
+    try {
+      const picture = await pickPicture(e);
+      if (picture) write(picture);
+    } catch (err) {
+      failure(err);
+    }
   }
 </script>
 
@@ -161,7 +134,7 @@
             {@render picture()}
             <span class="hint">Change</span>
             <input type="file" accept="image/*" aria-label="Picture" hidden
-                   onchange={pickPicture} />
+                   onchange={choosePicture} />
           </label>
         {:else}
           {@render picture()}
@@ -213,11 +186,17 @@
                finish above the fold. -->
           <div class="profile-teams">
             {#each user.teams || [] as t}
+              {@const team = app.allTeams.find((x) => x.shortCode === t.shortCode)}
               <div class="relation-row">
                 <span class="code-badge">{t.shortCode}</span>
-                <span style="flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis">
-                  {app.allTeams.find((x) => x.shortCode === t.shortCode)?.name || t.shortCode}
-                </span>
+                {#if team}
+                  <a href="/t/{team.id}/profile"
+                     style="flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis">
+                    {team.name}
+                  </a>
+                {:else}
+                  <span style="flex:1;font-size:12.5px">{t.shortCode}</span>
+                {/if}
                 <span class="state-badge">{t.role}</span>
               </div>
             {:else}

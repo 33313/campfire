@@ -137,6 +137,29 @@ func (s *Service) SetIconRendering(ctx context.Context, a Actor, teamID int64, r
 	})
 }
 
+// SetTeamProfile sets the picture and the description a team's profile page
+// shows. They are held to the same bounds as a user's picture and bio: the
+// picture ships with every team list, and the description is a paragraph.
+func (s *Service) SetTeamProfile(ctx context.Context, a Actor, teamID int64, avatar, description string) error {
+	if err := validateAvatar(avatar); err != nil {
+		return err
+	}
+	description = strings.TrimSpace(description)
+	if len([]rune(description)) > maxBio {
+		return invalidField("description", "a description is at most %d characters", maxBio)
+	}
+	return s.write(ctx, a, func(t *wtx) error {
+		if err := s.requireTeamAdmin(ctx, t.Tx, a, teamID); err != nil {
+			return err
+		}
+		if err := store.SetTeamProfile(ctx, t.Tx, teamID, avatar, description); err != nil {
+			return err
+		}
+		return t.log(ctx, store.Event{Kind: store.EvTeamUpdated, Entity: "team",
+			EntityID: teamID, TeamID: teamID, Field: "profile"})
+	})
+}
+
 func (s *Service) ArchiveTeam(ctx context.Context, a Actor, teamID int64, archived bool) error {
 	if err := requireInstanceAdmin(a); err != nil {
 		return err
