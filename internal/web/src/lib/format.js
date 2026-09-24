@@ -20,6 +20,14 @@ export function whenDay(iso) {
   return `${two(day)} ${MONTHS[m - 1]} ${y}`;
 }
 
+/** Whole days from today to a planned-end date string; negative once past. */
+export function daysUntil(iso) {
+  const [y, m, day] = iso.split("-").map(Number);
+  const today = new Date();
+  return Math.round((new Date(y, m - 1, day) -
+    new Date(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
+}
+
 /** "now", "12 min", "2 h", "yesterday", "05 Sep" — the log and admin idiom. */
 export function ago(micros) {
   if (!micros) return "never";

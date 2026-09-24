@@ -2,8 +2,9 @@
   import PriorityGlyph from "./PriorityGlyph.svelte";
   import BucketIcon from "./BucketIcon.svelte";
   import Avatar from "./Avatar.svelte";
-  import { BUCKET_COLOURS } from "../lib/icons.js";
-  import { whenDay } from "../lib/format.js";
+  import Icon from "./Icon.svelte";
+  import { BUCKET_COLOURS, NAV } from "../lib/icons.js";
+  import { whenDay, daysUntil } from "../lib/format.js";
 
   // A card carries six fields and no seventh: bucket, title, deadline,
   // priority, identifier, assignee. Labels never appear on one (SPEC.md §8.1).
@@ -17,6 +18,9 @@
 
   let dragging = $state(false);
   let tint = $derived(BUCKET_COLOURS[item.bucketColor] || null);
+  // A deadline three days away or less, or already past, is drawn in the
+  // accent so it is seen before it is missed.
+  let soon = $derived(item.plannedEnd ? daysUntil(item.plannedEnd) <= 3 : false);
 </script>
 
 <a class="card" class:selected class:focused class:dragging data-id={item.id} draggable="true"
@@ -53,7 +57,9 @@
     </span>
   {/if}
   {#if item.plannedEnd}
-    <span class="card-deadline ident">Due {whenDay(item.plannedEnd)}</span>
+    <span class="card-deadline" class:soon title="Planned end">
+      <Icon body={NAV.calendar} size={12} /><span>{whenDay(item.plannedEnd)}</span>
+    </span>
   {/if}
   <div class="card-foot">
     <PriorityGlyph level={item.priority} />

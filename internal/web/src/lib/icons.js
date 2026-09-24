@@ -14,6 +14,7 @@ export const NAV = {
   // The pail is the sidebar's Buckets section icon and nothing else. It is
   // never a bucket's own icon (DESIGN.md §4).
   buckets: '<path d="M3.2 5.2h9.6l-1 8a1.1 1.1 0 0 1-1.1 1H5.3a1.1 1.1 0 0 1-1.1-1Z"/><path d="M5.5 5.2a2.5 2.5 0 0 1 5 0"/>',
+  calendar: '<rect x="2.5" y="3.5" width="11" height="10"/><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3"/>',
   log: '<circle cx="8" cy="8" r="6"/><path d="M8 4.6V8l2.4 1.5"/>',
   settings: '<path d="M2 5h12"/><circle cx="6" cy="5" r="1.9"/><path d="M2 11h12"/><circle cx="10.5" cy="11" r="1.9"/>',
   team: '<circle cx="6" cy="5.6" r="2.3"/><path d="M1.9 13.4c.4-2.4 2-3.9 4.1-3.9s3.7 1.5 4.1 3.9"/><path d="M10.4 3.5a2.3 2.3 0 0 1 0 4.2M12 9.9c1.2.6 1.9 1.8 2.1 3.5"/>',

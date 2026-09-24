@@ -425,8 +425,13 @@ img.avatar { object-fit: cover; }
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim);
 }
 .card-bucket .name { min-width: 0; overflow-wrap: anywhere; }
-/* The planned end, on its own row under the bucket. */
-.card-deadline { align-self: flex-start; }
+/* The planned end, on its own row under the bucket: a calendar and the date,
+   in the accent once it is three days away or less. */
+.card-deadline {
+  display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.03em; color: var(--text);
+}
+.card-deadline.soon { color: var(--accent); }
 .card-title { margin: 0; font-size: 13px; line-height: 1.42; color: var(--text); text-wrap: pretty; }
 .card-foot { display: flex; align-items: center; gap: 8px; }
 /* The identifier is the one thing on a card that must never wrap or shorten. */

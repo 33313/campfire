@@ -891,7 +891,8 @@ test("a card shows its deadline on a row under the bucket, and only when it has 
 
   await page.goto("/t/1/board");
   const card = page.locator(".card", { hasText: "Clear the gutters" });
-  await expect(card.locator(".card-deadline")).toHaveText("Due 05 Mar 2026");
+  await expect(card.locator(".card-deadline")).toHaveText("05 Mar 2026");
+  await expect(card.locator(".card-deadline svg")).toBeVisible();
   const [row, due, foot] = await Promise.all([".card-bucket", ".card-deadline", ".card-foot"]
     .map((sel) => card.locator(sel).boundingBox()));
   expect(row.y + row.height).toBeLessThanOrEqual(due.y);
@@ -899,4 +900,25 @@ test("a card shows its deadline on a row under the bucket, and only when it has 
 
   // A card with no planned end has no deadline row at all.
   await expect(page.locator(".card", { hasText: "Short" }).locator(".card-deadline")).toHaveCount(0);
+});
+
+test("a deadline three days away or less turns amber", async ({ page }) => {
+  await signIn(page);
+  const day = (n) => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-` +
+      String(d.getDate()).padStart(2, "0");
+  };
+  for (const [title, n] of [["Due in three", 3], ["Due in four", 4], ["Overdue by one", -1]]) {
+    await page.request.post("/api/items", { data: {
+      kind: "ticket", teamId: 1, title, plannedEnd: day(n), accepted: true,
+    } });
+  }
+  await page.goto("/t/1/board");
+  const due = (title) => page.locator(".card", { hasText: title }).locator(".card-deadline");
+  const amber = "rgb(217, 160, 91)";
+  await expect(due("Due in three")).toHaveCSS("color", amber);
+  await expect(due("Overdue by one")).toHaveCSS("color", amber);
+  await expect(due("Due in four")).not.toHaveCSS("color", amber);
 });
