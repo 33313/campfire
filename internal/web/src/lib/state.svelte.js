@@ -22,14 +22,23 @@ export async function reloadContext(teamId) {
   const chosen = teamId || app.teams[0]?.teamId || app.allTeams[0]?.id;
   app.team = app.allTeams.find((t) => t.id === chosen) || null;
   if (!app.team) return;
-  const [views, labels, users, backlog] = await Promise.all([
-    api.listSavedViews(app.team.id), api.listLabels(), api.listUsers(),
-    api.getBacklog(app.team.id, {}, false, 1).catch(() => null),
+  const [views, labels, users] = await Promise.all([
+    api.listSavedViews(app.team.id), api.listLabels(), api.listUsers(), refreshBacklogCount(),
   ]);
   app.views = views || [];
   app.labels = labels || [];
   app.users = users || [];
-  app.backlogCount = backlog ? backlog.count : 0;
+}
+
+// The sidebar's backlog count. It is not any one screen's, so the stream
+// refreshes it beside whichever screen is showing; read only on boot, it went
+// stale with the first ticket created or moved.
+export async function refreshBacklogCount() {
+  const id = app.team?.id;
+  if (!id) return;
+  const backlog = await api.getBacklog(id, {}, false, 1).catch(() => null);
+  // A team switch while this was in flight has already counted the new team.
+  if (app.team?.id === id) app.backlogCount = backlog ? backlog.count : 0;
 }
 
 export function userName(id) {

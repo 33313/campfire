@@ -4,6 +4,8 @@
 // needs through the ordinary API and is correct if the stream never connects
 // (SPEC.md §12.4); a notification only causes a refetch.
 
+import { refreshBacklogCount } from "./state.svelte.js";
+
 export const stream = $state({ status: "connecting" }); // connecting | live | reconnecting | stale
 
 let source = null;
@@ -55,5 +57,6 @@ function scheduleRefresh() {
   pending = setTimeout(() => {
     pending = null;
     listener?.();
+    refreshBacklogCount();
   }, 300 + Math.random() * 400);
 }
