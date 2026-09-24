@@ -202,10 +202,10 @@ so terminate TLS at the proxy and keep the instance on loopback behind it.
 docker run -p 8080:8080 -v campfire-data:/data ghcr.io/33313/campfire
 ```
 
-Every release is tagged three ways: `0.4.2` exactly, `0.4` for the newest patch release of 0.4, and
-`latest`. From 1.0.0 on, `1` follows the newest release that needs no action to upgrade to. The
-image is built for `linux/amd64` and `linux/arm64`; `docker build -t campfire .` builds it from this
-tree.
+Every release is tagged four ways: `1.4.2` exactly, `1.4` for the newest patch release of 1.4, `1`
+for the newest release that needs no action to upgrade to, and `latest`. Below 1.0.0, `0` is no
+safer than `latest`: a minor release there may break. The image is built for `linux/amd64` and
+`linux/arm64`; `docker build -t campfire .` builds it from this tree.
 
 The image binds `0.0.0.0:8080` because loopback inside a container reaches nobody. Everything else
 is the same application, configured the same way; `/data` holds the database and the snapshots.
