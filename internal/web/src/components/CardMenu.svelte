@@ -7,6 +7,8 @@
   // selection selects that card first, so the menu always names what it will
   // touch and never quietly acts on something else.
 
+  import { untrack } from "svelte";
+
   import { api } from "../lib/api.js";
   import { navigate } from "../lib/router.svelte.js";
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
@@ -20,8 +22,7 @@
   // What the menu named when it opened, copied out of the props: the actions
   // outlive the menu — it closes before the dialog it opens — and a prop read
   // after that is a read of a board state that has already moved on.
-  const picked = [...ids];
-  const target = item;
+  const [picked, target] = untrack(() => [[...ids], item]);
 
   let el = $state(null);
   let one = picked.length === 1;
@@ -47,8 +48,8 @@
   // Kept on screen: a card near the right edge or the bottom would otherwise
   // open a menu half of which cannot be reached.
   const zoom = document.getElementById("app")?.currentCSSZoom ?? 1;
-  const left = Math.min(x / zoom, innerWidth / zoom - 196);
-  const top = Math.min(y / zoom, innerHeight / zoom - (one ? 250 : 190));
+  const left = $derived(Math.min(x / zoom, innerWidth / zoom - 196));
+  const top = $derived(Math.min(y / zoom, innerHeight / zoom - (one ? 250 : 190)));
 
   // The menu goes before the dialog it opens: leaving it up behind a modal is
   // two things asking for the same answer.

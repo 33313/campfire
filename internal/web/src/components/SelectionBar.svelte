@@ -11,7 +11,7 @@
   // It lies over the filter bar and fades in and out there. On the way out
   // the selection is already empty, so the count keeps the last one it had
   // rather than reading "0 selected" as it goes.
-  let count = $state(ids.length);
+  let count = $state(0);
   $effect.pre(() => { if (ids.length) count = ids.length; });
   const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 120;
 
