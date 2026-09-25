@@ -126,6 +126,9 @@ jobs:
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # BuildKit's default provenance attestation is an extra manifest per
+          # platform, which the registry lists as platform unknown/unknown.
+          provenance: false
 
       - name: Publish the GitHub release
         if: steps.plan.outputs.go
