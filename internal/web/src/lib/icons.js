@@ -25,7 +25,7 @@ export const NAV = {
   plus: '<path d="M8 3v10M3 8h10"/>',
   chevron: '<path d="M3.5 6 8 10.5 12.5 6"/>',
   close: '<path d="M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5"/>',
-  agent: '<rect x="2.5" y="5" width="11" height="8.5"/><path d="M5.5 8.2 7 9.7l-1.5 1.5M8.8 11.2h2.2M8 5V2.6"/>',
+  agent: '<rect x="3" y="5" width="10" height="8.5"/><path d="M8 5V2.5M6 8.2v1.6M10 8.2v1.6M1.5 8v3M14.5 8v3"/>',
   link: '<path d="M6.5 9.5 9.5 6.5"/><path d="M9 4.6 10.4 3.2a2.7 2.7 0 0 1 3.8 3.8l-1.4 1.4"/><path d="M7 11.4 5.6 12.8a2.7 2.7 0 0 1-3.8-3.8l1.4-1.4"/>',
   clone: '<rect x="5.5" y="5.5" width="8" height="8"/><path d="M10.5 2.5h-8v8"/>',
   split: '<path d="M2.5 8h4l3-4h4"/><path d="M9.5 12h4"/><path d="M6.5 8l3 4"/><path d="M11.5 2.5 13.5 4l-2 1.5"/><path d="M11.5 10.5 13.5 12l-2 1.5"/>',
