@@ -932,3 +932,33 @@ test("a deadline three days away or less turns amber, and red once past", async 
   await page.reload();
   await expect(due("Done but late")).toHaveCSS("color", "rgb(107, 97, 87)");
 });
+
+test("the log names a planned end in words, not its column", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/SOL-1");
+  await page.getByRole("banner").getByRole("button", { name: "Edit" }).click();
+  await page.getByLabel("Planned end").fill("2026-12-01");
+  await page.getByRole("banner").getByRole("button", { name: "Save" }).click();
+
+  await page.goto("/log");
+  const row = page.locator(".table tbody tr").filter({ hasText: "2026-12-01" }).first();
+  await expect(row.locator("td.field-label")).toHaveText("planned end");
+});
+
+test("a profile's activity ends in a link to the rest of it in the log", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/users/root");
+  await page.locator(".profile-activity").getByRole("link", { name: "View all" }).click();
+  await expect(page).toHaveURL(/\/log\?actor=\d+$/);
+  await expect(page.getByRole("button", { name: "root" })).toHaveClass(/\bon\b/);
+  await expect(page.getByRole("button", { name: "Whole instance" })).toHaveClass(/\bon\b/);
+  await expect(page.locator(".table tbody tr").first()).toContainText("root");
+
+  await page.goto("/t/1/profile");
+  const more = page.locator(".profile-activity .explain").last();
+  await expect(more).toContainText(/^\+\d+ entr(y|ies) · View all$/);
+  await more.getByRole("link", { name: "View all" }).click();
+  await expect(page).toHaveURL(/\/log\?team=1$/);
+  await expect(page.locator(".filter-bar .chip").first()).toHaveClass(/\bon\b/);
+  await expect(page.locator(".filter-bar .chip").first()).toContainText("Solstice");
+});

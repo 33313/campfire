@@ -484,6 +484,7 @@ item or entity affected, owning team, field changed, previous value, new value.
 |---|---|
 | Item history | That item. |
 | Team log | That team. |
+| Person log | One actor, across every team. Instance-level events for administrators only. |
 | Global log | Unfiltered. Instance administrators only. |
 
 Every mutation writes an event: creation, field edits, state transitions, comments, label changes,

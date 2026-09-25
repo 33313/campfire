@@ -16,6 +16,8 @@ type LogPage struct {
 	// Cursor is the sequence number to ask for next. Empty at the end of the
 	// list.
 	Cursor int64 `json:"cursor,omitempty"`
+	// Total is how many events the filter matches, across every page.
+	Total int `json:"total"`
 }
 
 // Log reads the audit log under its ordinary scoping: an item's history, a
@@ -25,14 +27,24 @@ func (s *Service) Log(ctx context.Context, a Actor, f store.EventFilter, beforeS
 		return nil, err
 	}
 	if f.ItemID == 0 && f.TeamID == 0 && !a.IsAdmin {
-		return nil, errForbidden
+		// One person's actions across every team are what their profile
+		// already shows anyone (SPEC.md §10); the instance-level ones stay
+		// an administrator's to read.
+		if f.ActorID == 0 {
+			return nil, errForbidden
+		}
+		f.InAnyTeam = true
 	}
 	limit = clampLimit(limit)
 	events, err := store.ListEvents(ctx, s.DB.R, f, beforeSeq, limit)
 	if err != nil {
 		return nil, mapErr(err)
 	}
-	page := &LogPage{Events: events}
+	total, err := store.CountEvents(ctx, s.DB.R, f)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	page := &LogPage{Events: events, Total: total}
 	if page.Events == nil {
 		page.Events = []store.Event{}
 	}

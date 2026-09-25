@@ -114,6 +114,48 @@ const eventJoins = `
 // from 41192", and that number is the cursor. A beforeSeq of 0 starts at the
 // newest event.
 func ListEvents(ctx context.Context, q Q, f EventFilter, beforeSeq int64, limit int) ([]Event, error) {
+	clause, args := f.where(beforeSeq)
+	args = append(args, limit)
+
+	rows, err := q.QueryContext(ctx,
+		`SELECT `+eventColumns+eventJoins+clause+` ORDER BY e.seq DESC LIMIT ?`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []Event
+	for rows.Next() {
+		var e Event
+		var actorID, tokenID, entityID, itemID, teamID, number sql.NullInt64
+		var actorName, agentName, originCode, teamCode, field, oldV, newV sql.NullString
+		if err := rows.Scan(&e.Seq, &e.At, &actorID, &tokenID, &e.Kind, &e.Entity, &entityID,
+			&itemID, &teamID, &field, &oldV, &newV,
+			&actorName, &agentName, &number, &originCode, &teamCode); err != nil {
+			return nil, err
+		}
+		e.ActorID, e.AgentTokenID = num(actorID), num(tokenID)
+		e.EntityID, e.ItemID, e.TeamID = num(entityID), num(itemID), num(teamID)
+		e.Field, e.OldValue, e.NewValue = text(field), text(oldV), text(newV)
+		e.ActorName, e.AgentName, e.TeamShortCode = text(actorName), text(agentName), text(teamCode)
+		if originCode.Valid && number.Valid {
+			e.ItemIdentifier = Identifier(originCode.String, number.Int64)
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+// CountEvents is how many events a filter matches, for the "+n entries" under
+// a glance at the log.
+func CountEvents(ctx context.Context, q Q, f EventFilter) (int, error) {
+	clause, args := f.where(0)
+	var n int
+	err := q.QueryRowContext(ctx, `SELECT count(*) FROM events e`+clause, args...).Scan(&n)
+	return n, err
+}
+
+func (f EventFilter) where(beforeSeq int64) (string, []any) {
 	var where []string
 	var args []any
 	if beforeSeq > 0 {
@@ -146,35 +188,7 @@ func ListEvents(ctx context.Context, q Q, f EventFilter, beforeSeq int64, limit 
 	if len(where) > 0 {
 		clause = " WHERE " + strings.Join(where, " AND ")
 	}
-	args = append(args, limit)
-
-	rows, err := q.QueryContext(ctx,
-		`SELECT `+eventColumns+eventJoins+clause+` ORDER BY e.seq DESC LIMIT ?`, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var out []Event
-	for rows.Next() {
-		var e Event
-		var actorID, tokenID, entityID, itemID, teamID, number sql.NullInt64
-		var actorName, agentName, originCode, teamCode, field, oldV, newV sql.NullString
-		if err := rows.Scan(&e.Seq, &e.At, &actorID, &tokenID, &e.Kind, &e.Entity, &entityID,
-			&itemID, &teamID, &field, &oldV, &newV,
-			&actorName, &agentName, &number, &originCode, &teamCode); err != nil {
-			return nil, err
-		}
-		e.ActorID, e.AgentTokenID = num(actorID), num(tokenID)
-		e.EntityID, e.ItemID, e.TeamID = num(entityID), num(itemID), num(teamID)
-		e.Field, e.OldValue, e.NewValue = text(field), text(oldV), text(newV)
-		e.ActorName, e.AgentName, e.TeamShortCode = text(actorName), text(agentName), text(teamCode)
-		if originCode.Valid && number.Valid {
-			e.ItemIdentifier = Identifier(originCode.String, number.Int64)
-		}
-		out = append(out, e)
-	}
-	return out, rows.Err()
+	return clause, args
 }
 
 // LatestSeq is the newest event's sequence number, which is the cursor a

@@ -22,6 +22,14 @@ func TestLogIsOrderedBySequenceAndPagedByKeyset(t *testing.T) {
 	if len(first.Events) != 10 || first.Cursor == 0 {
 		t.Fatalf("first page: %d events, cursor %d", len(first.Events), first.Cursor)
 	}
+	whole, err := w.Log(w.ctx, w.marta, store.EventFilter{TeamID: w.sol.ID}, 0, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Total != len(whole.Events) || first.Total < 25 {
+		t.Fatalf("total %d, want every event the filter matches (%d), not the page",
+			first.Total, len(whole.Events))
+	}
 	for i := 1; i < len(first.Events); i++ {
 		if first.Events[i].Seq >= first.Events[i-1].Seq {
 			t.Fatal("the log is not in descending sequence order")
@@ -51,6 +59,35 @@ func TestGlobalLogIsAdministratorsOnly(t *testing.T) {
 	}
 	if _, err := w.Log(w.ctx, w.sam, store.EventFilter{TeamID: w.sol.ID}, 0, 50); err != nil {
 		t.Fatalf("another team's log was refused: %v", err)
+	}
+}
+
+// One person's actions across every team are readable by anyone, as their
+// profile already shows them; the instance-level ones are not.
+func TestAnyoneReadsOnePersonsLog(t *testing.T) {
+	w := newWorld(t)
+	w.ticket(w.sol, w.marta, "work")
+	if _, err := w.IssueAgentToken(w.ctx, w.marta, "laptop"); err != nil {
+		t.Fatal(err)
+	}
+	page, err := w.Log(w.ctx, w.sam, store.EventFilter{ActorID: w.marta.UserID}, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.Total != len(page.Events) || page.Total == 0 {
+		t.Fatalf("%d events, total %d", len(page.Events), page.Total)
+	}
+	for _, e := range page.Events {
+		if e.ActorID != w.marta.UserID || e.TeamID == 0 {
+			t.Fatalf("event %d: actor %d, team %d", e.Seq, e.ActorID, e.TeamID)
+		}
+	}
+	all, err := w.Log(w.ctx, w.admin, store.EventFilter{ActorID: w.marta.UserID}, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if all.Total != page.Total+1 {
+		t.Fatalf("an administrator sees %d, a colleague %d; want the token's event more", all.Total, page.Total)
 	}
 }
 

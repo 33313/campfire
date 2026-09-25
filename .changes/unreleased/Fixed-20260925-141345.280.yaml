@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'The log says every change in words: "planned end" rather than PLANNEDEND, "turned off" rather than "enabled removed", a team''s name rather than its id.'
+time: 2026-09-25T14:13:45.280001831+02:00

@@ -12,7 +12,7 @@
   import { onNotify } from "../lib/stream.svelte.js";
   import { toast, failure } from "../lib/ui.svelte.js";
   import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
-  import { when, plural } from "../lib/format.js";
+  import { when, plural, moreEntries } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
   import { pickPicture, AVATAR } from "../lib/picture.js";
 
@@ -27,6 +27,7 @@
   let team = $state(null);
   let members = $state([]);
   let activity = $state([]);
+  let total = $state(0);
   let error = $state(null);
 
   async function load() {
@@ -36,6 +37,7 @@
         api.getTeam(teamId), api.listMembers(teamId), api.getLog({ team: teamId, limit: 30 }),
       ]);
       activity = log.events || [];
+      total = log.total || 0;
       error = null;
     } catch (err) {
       error = err;
@@ -212,8 +214,11 @@
             <div class="explain">Nothing yet.</div>
           {/each}
         </div>
+        <!-- A glance, not the log: the rest is one click away, already
+             filtered to this team. -->
         <p class="explain" style="margin:10px 0 0">
-          A glance, not the log. <a href="/log">The log</a> is where you read further.
+          {#if total > activity.length}{moreEntries(total - activity.length)} ·{/if}
+          <a href="/log?team={teamId}">View all</a>
         </p>
       {/snippet}
     </Section>

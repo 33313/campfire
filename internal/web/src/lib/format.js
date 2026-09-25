@@ -55,3 +55,8 @@ export function initials(name) {
 export function plural(n, word) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
+
+/** "+12 entries", what a glance at the log leaves out. */
+export function moreEntries(n) {
+  return `+${n} ${n === 1 ? "entry" : "entries"}`;
+}

@@ -652,8 +652,10 @@ paths:
       operationId: getLog
       summary: The audit log, keyset-paginated by sequence number
       description: |
-        Scoped by item, by team, or unfiltered. The unfiltered global log is
-        for instance administrators only.
+        Scoped by item, by team, by actor, or unfiltered. The unfiltered global
+        log is for instance administrators only; scoped by actor alone, anyone
+        else reads that person's events in every team. Total counts every event
+        the filter matches, across pages.
       x-agent: true
       parameters:
         - { name: item, in: query, schema: { type: integer } }

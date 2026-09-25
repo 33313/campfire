@@ -281,7 +281,7 @@ func (s *Server) toolset() []tool {
 			Name: "get_log", Operation: "getLog",
 			Description: "The audit log, newest first, keyset-paginated by sequence number. " +
 				"This is how to find what changed: read from your last seq. Scope it to an " +
-				"item or a team; the unfiltered global log needs an instance administrator.",
+				"item, a team or an actor; the unfiltered global log needs an instance administrator.",
 			Schema: obj(map[string]any{
 				"itemId": pInt, "teamId": pInt, "actorId": pInt,
 				"agentOnly": pBool, "before": pInt, "limit": pInt,

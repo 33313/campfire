@@ -16,7 +16,7 @@
   import { app, reloadContext } from "../lib/state.svelte.js";
   import { toast, failure } from "../lib/ui.svelte.js";
   import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
-  import { when, ago, initials, plural } from "../lib/format.js";
+  import { when, ago, initials, plural, moreEntries } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
   import { pickPicture, AVATAR } from "../lib/picture.js";
 
@@ -232,8 +232,13 @@
             <div class="explain">Nothing yet.</div>
           {/each}
         </div>
+        <!-- A glance, not the log: the rest is one click away, already
+             filtered to this person. -->
         <p class="explain" style="margin:10px 0 0">
-          A glance, not the log. <a href="/log">The log</a> is where you read further.
+          {#if profile.activityTotal > profile.activity.length}
+            {moreEntries(profile.activityTotal - profile.activity.length)} ·
+          {/if}
+          <a href="/log?actor={user.id}">View all</a>
         </p>
       {/snippet}
     </Section>

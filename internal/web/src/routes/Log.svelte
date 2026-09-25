@@ -7,10 +7,11 @@
 
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
+  import { route } from "../lib/router.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
   import { userOptions } from "../lib/options.js";
-  import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
+  import { loadBuckets, fieldName, fieldLabel, eventChange } from "../lib/events.svelte.js";
   import { clock } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
 
@@ -27,10 +28,17 @@
   const FIELDS = ["state", "assignee", "priority", "bucket", "label",
     "title", "description", "plannedEnd", "member", "name"];
 
-  let team = $derived(app.team);
-  let scope = $state("team");      // team | instance
+  // A profile's "View all" arrives here as ?team= or ?actor=: that team's
+  // log, or that person's actions in every team.
+  const urlTeam = +route.search.get("team") || 0;
+  const urlActor = +route.search.get("actor") || 0;
+
+  let team = $derived(app.allTeams.find((t) => t.id === urlTeam) || app.team);
+  // team | all. All is the whole instance to an administrator; to anyone else
+  // it is one person's actions across the teams, and needs an actor.
+  let scope = $state(urlActor && !urlTeam ? "all" : "team");
   let agentOnly = $state(false);
-  let actorId = $state(0);
+  let actorId = $state(urlActor);
   let fieldFilter = $state("");
   let itemFilter = $state(null);   // { id, identifier }
   let events = $state([]);
@@ -71,7 +79,11 @@
   $effect(() => onNotify(() => (paged ? (stale = true) : load())));
 
   async function pickActor() {
-    if (actorId) { actorId = 0; return load(); }
+    if (actorId) {
+      actorId = 0;
+      if (!app.user.isAdmin) scope = "team";
+      return load();
+    }
     const picked = await openModal(PickDialog, { title: "Actor", options: userOptions() });
     if (picked) { actorId = picked; load(); }
   }
@@ -79,7 +91,7 @@
   async function pickField() {
     if (fieldFilter) { fieldFilter = ""; return load(); }
     const picked = await openModal(PickDialog, {
-      title: "Field", options: FIELDS.map((f) => ({ value: f, label: f })),
+      title: "Field", options: FIELDS.map((f) => ({ value: f, label: fieldLabel(f) })),
     });
     if (picked) { fieldFilter = picked; load(); }
   }
@@ -125,9 +137,11 @@
       <button class="chip" class:on={scope === "team"}
               onclick={() => { scope = "team"; load(); }}>{team.name}</button>
     {/if}
-    {#if app.user.isAdmin}
-      <button class="chip" class:on={scope === "instance"}
-              onclick={() => { scope = "instance"; load(); }}>Whole instance</button>
+    {#if app.user.isAdmin || actorId}
+      <button class="chip" class:on={scope === "all"}
+              onclick={() => { scope = "all"; load(); }}>
+        {app.user.isAdmin ? "Whole instance" : "All teams"}
+      </button>
     {/if}
     <span class="rule-v"></span>
     <button class="chip" class:on={!!actorId} onclick={pickActor}>
@@ -135,7 +149,7 @@
       <Icon body={actorId ? NAV.close : NAV.chevron} size={10} />
     </button>
     <button class="chip" class:on={!!fieldFilter} onclick={pickField}>
-      <span>{fieldFilter || "Field"}</span>
+      <span>{fieldFilter ? fieldLabel(fieldFilter) : "Field"}</span>
       <Icon body={fieldFilter ? NAV.close : NAV.chevron} size={10} />
     </button>
     <button class="chip" class:on={!!itemFilter} onclick={pickItem}>

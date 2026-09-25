@@ -418,6 +418,9 @@ func (s *Service) NeedsBootstrap(ctx context.Context) (bool, error) {
 type Profile struct {
 	User     *User         `json:"user"`
 	Activity []store.Event `json:"activity"`
+	// ActivityTotal is every event the activity is the newest of, so the
+	// profile can say how many more the log holds.
+	ActivityTotal int `json:"activityTotal"`
 }
 
 // recentActivity is how much of a person's trail a profile shows. It is a
@@ -458,5 +461,9 @@ func (s *Service) Profile(ctx context.Context, a Actor, username string) (*Profi
 	if events == nil {
 		events = []store.Event{}
 	}
-	return &Profile{User: out, Activity: events}, nil
+	total, err := store.CountEvents(ctx, s.DB.R, f)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	return &Profile{User: out, Activity: events, ActivityTotal: total}, nil
 }
