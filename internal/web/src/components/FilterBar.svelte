@@ -10,7 +10,8 @@
   import SaveViewDialog from "../dialogs/SaveViewDialog.svelte";
 
   /** One chip per dimension of SPEC.md §9.2, and no query box. */
-  let { teamId, filter, setFilter, showBuckets, setShowBuckets } = $props();
+  // setAllDone is the board's alone: the backlog has no final state.
+  let { teamId, filter, setFilter, showBuckets, setShowBuckets, allDone, setAllDone } = $props();
 
   let assigneeOn = $derived(!!filter.assigneeIds?.length || !!filter.unassigned);
   let assigneeLabel = $derived(filter.assigneeIds?.length
@@ -106,6 +107,12 @@
   </button>
 
   <div class="right">
+    {#if setAllDone}
+      <span style="font-size:12px;color:var(--muted)" title="Done for more than three days">Show old done</span>
+      <button class="toggle" class:on={allDone} aria-label="Show old done"
+              onclick={() => setAllDone(!allDone)}><i></i></button>
+      <span class="rule-v"></span>
+    {/if}
     <span style="font-size:12px;color:var(--muted)">Show buckets</span>
     <button class="toggle" class:on={showBuckets} aria-label="Show buckets"
             onclick={() => setShowBuckets(!showBuckets)}><i></i></button>

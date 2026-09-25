@@ -125,9 +125,10 @@ func (s *Server) toolset() []tool {
 		{
 			Name: "get_board", Operation: "getBoard",
 			Description: "A team's board: one column per work state, excluding the default " +
-				"and rejected states. Buckets are hidden unless showBuckets is true.",
+				"and rejected states. Buckets are hidden unless showBuckets is true. Items done " +
+				"for more than three days are hidden unless allDone is true.",
 			Schema: obj(map[string]any{
-				"teamId": pInt, "showBuckets": pBool, "limit": pInt,
+				"teamId": pInt, "showBuckets": pBool, "allDone": pBool, "limit": pInt,
 				"assigneeIds": pIntList, "labelIds": pIntList, "priorities": pIntList,
 				"bucketIds": pIntList, "text": pString,
 			}, "teamId"),
@@ -135,13 +136,14 @@ func (s *Server) toolset() []tool {
 				var in struct {
 					TeamID      int64
 					ShowBuckets bool
+					AllDone     bool
 					Limit       int
 					core.Filter
 				}
 				if err := decodeInto(args, &in); err != nil {
 					return nil, err
 				}
-				return svc.Board(ctx, a, in.TeamID, in.Filter, in.ShowBuckets, in.Limit)
+				return svc.Board(ctx, a, in.TeamID, in.Filter, in.ShowBuckets, in.AllDone, in.Limit)
 			},
 		},
 		{

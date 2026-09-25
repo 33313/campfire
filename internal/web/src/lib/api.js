@@ -94,8 +94,11 @@ export const api = {
   deleteWorkState: (id) => del(`/api/states/${id}`),
 
   // Views over items
-  getBoard: (teamId, filter, buckets, limit = 100) =>
-    get(`/api/teams/${teamId}/board?${withFlags(filter, buckets, limit)}`),
+  getBoard: (teamId, filter, buckets, allDone, limit = 100) => {
+    const q = withFlags(filter, buckets, limit);
+    if (allDone) q.set("allDone", "1");
+    return get(`/api/teams/${teamId}/board?${q}`);
+  },
   getBacklog: (teamId, filter, buckets, limit = 100) =>
     get(`/api/teams/${teamId}/backlog?${withFlags(filter, buckets, limit)}`),
   listSavedViews: (teamId) => get(`/api/teams/${teamId}/views`),

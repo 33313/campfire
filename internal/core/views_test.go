@@ -23,7 +23,7 @@ func TestBoardAndBacklogSplitTheStateModel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{}, false, 50)
+	board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{}, false, false, 50)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestBucketsAreHiddenFromBoardsUnlessAskedFor(t *testing.T) {
 		t.Fatal(err)
 	}
 	count := func(showBuckets bool) int {
-		board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{}, showBuckets, 50)
+		board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{}, showBuckets, false, 50)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -330,7 +330,7 @@ func TestBoardHonoursAStateClauseFromAView(t *testing.T) {
 	}
 	w.ticket(w.sol, w.marta, "stays")
 
-	board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{StateIDs: []int64{accepted.ID}}, false, 50)
+	board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{StateIDs: []int64{accepted.ID}}, false, false, 50)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -398,5 +398,43 @@ func TestBucketProgressCountsStartedWorkSeparately(t *testing.T) {
 	// terminal state.
 	if p.Accepted != 2 {
 		t.Fatalf("accepted %d, want 2 (the accepted one and the one in progress)", p.Accepted)
+	}
+}
+
+// SPEC.md §7.2: an item done for longer than DoneFor leaves the board's final
+// column unless the board asks for all of them.
+func TestOldDoneItemsAreHiddenFromTheBoard(t *testing.T) {
+	w := newWorld(t)
+	now := int64(1_700_000_000_000_000)
+	w.Clock = func() int64 { return now }
+	done := w.state(w.sol, store.RoleFinal)
+	it := w.ticket(w.sol, w.marta, "Sweep the chimney")
+	if _, err := w.MoveItem(w.ctx, w.marta, it.ID, done.ID, "", ""); err != nil {
+		t.Fatal(err)
+	}
+	final := func(allDone bool) Column {
+		board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{}, false, allDone, 50)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, col := range board.Columns {
+			if col.State.ID == done.ID {
+				return col
+			}
+		}
+		t.Fatal("no final column")
+		return Column{}
+	}
+
+	now += DoneFor
+	if col := final(false); len(col.Items) != 1 || col.Count != 1 {
+		t.Fatalf("done for exactly DoneFor: %d items, count %d", len(col.Items), col.Count)
+	}
+	now++
+	if col := final(false); len(col.Items) != 0 || col.Count != 0 {
+		t.Fatalf("done for longer than DoneFor: %d items, count %d", len(col.Items), col.Count)
+	}
+	if col := final(true); len(col.Items) != 1 || col.Count != 1 {
+		t.Fatalf("allDone: %d items, count %d", len(col.Items), col.Count)
 	}
 }

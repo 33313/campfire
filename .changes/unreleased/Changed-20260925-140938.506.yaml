@@ -1,0 +1,3 @@
+kind: Changed
+body: The board hides items that have been done for more than three days. Turn on "Show old done" in the filter bar to see them again; the API and the get_board agent tool take allDone for the same.
+time: 2026-09-25T14:09:38.506133236+02:00

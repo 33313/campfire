@@ -41,6 +41,10 @@
   // never what is true.
   let key = $derived(`buckets:${teamId}:board`);
   let showBuckets = $state(untrack(() => localStorage.getItem(key) === "1"));
+  // Items done for more than three days are hidden unless this is on
+  // (SPEC.md §7.2); a long Done column is history, not work.
+  let doneKey = $derived(`done:${teamId}:board`);
+  let allDone = $state(untrack(() => localStorage.getItem(doneKey) === "1"));
 
   // Applying a saved view means applying the filter it stores. It is the same
   // dimensions composed the same way, so the board takes it as an ordinary
@@ -60,7 +64,7 @@
   async function load() {
     try {
       if (!team) [team, states] = await Promise.all([api.getTeam(teamId), api.listWorkStates(teamId)]);
-      board = await api.getBoard(teamId, filter, showBuckets);
+      board = await api.getBoard(teamId, filter, showBuckets, allDone);
       if (focused) focused = await fetchFocus(focused.item.id).catch(() => null);
       error = null;
     } catch (err) {
@@ -87,6 +91,11 @@
   function setShowBuckets(on) {
     showBuckets = on;
     localStorage.setItem(key, on ? "1" : "0");
+    load();
+  }
+  function setAllDone(on) {
+    allDone = on;
+    localStorage.setItem(doneKey, on ? "1" : "0");
     load();
   }
   // The previewed card is the anchor of a selection that starts from it: a
@@ -174,7 +183,7 @@
        its own, so starting a selection moves nothing on the screen. -->
   <div class="toolbar">
     <div inert={selected.length > 0}>
-      <FilterBar {teamId} {filter} {setFilter} {showBuckets} {setShowBuckets} />
+      <FilterBar {teamId} {filter} {setFilter} {showBuckets} {setShowBuckets} {allDone} {setAllDone} />
     </div>
     {#if selected.length}
       <SelectionBar ids={selected} {states}
