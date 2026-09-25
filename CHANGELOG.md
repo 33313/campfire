@@ -5,6 +5,12 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `go tool changie merge`.
 
+## v0.3.0 - 2026-09-25
+
+### Added
+
+- A sign-out button beside your name at the foot of the sidebar, on every screen.
+
 ## v0.2.0 - 2026-09-25
 
 ### Changed
