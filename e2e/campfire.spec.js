@@ -368,10 +368,10 @@ test("a toast says its piece and then goes away", async ({ page }) => {
   await expect(page.locator(".toast")).toHaveCount(0, { timeout: 10000 });
 });
 
-test("signing out returns to the sign-in card", async ({ page }) => {
+test("signing out from the sidebar returns to the sign-in card", async ({ page }) => {
   await signIn(page);
-  await page.goto("/account");
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.goto("/t/1/board");
+  await page.locator(".sidebar").getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
@@ -493,7 +493,7 @@ test("a profile picture replaces the initials wherever the name appears", async 
   await signIn(page);
   // The identity block at the foot of the sidebar goes to the profile, and the
   // profile is where the picture is changed.
-  await page.locator(".whoami").click();
+  await page.locator(".whoami .who-link").click();
   await expect(page).toHaveURL(/\/users\/root$/);
   await page.getByRole("button", { name: "Edit profile" }).click();
 

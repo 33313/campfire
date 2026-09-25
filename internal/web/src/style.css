@@ -147,6 +147,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 1px; padding: 8px; }
 .whoami { display: flex; align-items: center; gap: 9px; margin-top: 7px;
   padding: 9px 9px 2px; border-top: 1px solid var(--border); }
+.whoami .who-link { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0;
+  text-decoration: none; }
 .whoami .who { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
 .whoami .who b { font-size: 12px; font-weight: 400; color: var(--text); }
 .whoami .who small { font-size: 10.5px; color: var(--faint); }

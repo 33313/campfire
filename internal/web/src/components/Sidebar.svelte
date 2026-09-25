@@ -165,13 +165,20 @@
       </a>
     {/if}
     <!-- Your profile, not your settings: the block shows who you are, and that
-         is the page it goes to. Settings is a button on the profile. -->
-    <a class="whoami" href="/users/{app.user.username}" style="text-decoration:none">
-      <Avatar name={app.user.username} size="big" />
-      <span class="who">
-        <b>{app.user.username}</b>
-        <small>{app.user.isAdmin ? "Instance administrator" : "Member"}</small>
-      </span>
-    </a>
+         is the page it goes to. Settings is a button on the profile. Signing
+         out sits beside who you are signed in as. -->
+    <div class="whoami">
+      <a class="who-link" href="/users/{app.user.username}">
+        <Avatar name={app.user.username} size="big" />
+        <span class="who">
+          <b>{app.user.username}</b>
+          <small>{app.user.isAdmin ? "Instance administrator" : "Member"}</small>
+        </span>
+      </a>
+      <button class="btn quiet small" title="Sign out" aria-label="Sign out" style="padding:0 5px"
+              onclick={async () => { await api.signOut().catch(() => {}); location.href = "/"; }}>
+        <Icon body={NAV.signout} size={13} />
+      </button>
+    </div>
   </div>
 </aside>
