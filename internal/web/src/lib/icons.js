@@ -29,6 +29,7 @@ export const NAV = {
   link: '<path d="M6.5 9.5 9.5 6.5"/><path d="M9 4.6 10.4 3.2a2.7 2.7 0 0 1 3.8 3.8l-1.4 1.4"/><path d="M7 11.4 5.6 12.8a2.7 2.7 0 0 1-3.8-3.8l1.4-1.4"/>',
   clone: '<rect x="5.5" y="5.5" width="8" height="8"/><path d="M10.5 2.5h-8v8"/>',
   split: '<path d="M2.5 8h4l3-4h4"/><path d="M9.5 12h4"/><path d="M6.5 8l3 4"/><path d="M11.5 2.5 13.5 4l-2 1.5"/><path d="M11.5 10.5 13.5 12l-2 1.5"/>',
+  signout: '<path d="M7 2.5H2.5v11H7"/><path d="M6.5 8h6.5M10 5l3 3-3 3"/>',
   export: '<path d="M8 2v8M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13h11"/>',
   // Distinct from the `pen` bucket icon, which the two used to share.
   pen: '<path d="M10.6 2.9 13.1 5.4 5.5 13H3v-2.5Z"/>',

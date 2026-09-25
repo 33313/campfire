@@ -99,9 +99,6 @@
                 sub={app.user.isAdmin ? "Instance administrator" : "Member"}>
     {#snippet right()}
       <a class="btn small" href="/users/{app.user.username}">Your profile</a>
-      <button class="btn small" onclick={async () => { await api.signOut(); location.href = "/"; }}>
-        Sign out
-      </button>
     {/snippet}
   </ScreenHeader>
 
