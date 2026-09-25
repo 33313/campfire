@@ -335,6 +335,10 @@ paths:
       parameters:
         - { $ref: "#/components/parameters/Id" }
         - { $ref: "#/components/parameters/Buckets" }
+        - name: allDone
+          in: query
+          description: Show every item in the final state. Off by default, when items done for more than three days are hidden.
+          schema: { type: boolean }
         - { $ref: "#/components/parameters/Limit" }
         - { $ref: "#/components/parameters/FilterState" }
         - { $ref: "#/components/parameters/FilterLabel" }

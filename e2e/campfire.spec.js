@@ -932,3 +932,22 @@ test("a deadline three days away or less turns amber, and red once past", async 
   await page.reload();
   await expect(due("Done but late")).toHaveCSS("color", "rgb(107, 97, 87)");
 });
+
+test("the board hides old done items behind a toggle the backlog does not have", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  const toggle = page.getByRole("button", { name: "Show old done" });
+  await expect(toggle).not.toHaveClass(/\bon\b/);
+  const asked = page.waitForRequest((r) => r.url().includes("/board?") && r.url().includes("allDone=1"));
+  await toggle.click();
+  await asked;
+  await expect(toggle).toHaveClass(/\bon\b/);
+  // A view preference: it survives a reload.
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Show old done" })).toHaveClass(/\bon\b/);
+  await page.getByRole("button", { name: "Show old done" }).click();
+
+  await page.goto("/t/1/backlog");
+  await expect(page.getByRole("button", { name: "Show buckets" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Show old done" })).toHaveCount(0);
+});

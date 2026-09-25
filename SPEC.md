@@ -347,6 +347,9 @@ Example: `Backlog` (default), `To Do` (accepted), `In Progress`, `In Review`, `D
 - The **board** shows every state except the default state and the rejected state.
 - The **backlog** shows items in the default state.
 - Rejected items WILL NOT appear on any board. They are reachable by filter and by permalink.
+- Items that have been in the final state for more than three days are hidden from the board
+  unless it asks for all of them, a per-board toggle like the one for buckets
+  ([§6.2](#62-buckets)). A Done column that only grows is history, not work.
 
 Backlog is therefore a consequence of the state model, not a separate feature.
 

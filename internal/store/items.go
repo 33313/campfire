@@ -381,6 +381,9 @@ type ItemFilter struct {
 	InAnyBucket  bool
 	Priorities   []int64
 	Text         string
+	// EndedSince drops items that reached a terminal state before this time.
+	// Items still open carry no actual end and always pass.
+	EndedSince int64
 }
 
 func placeholders(n int) string {
@@ -430,6 +433,10 @@ func (f ItemFilter) where() (string, []any) {
 		w = append(w, "i.bucket_id IS NOT NULL")
 	}
 	add("i.priority", f.Priorities)
+	if f.EndedSince > 0 {
+		w = append(w, "(i.actual_end IS NULL OR i.actual_end >= ?)")
+		args = append(args, f.EndedSince)
+	}
 	for _, id := range f.LabelIDs {
 		// Several label clauses intersect: an item must carry all of them.
 		w = append(w, "EXISTS (SELECT 1 FROM item_labels il WHERE il.item_id = i.id AND il.label_id = ?)")

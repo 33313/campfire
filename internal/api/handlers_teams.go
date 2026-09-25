@@ -189,7 +189,7 @@ func (s *Server) board(w http.ResponseWriter, r *http.Request, a core.Actor) (an
 		return nil, err
 	}
 	return s.svc.Board(r.Context(), a, id, filterFrom(r),
-		queryBool(r, "buckets"), int(queryInt(r, "limit")))
+		queryBool(r, "buckets"), queryBool(r, "allDone"), int(queryInt(r, "limit")))
 }
 
 func (s *Server) backlog(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {

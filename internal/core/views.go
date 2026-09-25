@@ -53,13 +53,19 @@ func (f Filter) store() store.ItemFilter {
 	}
 }
 
+// DoneFor is how long an item stays in the board's final column after it
+// gets there. After that it is hidden unless the board asks for all of them
+// (SPEC.md §7.2).
+const DoneFor = 3 * 24 * 60 * 60 * 1_000_000 // microseconds, like every timestamp
+
 // Board returns one team's board: one column per work state, excluding the
 // default and rejected states.
 //
 // Buckets are hidden from board columns by default and shown by a per-board
 // toggle, so that an engineering board is not diluted by milestones and a
-// planning team's board can consist entirely of them (SPEC.md §6.2).
-func (s *Service) Board(ctx context.Context, a Actor, teamID int64, f Filter, showBuckets bool, perColumn int) (*Board, error) {
+// planning team's board can consist entirely of them (SPEC.md §6.2). Items
+// done for longer than DoneFor are hidden the same way, behind allDone.
+func (s *Service) Board(ctx context.Context, a Actor, teamID int64, f Filter, showBuckets, allDone bool, perColumn int) (*Board, error) {
 	if err := requireUser(a); err != nil {
 		return nil, err
 	}
@@ -76,7 +82,11 @@ func (s *Service) Board(ctx context.Context, a Actor, teamID int64, f Filter, sh
 		if st.Role == store.RoleDefault || st.Role == store.RoleRejected {
 			continue
 		}
-		col, err := s.column(ctx, teamID, st, f, showBuckets, perColumn)
+		var endedSince int64
+		if st.Role == store.RoleFinal && !allDone {
+			endedSince = s.now() - DoneFor
+		}
+		col, err := s.column(ctx, teamID, st, f, showBuckets, endedSince, perColumn)
 		if err != nil {
 			return nil, err
 		}
@@ -94,13 +104,14 @@ func (s *Service) Backlog(ctx context.Context, a Actor, teamID int64, f Filter, 
 	if err != nil {
 		return nil, mapErr(err)
 	}
-	col, err := s.column(ctx, teamID, st, f, showBuckets, limit)
+	col, err := s.column(ctx, teamID, st, f, showBuckets, 0, limit)
 	return &col, err
 }
 
-func (s *Service) column(ctx context.Context, teamID int64, st store.WorkState, f Filter, showBuckets bool, limit int) (Column, error) {
+func (s *Service) column(ctx context.Context, teamID int64, st store.WorkState, f Filter, showBuckets bool, endedSince int64, limit int) (Column, error) {
 	sf := f.store()
 	sf.TeamIDs = []int64{teamID}
+	sf.EndedSince = endedSince
 	// A saved view may carry a state clause of its own. The column is that
 	// clause intersected with the column's own state, never the column's state
 	// silently replacing it (SPEC.md §9.4).
