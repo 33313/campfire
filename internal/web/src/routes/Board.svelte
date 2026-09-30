@@ -38,7 +38,7 @@
   let selected = $state([]);
   let focused = $state(null); // { item, comments } for the preview aside
   let menu = $state(null);    // { item, ids, x, y } for the right-click menu
-  let dragging = null;
+  let drag = $state(null);   // { ids, x, y, live, target } while a card is held
 
   // A view preference, private to this browser: it decides what is drawn,
   // never what is true.
@@ -147,50 +147,94 @@
     menu = { item, ids: [...selected], x, y };
   }
 
-  // What the drag carries: the whole selection when the card under the pointer
-  // is part of it, and that card alone otherwise. Dragging one of five selected
-  // cards to another column and watching four stay behind is the bug this
-  // answers; a card outside the selection still travels on its own.
+  // Dragging is the pointer's, not the browser's. Native drag and drop draws a
+  // ghost of its own, flickers its drop target on every child the pointer
+  // crosses, and gives nothing to hang an insertion line on.
   //
-  // Board order, not selection order, so a run of cards lands the way it was
-  // read rather than the way it was clicked.
-  function dragged() {
-    if (!dragging) return [];
-    if (!selected.includes(dragging.id)) return [dragging.id];
-    return (board?.columns || []).flatMap((c) => c.items || [])
-      .map((i) => i.id).filter((id) => selected.includes(id));
+  // What the drag carries: the whole selection when the card under the pointer
+  // is part of it, and that card alone otherwise. Board order, not selection
+  // order, so a run of cards lands the way it was read rather than the way it
+  // was clicked.
+  function grab(item, e) {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    const ids = !selected.includes(item.id) ? [item.id]
+      : (board?.columns || []).flatMap((c) => c.items || [])
+        .map((i) => i.id).filter((id) => selected.includes(id));
+    drag = { ids, x: e.clientX, y: e.clientY, live: false, target: null };
+    addEventListener("pointermove", move);
+    addEventListener("pointerup", release);
+    addEventListener("pointercancel", cancel);
+    addEventListener("keydown", escape);
   }
 
-  // The card the pointer is above, so a drop lands in front of it rather than
-  // always at the end of the column. A card being dragged is not its own
-  // neighbour: measuring against one would rank a card before itself.
-  function neighbourAt(container, y, moving) {
-    for (const el of container.querySelectorAll(".card[data-id]")) {
-      const id = +el.dataset.id;
-      if (moving.includes(id)) continue;
-      const box = el.getBoundingClientRect();
-      if (y < box.top + box.height / 2) return id;
+  // A press only becomes a drag once the pointer has travelled, so a click
+  // stays a click.
+  function move(e) {
+    if (!drag.live) {
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5) return;
+      drag.live = true;
+      getSelection()?.removeAllRanges();
+      document.body.classList.add("grabbing");
     }
-    return 0; // past the last card: no neighbour, so the drop ranks at the end
+    drag.target = targetAt(e.clientX, e.clientY);
   }
 
-  async function drop(e, col) {
-    e.preventDefault();
-    e.currentTarget.classList.remove("over");
-    const moving = dragged();
-    if (!moving.length) return;
-    const before = neighbourAt(e.currentTarget, e.clientY, moving);
+  // Where a drop would land: between the two cards around the pointer, by
+  // their midpoints, with the held cards left out — a card is not its own
+  // neighbour. `top` is where the line is drawn, in the gap between them.
+  function targetAt(x, y) {
+    const body = document.elementFromPoint(x, y)?.closest(".column")?.querySelector(".column-body");
+    if (!body) return null;
+    let after = 0, before = 0, edge = null;
+    for (const el of body.querySelectorAll(".card[data-id]")) {
+      if (drag.ids.includes(+el.dataset.id)) continue;
+      const box = el.getBoundingClientRect();
+      if (y < box.top + box.height / 2) { before = +el.dataset.id; edge = box.top - 4; break; }
+      after = +el.dataset.id; edge = box.bottom + 4;
+    }
+    const frame = body.getBoundingClientRect();
+    // Client pixels, written back inside the zoomed #app (DESIGN.md §1).
+    const zoom = body.currentCSSZoom || 1;
+    const top = ((edge ?? frame.top + 10) - frame.top) / zoom + body.scrollTop - 1;
+    return { stateId: +body.dataset.state, after, before, top };
+  }
+
+  function release() {
+    const { live, target, ids } = drag;
+    cancel();
+    if (!live) return;
+    // The click that ends a drag is not a click on the card.
+    const eat = (e) => { e.preventDefault(); e.stopPropagation(); };
+    addEventListener("click", eat, { capture: true, once: true });
+    setTimeout(() => removeEventListener("click", eat, { capture: true }));
+    if (target) drop(target, ids);
+  }
+
+  function cancel() {
+    drag = null;
+    document.body.classList.remove("grabbing");
+    removeEventListener("pointermove", move);
+    removeEventListener("pointerup", release);
+    removeEventListener("pointercancel", cancel);
+    removeEventListener("keydown", escape);
+  }
+  const escape = (e) => e.key === "Escape" && cancel();
+
+  // One call per card, each ranked after the one before it and before the
+  // card under the line, so the run keeps its order and lands where the line
+  // was. The first one names the card above the line too: naming only the one
+  // below ranked it anywhere above that card, usually at the top.
+  //
+  // A refusal stops the run: the ones already moved stay moved, and the toast
+  // says why.
+  async function drop({ stateId, after, before }, ids) {
     try {
-      // One call per card, each ranked after the one before it, so the run
-      // keeps its order instead of reversing into the gap. A refusal stops the
-      // run: the ones already moved stay moved, and the toast says why.
-      let after = 0;
-      for (const id of moving) {
-        await api.rankItem(id, col.state.id, after, before);
+      for (const id of ids) {
+        await api.rankItem(id, stateId, after, before);
         after = id;
       }
-      await load();
     } catch (err) { failure(err); }
+    await load();
   }
 </script>
 
@@ -233,17 +277,17 @@
                 <h2>{col.state.name}</h2>
                 <span class="column-count">{col.count}</span>
               </div>
-              <div class="column-body" role="presentation"
-                   ondragover={(e) => { e.preventDefault(); e.currentTarget.classList.add("over"); }}
-                   ondragleave={(e) => e.currentTarget.classList.remove("over")}
-                   ondrop={(e) => drop(e, col)}>
+              <div class="column-body" data-state={col.state.id}>
+                {#if drag?.target?.stateId === col.state.id}
+                  <i class="drop-line" style:top="{drag.target.top}px"></i>
+                {/if}
                 {#each col.items || [] as item (item.id)}
                   <div class="card-slot" in:receive={{ key: item.id }} out:send={{ key: item.id }}
                        animate:flip={{ duration: ms(GLIDE), easing: easeOut }}>
                     <Card {item} selected={selected.includes(item.id)}
                           focused={focused?.item.id === item.id} rendering={team.iconRendering}
-                          ontoggle={toggle} ondrag={(it) => (dragging = it)} onpreview={preview}
-                          onmenu={openMenu} />
+                          dragging={drag?.live && drag.ids.includes(item.id)}
+                          ontoggle={toggle} ongrab={grab} onpreview={preview} onmenu={openMenu} />
                   </div>
                 {/each}
                 {#if !col.items?.length}

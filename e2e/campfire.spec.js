@@ -961,6 +961,35 @@ test("the board hides old done items behind a toggle the backlog does not have",
   await expect(page.getByRole("button", { name: "Show old done" })).toHaveCount(0);
 });
 
+test("a card dropped between two others lands between them, where the line said", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  const todo = page.locator(".column", { has: page.getByRole("heading", { name: "To Do" }) });
+  const cards = todo.locator(".card");
+  await expect(cards.nth(2)).toBeVisible();
+  const titles = () => cards.locator(".card-title").allTextContents();
+  const [first, second] = await titles();
+  const last = (await titles()).at(-1);
+
+  // Held over the top half of the second card: the line sits in the gap
+  // between the first and the second.
+  const from = await cards.last().boundingBox();
+  const [a, b] = [await cards.nth(0).boundingBox(), await cards.nth(1).boundingBox()];
+  await page.mouse.move(from.x + 20, from.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(b.x + 20, b.y + 6, { steps: 4 });
+  const line = await todo.locator(".drop-line").boundingBox();
+  expect(line.y).toBeGreaterThanOrEqual(a.y + a.height - 1);
+  expect(line.y + line.height).toBeLessThanOrEqual(b.y + 1);
+
+  // Dropped, it is second — not first, which is where naming only the card
+  // below used to put it — and the click that ended the drag opened nothing.
+  await page.mouse.up();
+  await expect.poll(async () => (await titles()).slice(0, 3)).toEqual([first, last, second]);
+  await expect(todo.locator(".drop-line")).toHaveCount(0);
+  await expect(page.locator(".detail-aside")).toHaveCount(0);
+});
+
 // The rest of the suite runs with reduced motion; this one needs the motion.
 test.describe(() => {
   test.use({ contextOptions: { reducedMotion: "no-preference" } });
