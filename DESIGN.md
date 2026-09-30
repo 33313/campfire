@@ -71,14 +71,14 @@ Nothing in the interface uses a colour that is not on this list.
 
 | Token | Hex | Rule |
 |---|---|---|
-| `accent` | `#d9a05b` | amber. Active nav, P1, primary buttons, selection, focus, identifiers in context. |
+| `accent` | `#d9a05b` | amber. Active nav, P1 and P2, primary buttons, selection, focus, identifiers in context. |
 | `accent-hover` | `#e6b479` | link hover only. |
 | `accent-tint` | `rgba(217,160,91,0.12)` | selection, active nav, drop targets, the on-state of a toggle. |
 | `accent-tint-weak` | `rgba(217,160,91,0.06)` | a selected table row, a drag placeholder. |
 | `alert` | `#c4675c` | clay. **Errors and rejection only.** Never decoration. |
 | `alert-tint` | `rgba(196,103,92,0.10)` | the count block in a destructive confirm. |
 | `ok` | `#a3a961` | olive. Terminal states, progress fill, verified snapshots, the live dot. |
-| `steel` | `#7d94a8` | P2 only. |
+| `steel` | `#7d94a8` | P3 only. |
 
 `on-accent` is `#131110` — text on an amber or clay fill.
 
@@ -167,8 +167,8 @@ that writes a client coordinate into a style inside `#app` divides by `currentCS
 3. **A ticket has no type.** There is no `type` field, no per-team type list, no type filter, no type
    column, and no type on a card. See `SPEC.md` §3.2. If you find yourself adding one back, the
    answer is in Appendix B.
-4. **Priority is four glyphs *and* four colours.** The shape carries the level on its own; colour
-   only reinforces it. Do not collapse it to a coloured dot.
+4. **Priority is four glyphs *and* three colours.** The shape carries the level on its own; colour
+   only reinforces it. Do not collapse every level to a coloured dot.
 5. **Labels never appear on a board card.** They live on the item detail view. `SPEC.md` §8.1.
 
 ---
@@ -180,10 +180,10 @@ Four levels. Rendered at 14px on cards and rows, 16px in a legend, `stroke-width
 
 | Level | Colour | Glyph | Path |
 |---|---|---|---|
-| P1 Highest | `#d9a05b` accent | double chevron up | `M4 8.5 8 4.5l4 4` + `M4 12 8 8l4 4` |
-| P2 High | `#7d94a8` steel | chevron up | `M3.8 10.2 8 6l4.2 4.2` |
-| P3 Medium *(default)* | `#8f8578` muted | bar | `M3.8 8h8.4` |
-| P4 Low | `#5f574d` faint | chevron down | `M3.8 5.8 8 10l4.2-4.2` |
+| P1 Highest | `#d9a05b` accent | triple chevron up | `M4 6.5 8 2.5l4 4` + `M4 10 8 6l4 4` + `M4 13.5 8 9.5l4 4` |
+| P2 High | `#d9a05b` accent | chevron up | `M3.8 10.2 8 6l4.2 4.2` |
+| P3 Medium *(default)* | `#7d94a8` steel | empty circle | `circle cx=8 cy=8 r=4` |
+| P4 Low | `#5f574d` faint | dot | `circle cx=8 cy=8 r=1` (the 2px stroke fills it) |
 
 ---
 
