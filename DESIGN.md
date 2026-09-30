@@ -61,24 +61,24 @@ Nothing in the interface uses a colour that is not on this list.
 |---|---|---|
 | `text` | `#d6cfc4` | body, card titles, table cells |
 | `bright` | `#ece5d8` | headings, the selected row, emphasis |
-| `muted` | `#8f8578` | secondary text, labels, inactive nav, P4 |
+| `muted` | `#8f8578` | secondary text, labels, inactive nav |
 | `muted-soft` | `#a89c8d` | avatar initials, mono values inside panels |
 | `dim` | `#6b6157` | explanatory text under a heading |
-| `faint` | `#5f574d` | column labels, timestamps, placeholders |
+| `faint` | `#5f574d` | column labels, timestamps, placeholders, P4 |
 | `ghost` | `#4a423a` | em-dashes for empty values, disabled marks |
 
 ### Accent and signal
 
 | Token | Hex | Rule |
 |---|---|---|
-| `accent` | `#f0a84a` | amber. Active nav, P2, primary buttons, selection, focus, identifiers in context. |
+| `accent` | `#f0a84a` | amber. Active nav, P1, primary buttons, selection, focus, identifiers in context. |
 | `accent-hover` | `#f7bf6e` | link hover only. |
 | `accent-tint` | `rgba(217,160,91,0.12)` | selection, active nav, drop targets, the on-state of a toggle. |
 | `accent-tint-weak` | `rgba(217,160,91,0.06)` | a selected table row, a drag placeholder. |
-| `alert` | `#e5604d` | clay. **Errors, rejection and P1 only.** Never decoration. |
+| `alert` | `#e5604d` | clay. **Errors and rejection only.** Never decoration. |
 | `alert-tint` | `rgba(196,103,92,0.10)` | the count block in a destructive confirm. |
 | `ok` | `#b2bd52` | olive. Terminal states, progress fill, verified snapshots, the live dot. |
-| `steel` | `#79a4cc` | P3 only. |
+| `steel` | `#79a4cc` | P2 only. |
 
 `on-accent` is `#131110` — text on an amber or clay fill.
 
@@ -127,7 +127,7 @@ Three families, each with one job.
 | Settings rail | 190px fixed |
 | Icon | 15px nav, 13px inline with text, 11px on a card, 9–10px as a marker |
 
-Icon strokes: 1.4 for outline glyphs, 1.5–1.8 for markers and priority chevrons, 1.2 for priority rings, 2 for check marks.
+Icon strokes: 1.4 for outline glyphs, 1.5–1.8 for markers, 2 for priority and check marks.
 `stroke-linecap="square"`, `stroke-linejoin="miter"` — round caps are off-language.
 
 These are the numbers for a ~1440px viewport, and they are not re-specified per size. A display that
@@ -167,23 +167,23 @@ that writes a client coordinate into a style inside `#app` divides by `currentCS
 3. **A ticket has no type.** There is no `type` field, no per-team type list, no type filter, no type
    column, and no type on a card. See `SPEC.md` §3.2. If you find yourself adding one back, the
    answer is in Appendix B.
-4. **Priority is four glyphs *and* four colours.** The chevron carries the level on its own; the
-   ring and colour only reinforce it. Do not collapse it to a coloured dot.
+4. **Priority is four glyphs *and* four colours.** The shape carries the level on its own; colour
+   only reinforces it. Do not collapse it to a coloured dot.
 5. **Labels never appear on a board card.** They live on the item detail view. `SPEC.md` §8.1.
 
 ---
 
 ## 3. Priority
 
-Four levels. Rendered at 14px on cards and rows, 16px in a legend, `viewBox="0 0 16 16"`. Each
-chevron sits in a ring: rings are `stroke-width="1.2"`, r 6.6; chevrons `stroke-width="1.6"`.
+Four levels. Rendered at 14px on cards and rows, 16px in a legend, `stroke-width="2"`,
+`viewBox="0 0 16 16"`.
 
-| Level | Colour | Ring | Glyph | Path |
-|---|---|---|---|---|
-| P1 Highest | `#e5604d` alert | solid, r 7.2 | double chevron up, `on-accent` | `M5 8 8 5l3 3` + `M5 11.3 8 8.3l3 3` |
-| P2 High | `#f0a84a` accent | outline + 18% tint | chevron up | `M5 9.6 8 6.6l3 3` |
-| P3 Medium *(default)* | `#79a4cc` steel | outline | bar | `M5.3 8h5.4` |
-| P4 Low | `#8f8578` muted | dashed, `dim` | chevron down | `M5.5 6.8 8 9.3l2.5-2.5` |
+| Level | Colour | Glyph | Path |
+|---|---|---|---|
+| P1 Highest | `#f0a84a` accent | double chevron up | `M4 8.5 8 4.5l4 4` + `M4 12 8 8l4 4` |
+| P2 High | `#79a4cc` steel | chevron up | `M3.8 10.2 8 6l4.2 4.2` |
+| P3 Medium *(default)* | `#8f8578` muted | bar | `M3.8 8h8.4` |
+| P4 Low | `#5f574d` faint | chevron down | `M3.8 5.8 8 10l4.2-4.2` |
 
 ---
 
