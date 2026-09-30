@@ -1011,20 +1011,27 @@ test("a card dropped between two others lands between them, where the line said"
 test.describe(() => {
   test.use({ contextOptions: { reducedMotion: "no-preference" } });
 
-  test("a card finished on the board throws sparks, even when someone else finished it", async ({ page }) => {
+  test("a card finished on the board feeds the fire, even when someone else finished it", async ({ page }) => {
     await signIn(page);
     const item = await (await page.request.post("/api/items", { data: {
       kind: "ticket", teamId: 1, title: "Light the fire", accepted: true,
     } })).json();
     await page.goto("/t/1/board");
     await expect(page.locator(".card", { hasText: "Light the fire" })).toBeVisible();
-    await expect(page.locator(".spark")).toHaveCount(0);
+    await expect(page.locator("canvas.embers")).toHaveCount(0);
 
     // Moved behind the board's back: it hears of it on the stream.
     const done = (await (await page.request.get("/api/teams/1/states")).json())
       .find((s) => s.role === "final");
     await page.request.post(`/api/items/${item.id}/move`, { data: { stateId: done.id } });
-    await expect(page.locator(".spark").first()).toBeAttached();
+    // It kindles where it landed, embers are drawn, and the campfire in the
+    // sidebar roars when the one carrying the work reaches it (DEV-71).
+    const doneColumn = page.locator(".column", { has: page.getByRole("heading", { name: "Done" }) });
+    await expect(doneColumn.locator(".card.kindled", { hasText: "Light the fire" })).toBeAttached();
+    await expect(page.locator("canvas.embers")).toBeAttached();
+    await expect(page.locator(".sidebar .mark.roar")).toBeAttached();
+    // And the canvas goes once the last ember is out.
+    await expect(page.locator("canvas.embers")).toHaveCount(0, { timeout: 5000 });
   });
 
   test("on a large panel a card glides from where it was, not a quarter further", async ({ page }) => {

@@ -873,8 +873,35 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 }
 @keyframes flare { 40% { scale: 1.15 1.3; } }
 
-/* Embers off a card that has just been finished (motion.js). */
-.spark { position: fixed; z-index: 70; pointer-events: none; }
+/* A finished card feeds the fire (embers.js). The embers are drawn on one
+   canvas over the page, alive only while they are. */
+.embers { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 70; pointer-events: none; }
+/* The card kindles: heat washes up through it and its border runs from the
+   amber of fire to the olive of done, then settles. */
+.card.kindled { position: relative; overflow: hidden; animation: warm 1s var(--ease-out); }
+.card.kindled::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to top, var(--accent-tint), transparent 75%);
+  animation: wash 1s var(--ease-out) forwards;
+}
+@keyframes warm {
+  12% { border-color: var(--accent); }
+  55% { border-color: var(--ok); }
+}
+@keyframes wash {
+  from { opacity: 0; translate: 0 60%; }
+  25% { opacity: 1; }
+  to { opacity: 0; translate: 0 -40%; }
+}
+.column-count.bump { animation: bump 420ms var(--ease-out); }
+@keyframes bump { 30% { scale: 1.25; color: var(--ok); border-color: var(--ok); } }
+/* The campfire roars up when a finished card's ember reaches it. */
+.mark.roar { animation: glow 900ms var(--ease-out); }
+.mark.roar .flame { animation: roar 900ms var(--ease-out); }
+.mark.roar .core { animation: roar-core 900ms var(--ease-out); }
+@keyframes glow { 20% { filter: drop-shadow(0 0 5px var(--accent)); } }
+@keyframes roar { 20% { transform: scale(1.3, 1.55); } 55% { transform: scale(0.96, 1.08); } }
+@keyframes roar-core { 20% { scale: 1.3 1.9; } 50% { scale: 0.9 1.2; } }
 
 /* The wordmark beside the mark, and the boot screen's slow fire, which only
    shows itself if the boot is slow enough to need it. */

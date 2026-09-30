@@ -16,7 +16,8 @@
   import { createItem } from "../lib/create.js";
   import { filterFromView } from "../lib/options.js";
   import { NAV } from "../lib/icons.js";
-  import { ms, sparks, easeOut, QUICK, GLIDE } from "../lib/motion.js";
+  import { ms, easeOut, QUICK, GLIDE } from "../lib/motion.js";
+  import { kindle } from "../lib/embers.js";
   import { lift } from "../lib/ghost.js";
 
   import Icon from "../components/Icon.svelte";
@@ -77,13 +78,15 @@
   });
 
   // A card that was open work a moment ago and is now in the final state
-  // throws sparks once it has landed. Only one that was on the board before:
-  // a filter that brings finished work into view has finished nothing.
+  // feeds the fire once it has landed (embers.js). Only one that was on the
+  // board before: a filter that brings finished work into view has finished
+  // nothing. Each comes with the column it is now in, because that is where to
+  // look for it — its old card may still be fading out of another.
   function finished(before, after) {
     const open = new Set(before.columns.filter((c) => c.state.role !== "final")
       .flatMap((c) => (c.items || []).map((i) => i.id)));
     return after.columns.filter((c) => c.state.role === "final")
-      .flatMap((c) => (c.items || []).map((i) => i.id)).filter((id) => open.has(id));
+      .flatMap((c) => (c.items || []).filter((i) => open.has(i.id)).map((i) => [i.id, c.state.id]));
   }
 
   async function load() {
@@ -95,8 +98,10 @@
         const done = finished(before, board);
         if (done.length) {
           await tick();
-          setTimeout(() => done.forEach((id) =>
-            sparks(document.querySelector(`.card[data-id="${id}"]`))), ms(GLIDE));
+          // A run finished together feeds the fire one after another.
+          setTimeout(() => done.slice(0, 6).forEach(([id, state], i) => kindle(
+            document.querySelector(`.column-body[data-state="${state}"] .card[data-id="${id}"]`),
+            i * 0.09)), ms(GLIDE));
         }
       }
       if (focused) focused = await fetchFocus(focused.item.id).catch(() => null);
