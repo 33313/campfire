@@ -130,29 +130,13 @@ Icon strokes: 1.4 for outline glyphs, 1.5–1.8 for markers, 2 for priority and 
 `stroke-linecap="square"`, `stroke-linejoin="miter"` — round caps are off-language.
 
 These are the numbers for a ~1440px viewport, and they are not re-specified per size. A display that
-wants them larger is normally the desktop's job: OS scaling reports a smaller viewport in CSS
-pixels, and the geometry above then lands at the size it was drawn at.
+wants them larger is the desktop's job, or the browser's: OS scaling and browser zoom both report a
+smaller viewport in CSS pixels, and the geometry above then lands at the size it was drawn at.
 
-A very large panel run with no OS scaling at all is the case the desktop does not cover, and there
-the whole interface is zoomed rather than re-specified — `zoom: 1.25 / 1.5 / 2` at 2400 / 3000 /
-3800px wide. Each step also requires a height — 1000 / 1500 / 1500 — because height is what sorts a
-dense panel from a merely wide one: every 1440p panel is 1440 tall however wide it gets, and a real
-4K is 2160. And each requires `resolution <= 1x`, so none of it stacks on top of a desktop that is
-already scaling. Zoom reflows; a transform would not.
-
-The zoom sits on `#app`, not `:root`. A zoomed subtree is a coordinate trap: `getBoundingClientRect`
-and `event.clientX` report viewport pixels, but a CSS length written back inside the zoom is
-multiplied by it. On `:root` that caught the whole page — including the overlays a password manager
-injects into `<body>` — so anything positioned from a client rect landed at 1.25x its target. Code
-that writes a client coordinate into a style inside `#app` divides by `currentCSSZoom` first.
-
-| Panel | zoom | Layout gets |
-|---|---|---|
-| 1920×1080 | 1 | 1920×1080 |
-| 2560×1440 | 1.25 | 2048×1152 |
-| 3440×1440 *(ultrawide)* | 1.25 | 2752×1152 |
-| 3840×2160 *(4K)* | 2 | 1920×1080 |
-| 5120×2160 *(5K2K)* | 2 | 2560×1080 |
+The interface never zooms itself. It used to, with `zoom` on `#app` for large panels at 1×. That
+put `#app` in a second coordinate space, and every drag, menu and animation that measures the screen
+then had to divide by the zoom by hand; each one that forgot was a bug. A client rect and a CSS
+length inside the app are the same pixels, and nothing may make them differ again.
 
 ---
 
@@ -390,8 +374,8 @@ Where it appears, and nowhere else:
 Ask rather than invent:
 
 - Light mode. There is none, and the palette is not built for one.
-- Mobile and narrow layouts. The rails are fixed; the board columns flex and an unscaled large panel
-  is zoomed (§1), and that is the whole of it. Narrower than the rails allow, the interface scrolls
+- Mobile and narrow layouts. The rails are fixed and the board columns flex, and that is the whole
+  of it. Narrower than the rails allow, the interface scrolls
   rather than reflows.
 - Empty states beyond the board's empty column, the log's end-of-list, and the one-line `empty-note`
   a list falls back to.

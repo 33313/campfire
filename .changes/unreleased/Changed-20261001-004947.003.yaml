@@ -1,0 +1,3 @@
+kind: Changed
+body: The interface no longer zooms itself on large displays. To make it bigger, use your desktop's display scaling or the browser's zoom. This fixes cards and menus landing in the wrong place when dragged, dropped or opened on those displays.
+time: 2026-10-01T00:49:47.367878312+02:00

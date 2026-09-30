@@ -14,10 +14,7 @@ export function hug(node) {
     const rects = [...lines.getClientRects()];
     if (rects.length < 2) return; // one line already hugs
     const slack = text.getBoundingClientRect().width - Math.max(...rects.map((r) => r.width));
-    // Rects are viewport pixels; a width written inside the zoomed #app is
-    // multiplied by the zoom (DESIGN.md §1), so it is divided back out.
-    const zoom = node.currentCSSZoom || 1;
-    node.style.width = `${Math.ceil((node.getBoundingClientRect().width - slack) / zoom)}px`;
+    node.style.width = `${Math.ceil(node.getBoundingClientRect().width - slack)}px`;
   };
 
   // The card's width is what decides where the name breaks, so a change in it
