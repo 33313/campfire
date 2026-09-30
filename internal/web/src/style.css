@@ -431,8 +431,19 @@ img.avatar { object-fit: cover; }
   margin-left: auto; padding: 1px 6px; border: 1px solid var(--border);
   font-family: var(--mono); font-size: 10.5px; color: var(--muted);
 }
-.column-body { display: flex; flex-direction: column; gap: 8px; padding: 10px; overflow-y: auto; flex: 1; }
-.column-body.over { background: var(--accent-tint-weak); }
+.column-body {
+  display: flex; flex-direction: column; gap: 8px; padding: 10px; overflow-y: auto; flex: 1;
+  position: relative;
+}
+/* Where a held card will land: an amber line in the gap it will open. It is
+   drawn over the gap rather than in it, so the cards never move under the
+   pointer while it is being aimed. */
+.drop-line {
+  position: absolute; left: 10px; right: 10px; height: 2px; background: var(--accent);
+  pointer-events: none; transition: top var(--snap) var(--ease-out);
+}
+/* While a card is held, the pointer says so everywhere, and nothing selects. */
+body.grabbing, body.grabbing * { cursor: grabbing !important; user-select: none; }
 
 .card {
   display: flex; flex-direction: column; gap: 9px; padding: 10px 11px;
@@ -474,7 +485,6 @@ img.avatar { object-fit: cover; }
 .card-foot { display: flex; align-items: center; gap: 8px; }
 /* The identifier is the one thing on a card that must never wrap or shorten. */
 .card-foot .ident { white-space: nowrap; flex: 0 0 auto; }
-.drop-placeholder { height: 74px; border: 1px dashed var(--border); background: var(--accent-tint-weak); }
 
 /* Tables ---------------------------------------------------------------- */
 

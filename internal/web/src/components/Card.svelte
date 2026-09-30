@@ -15,10 +15,11 @@
   // The bucket wears its colour where it has one, so a column of cards is
   // sorted by eye without reading a title on each: on its border and its name,
   // never as a fill. A filled chip on most cards outshouts the one P1 tile.
-  let { item, selected = false, focused = false, rendering = "mono",
-         ontoggle, ondrag, onpreview, onmenu } = $props();
+  //
+  // A drag is the board's: the card only says where the pointer went down.
+  let { item, selected = false, focused = false, dragging = false, rendering = "mono",
+         ontoggle, ongrab, onpreview, onmenu } = $props();
 
-  let dragging = $state(false);
   let tint = $derived(BUCKET_COLOURS[item.bucketColor] || null);
   // A deadline three days away or less is drawn in the accent so it is seen
   // before it is missed, and one already past in the alert colour. A done
@@ -29,8 +30,9 @@
   let overdue = $derived(days !== null && days < 0);
 </script>
 
-<a class="card" class:selected class:focused class:dragging data-id={item.id} draggable="true"
+<a class="card" class:selected class:focused class:dragging data-id={item.id}
   href="/{item.identifier}"
+  onpointerdown={(e) => ongrab?.(item, e)}
   onclick={(e) => {
     // A modifier picks the card into the selection instead of opening it; the
     // router leaves modified clicks alone, so only the navigation is stopped.
@@ -45,13 +47,7 @@
     e.preventDefault();
     onmenu(item, e.clientX, e.clientY);
   }}
-  ondragstart={(e) => {
-    dragging = true;
-    ondrag(item);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", item.identifier);
-  }}
-  ondragend={() => { dragging = false; ondrag(null); }}>
+  ondragstart={(e) => e.preventDefault()}>
 
   <p class="card-title">{item.title}</p>
   {#if item.bucketIdentifier}
