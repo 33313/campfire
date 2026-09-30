@@ -29,14 +29,14 @@
   --ghost: #4a423a;
 
   /* Accent and signal */
-  --accent: #d9a05b;
-  --accent-hover: #e6b479;
-  --accent-tint: rgba(217, 160, 91, 0.12);
-  --accent-tint-weak: rgba(217, 160, 91, 0.06);
-  --alert: #c4675c;
-  --alert-tint: rgba(196, 103, 92, 0.10);
-  --ok: #a3a961;
-  --steel: #7d94a8;
+  --accent: #f0a84a;
+  --accent-hover: #f7bf6e;
+  --accent-tint: rgba(240, 168, 74, 0.18);
+  --accent-tint-weak: rgba(240, 168, 74, 0.08);
+  --alert: #e5604d;
+  --alert-tint: rgba(229, 96, 77, 0.14);
+  --ok: #b2bd52;
+  --steel: #79a4cc;
   --on-accent: #131110;
 
   --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;

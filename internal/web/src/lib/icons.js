@@ -37,14 +37,13 @@ export const NAV = {
   save: '<path d="M2.6 2.6h8.4l2.4 2.4v8.4H2.6Z"/><path d="M5.4 2.6v3.8h5.2V2.6"/><path d="M4.8 13.4V9h6.4v4.4"/>',
 };
 
-// Priority is four glyphs *and* three colours. The shape carries the level on
-// its own; colour only reinforces it.
+// Priority is four glyphs *and* four colours. The chevron carries the level;
+// the ring PriorityGlyph.svelte draws around it reinforces it.
 export const PRIORITY = {
-  1: { colour: "var(--accent)", body: '<path d="M4 6.5 8 2.5l4 4"/><path d="M4 10 8 6l4 4"/><path d="M4 13.5 8 9.5l4 4"/>', name: "P1 · Highest" },
-  2: { colour: "var(--accent)", body: '<path d="M3.8 10.2 8 6l4.2 4.2"/>', name: "P2 · High" },
-  3: { colour: "var(--steel)", body: '<circle cx="8" cy="8" r="4"/>', name: "P3 · Medium" },
-  // r=1 under a 2px stroke draws a solid dot without a fill.
-  4: { colour: "var(--faint)", body: '<circle cx="8" cy="8" r="1"/>', name: "P4 · Low" },
+  1: { colour: "var(--alert)", body: '<path d="M5 8 8 5l3 3"/><path d="M5 11.3 8 8.3l3 3"/>', name: "P1 · Highest" },
+  2: { colour: "var(--accent)", body: '<path d="M5 9.6 8 6.6l3 3"/>', name: "P2 · High" },
+  3: { colour: "var(--steel)", body: '<path d="M5.3 8h5.4"/>', name: "P3 · Medium" },
+  4: { colour: "var(--muted)", body: '<path d="M5.5 6.8 8 9.3l2.5-2.5"/>', name: "P4 · Low" },
 };
 
 // The fixed set of eight bucket icons (DESIGN.md §4). Not extensible, not

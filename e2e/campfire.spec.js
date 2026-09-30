@@ -917,9 +917,9 @@ test("a deadline three days away or less turns amber, and red once past", async 
   }
   await page.goto("/t/1/board");
   const due = (title) => page.locator(".card", { hasText: title }).locator(".card-deadline");
-  const amber = "rgb(217, 160, 91)";
+  const amber = "rgb(240, 168, 74)";
   await expect(due("Due in three")).toHaveCSS("color", amber);
-  await expect(due("Overdue by one")).toHaveCSS("color", "rgb(196, 103, 92)");
+  await expect(due("Overdue by one")).toHaveCSS("color", "rgb(229, 96, 77)");
   await expect(due("Due in four")).not.toHaveCSS("color", amber);
 
   // A done ticket's deadline is greyed out, however late it was.
