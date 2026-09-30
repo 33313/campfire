@@ -247,6 +247,7 @@
   async function drop(target, ids) {
     const copy = ghost;
     const home = ids.includes(+held.dataset.id) ? +held.dataset.id : ids[0];
+    const origin = held.closest(".column-body")?.dataset.state;
     ghost = null;
     if (target) {
       landing = ids;
@@ -260,7 +261,13 @@
       await load();
       await tick();
     }
-    await copy.land(document.querySelector(`.card[data-id="${home}"]`)?.getBoundingClientRect());
+    // Looked for in the column it went to, then the one it came from. The copy
+    // leaving the old column is still in the page, fading, and on a move to
+    // the right it comes first: the held card flew back to where it started.
+    const at = (state) => state &&
+      document.querySelector(`.column-body[data-state="${state}"] .card[data-id="${home}"]`);
+    const spot = at(target?.stateId) || at(origin);
+    await copy.land(spot?.getBoundingClientRect());
     landing = [];
   }
 </script>

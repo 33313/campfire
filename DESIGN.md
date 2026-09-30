@@ -345,7 +345,7 @@ nothing else to look at.
 | Screen | its body fades up once it has something to show; header and rails stay put |
 | Card changing column | travels there, whoever moved it — a drop, a bulk move, a teammate's change on the stream. Cards around it close up or make room. A card from nowhere or to nowhere fades |
 | Card held in a drag | a copy follows the pointer from the spot it was picked up by, lifted to 103% and off the surface on the product's only shadow (`0 10px 24px` at 50% black). It turns about that spot with the speed it is carried at, at most 6°, and swings back upright when the hand stops. A run of cards carries its count in an `accent` badge |
-| Card dropped | the copy settles onto the card's new place in 180ms with a slight overshoot, and the card shows under it; the cards around it make room. Called off — Escape, or let go outside a column — it settles back where it came from |
+| Card dropped | the copy travels straight from the hand onto the card's new place in 180ms, on `ease-out`, and the card shows under it; the cards around it make room. Called off — Escape, or let go outside a column — it settles back where it came from |
 | Card reaching the final state | throws a handful of square embers upward once it has landed, in `accent` and `accent-hover`. Only a card that was open work on the board a moment ago: a filter that brings finished work into view has finished nothing |
 | Progress bar | both parts grow from the left in proportion, over 700ms, when drawn |
 | Toast | rises into the stack; the ones above make room; it fades on the way out |

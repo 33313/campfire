@@ -1059,4 +1059,36 @@ test.describe(() => {
     expect(trail.length).toBeGreaterThan(3);
     expect(Math.min(...trail)).toBeGreaterThan(Math.min(was.x, now.x) - 3);
   });
+
+  test("a card dropped to the right lands where it was let go, not back where it came from", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/t/1/board");
+    const column = (name) => page.locator(".column", { has: page.getByRole("heading", { name }) });
+    const card = column("To Do").locator(".card").first();
+    const id = await card.getAttribute("data-id");
+    const from = await card.boundingBox();
+    const to = await column("In Progress").locator(".column-body").boundingBox();
+
+    await page.mouse.move(from.x + 20, from.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(to.x + 40, to.y + 20, { steps: 6 });
+    const letGo = (await page.locator(".card.ghost").boundingBox()).x;
+    // Every frame of the landing, until the copy is gone.
+    await page.evaluate(() => {
+      window.trail = [];
+      (function sample() {
+        const held = document.querySelector(".card.ghost");
+        if (!held) return;
+        window.trail.push(held.getBoundingClientRect().x);
+        requestAnimationFrame(sample);
+      })();
+    });
+    await page.mouse.up();
+    await expect(page.locator(".card.ghost")).toHaveCount(0);
+
+    const landed = await column("In Progress").locator(`.card[data-id="${id}"]`).boundingBox();
+    const trail = await page.evaluate(() => window.trail);
+    expect(Math.min(...trail)).toBeGreaterThan(Math.min(letGo, landed.x) - 3);
+    expect(Math.abs(trail.at(-1) - landed.x)).toBeLessThan(3);
+  });
 });

@@ -53,8 +53,10 @@ export function lift(card, x, y, count = 1) {
       const to = rect
         ? [{ transform: `translate(${rect.left / zoom}px, ${rect.top / zoom}px) rotate(0deg) scale(1)` }]
         : [{ opacity: 0 }];
+      // Straight from the hand to its place, on the ease-out everything else
+      // moves on: an overshoot carried it past the slot and back.
       await el.animate(to, { duration: ms(rect ? 180 : 120), fill: "forwards",
-        easing: "cubic-bezier(0.3, 1.3, 0.5, 1)" }).finished.catch(() => {});
+        easing: "cubic-bezier(0.33, 1, 0.68, 1)" }).finished.catch(() => {});
       el.remove();
     },
   };
