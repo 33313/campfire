@@ -73,10 +73,10 @@ Nothing in the interface uses a colour that is not on this list.
 |---|---|---|
 | `accent` | `#f0a84a` | amber. Active nav, P1, primary buttons, selection, focus, identifiers in context. |
 | `accent-hover` | `#f7bf6e` | link hover only. |
-| `accent-tint` | `rgba(217,160,91,0.12)` | selection, active nav, drop targets, the on-state of a toggle. |
-| `accent-tint-weak` | `rgba(217,160,91,0.06)` | a selected table row, a drag placeholder. |
-| `alert` | `#e5604d` | clay. **Errors and rejection only.** Never decoration. |
-| `alert-tint` | `rgba(196,103,92,0.10)` | the count block in a destructive confirm. |
+| `accent-tint` | `rgba(240,168,74,0.18)` | selection, active nav, drop targets, the on-state of a toggle. |
+| `accent-tint-weak` | `rgba(240,168,74,0.08)` | a selected table row, a drag placeholder. |
+| `alert` | `#e5604d` | clay. **Errors, rejection and overdue deadlines only.** Never decoration. |
+| `alert-tint` | `rgba(229,96,77,0.14)` | the count block in a destructive confirm. |
 | `ok` | `#b2bd52` | olive. Terminal states, progress fill, verified snapshots, the live dot. |
 | `steel` | `#79a4cc` | P2 only. |
 
