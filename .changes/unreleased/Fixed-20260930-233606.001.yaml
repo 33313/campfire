@@ -1,3 +1,0 @@
-kind: Fixed
-body: A bucket name that wraps onto two lines keeps its border around the name instead of stretching to the width of the card.
-time: 2026-09-30T23:36:06.935929767+02:00

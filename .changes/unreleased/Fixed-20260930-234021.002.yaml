@@ -1,3 +1,0 @@
-kind: Fixed
-body: A card dragged between two others lands between them, not at the top of the column, and an amber line shows where it will land while it is held. Escape cancels a drag.
-time: 2026-09-30T23:40:21.159186332+02:00
