@@ -982,12 +982,29 @@ test("a card dropped between two others lands between them, where the line said"
   expect(line.y).toBeGreaterThanOrEqual(a.y + a.height - 1);
   expect(line.y + line.height).toBeLessThanOrEqual(b.y + 1);
 
+  // The card in the hand is held by the spot it was picked up from (DEV-68).
+  const held = await page.locator(".card.ghost").boundingBox();
+  expect(Math.abs(held.x + 20 - (b.x + 20))).toBeLessThan(3);
+  expect(Math.abs(held.y + 10 - (b.y + 6))).toBeLessThan(3);
+
   // Dropped, it is second — not first, which is where naming only the card
   // below used to put it — and the click that ended the drag opened nothing.
   await page.mouse.up();
   await expect.poll(async () => (await titles()).slice(0, 3)).toEqual([first, last, second]);
   await expect(todo.locator(".drop-line")).toHaveCount(0);
+  await expect(page.locator(".card.ghost")).toHaveCount(0);
   await expect(page.locator(".detail-aside")).toHaveCount(0);
+
+  // Escape puts a held card back where it was.
+  const order = await titles();
+  const top = await cards.first().boundingBox();
+  await page.mouse.move(top.x + 20, top.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(top.x + 20, top.y + 300, { steps: 4 });
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".card.ghost")).toHaveCount(0);
+  await page.mouse.up();
+  expect(await titles()).toEqual(order);
 });
 
 // The rest of the suite runs with reduced motion; this one needs the motion.
