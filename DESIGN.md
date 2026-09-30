@@ -358,7 +358,7 @@ The mark is a flame over two crossed logs, in the 16px grid, square and mitred l
 
 Where it appears, and nowhere else:
 
-- **Sidebar**, 19px beside the wordmark (mono 19 / 500 caps at 0.18em, `text`), the pair centred
+- **Sidebar**, 19px beside the wordmark (mono 15 / 500 caps at 0.18em, `text`), the pair centred
   over the sidebar. It is lit while the live stream is up and burns down to embers while it is not,
   so the one piece of branding is also a status light nobody has to look for. It flares once for
   each change that arrives.
