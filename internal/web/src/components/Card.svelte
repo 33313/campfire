@@ -5,6 +5,7 @@
   import Icon from "./Icon.svelte";
   import { BUCKET_COLOURS, NAV } from "../lib/icons.js";
   import { whenDay, daysUntil } from "../lib/format.js";
+  import { hug } from "../lib/hug.js";
 
   // A card carries six fields and no seventh: bucket, title, deadline,
   // priority, identifier, assignee. Labels never appear on one (SPEC.md §8.1).
@@ -54,7 +55,7 @@
 
   <p class="card-title">{item.title}</p>
   {#if item.bucketIdentifier}
-    <span class="card-bucket" title="{item.bucketIdentifier}  {item.bucketTitle}"
+    <span class="card-bucket" title="{item.bucketIdentifier}  {item.bucketTitle}" use:hug={item.bucketTitle}
           style={tint ? `border-color:${tint};color:${tint}` : ""}>
       <BucketIcon name={item.bucketIcon} size={10} {rendering} color={item.bucketColor} />
       <span class="name">{item.bucketTitle}</span>

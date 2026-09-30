@@ -840,6 +840,15 @@ test("a long bucket name makes the card taller, not wider", async ({ page }) => 
   expect(b.x + b.width).toBeLessThanOrEqual(c.x + c.width);
   expect(b.height).toBeGreaterThan(20);
   expect(await chip.locator(".name").evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+
+  // And its border follows the name's longest line, not the card's width
+  // (DEV-67): the chip ends one padding past the text.
+  await expect.poll(() => chip.evaluate((el) => {
+    const lines = document.createRange();
+    lines.selectNodeContents(el.querySelector(".name"));
+    const right = Math.max(...[...lines.getClientRects()].map((r) => r.right));
+    return el.getBoundingClientRect().right - right;
+  })).toBeLessThanOrEqual(8); // 6px padding, 1px border, 1px rounding
 });
 
 test("starting a selection moves nothing on the screen", async ({ page }) => {
