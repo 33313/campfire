@@ -6,7 +6,7 @@
 
   import { untrack, tick } from "svelte";
   import { flip } from "svelte/animate";
-  import { fade } from "svelte/transition";
+  import { crossfade, fade } from "svelte/transition";
 
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
@@ -16,7 +16,7 @@
   import { createItem } from "../lib/create.js";
   import { filterFromView } from "../lib/options.js";
   import { NAV } from "../lib/icons.js";
-  import { ms, sparks, crossfade, easeOut, QUICK, GLIDE } from "../lib/motion.js";
+  import { ms, sparks, easeOut, QUICK, GLIDE } from "../lib/motion.js";
   import { lift } from "../lib/ghost.js";
 
   import Icon from "../components/Icon.svelte";
@@ -200,9 +200,7 @@
       after = +el.dataset.id; edge = box.bottom + 4;
     }
     const frame = body.getBoundingClientRect();
-    // Client pixels, written back inside the zoomed #app (DESIGN.md §1).
-    const zoom = body.currentCSSZoom || 1;
-    const top = ((edge ?? frame.top + 10) - frame.top) / zoom + body.scrollTop - 1;
+    const top = (edge ?? frame.top + 10) - frame.top + body.scrollTop - 1;
     return { stateId: +body.dataset.state, after, before, top };
   }
 

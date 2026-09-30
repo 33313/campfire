@@ -469,14 +469,14 @@ test("right-clicking a card offers what the selection bar offers, and more", asy
   await expect(progress.locator(".card").first()).toBeVisible();
 });
 
-test("the menu opens at the pointer on a panel wide enough to zoom", async ({ page }) => {
-  // A client coordinate written straight back into a style inside #app is
-  // multiplied by the zoom, which opened the menu a quarter of a screen down
-  // and to the right of the click.
+test("the menu opens at the pointer on a large panel", async ({ page }) => {
+  // The interface never zooms itself (DESIGN.md §1): when it did, a client
+  // coordinate written back into a style was multiplied by the zoom, and the
+  // menu opened a quarter of a screen down and to the right of the click.
   await page.setViewportSize({ width: 2560, height: 1440 });
   await signIn(page);
   await page.goto("/t/1/board");
-  await expect(page.locator("#app")).toHaveCSS("zoom", "1.25");
+  await expect(page.locator("#app")).toHaveCSS("zoom", "1");
 
   const card = page.locator(".card").first();
   await expect(card).toBeVisible();
@@ -1027,9 +1027,9 @@ test.describe(() => {
     await expect(page.locator(".spark").first()).toBeAttached();
   });
 
-  test("on a zoomed panel a card glides from where it was, not a quarter further", async ({ page }) => {
+  test("on a large panel a card glides from where it was, not a quarter further", async ({ page }) => {
     await signIn(page);
-    // 2560 wide at 1x: #app is zoomed to 1.25 (DESIGN.md §1).
+    // 2560 wide at 1x, where the interface once zoomed itself (DESIGN.md §1).
     await page.setViewportSize({ width: 2560, height: 1440 });
     await page.goto("/t/1/board");
     const column = (name) => page.locator(".column", { has: page.getByRole("heading", { name }) });
