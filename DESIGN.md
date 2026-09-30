@@ -358,9 +358,9 @@ The mark is a flame over two crossed logs, in the 16px grid, square and mitred l
 
 Where it appears, and nowhere else:
 
-- **Sidebar**, 14px beside the wordmark. It is lit while the live stream is up and burns down to
-  embers while it is not, so the one piece of branding is also a status light nobody has to look
-  for. It flares once for each change that arrives.
+- **Sidebar**, 18px beside the wordmark, which is mono 12 caps at 0.18em in `muted`. It is lit while
+  the live stream is up and burns down to embers while it is not, so the one piece of branding is
+  also a status light nobody has to look for. It flares once for each change that arrives.
 - **Loading**, 32px, burning — the flame leans, the core flickers on its own beat. It fades in only
   after 300ms, so a fast boot never shows it.
 - **Sign in**, 36px, burning, above the wordmark. This is the one screen allowed a glow: a low

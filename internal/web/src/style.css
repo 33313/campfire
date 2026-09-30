@@ -121,7 +121,7 @@ a, .btn, .chip, .nav-item, .card, .bucket-card, .input, .bare, .label-input, .to
   display: flex; flex-direction: column; gap: 12px;
   padding: 14px 14px 13px; border-bottom: 1px solid var(--border);
 }
-.wordmark { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em;
+.wordmark { font-family: var(--mono); font-size: 12px; letter-spacing: 0.18em;
   text-transform: uppercase; color: var(--muted); }
 .team-switch {
   display: flex; align-items: center; gap: 9px; padding: 7px 9px;
@@ -905,7 +905,7 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 
 /* The wordmark beside the mark, and the boot screen's slow fire, which only
    shows itself if the boot is slow enough to need it. */
-.brand { display: flex; align-items: center; gap: 8px; }
+.brand { display: flex; align-items: center; gap: 9px; }
 .loader { animation: fade 400ms ease-out 300ms backwards; }
 
 /* Sign in is the one screen with nothing to do but arrive, so it is the one

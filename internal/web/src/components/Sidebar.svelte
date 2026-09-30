@@ -86,7 +86,7 @@
          arrives; it burns down while the stream is away. -->
     <div class="brand" title={stream.status === "live" ? "Live" : stream.status}>
       {#key stream.beat}
-        <Mark size={14} lit={stream.status === "live"} crackle={stream.beat > 0} />
+        <Mark size={18} lit={stream.status === "live"} crackle={stream.beat > 0} />
       {/key}
       <span class="wordmark">Campfire</span>
     </div>
