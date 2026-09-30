@@ -982,12 +982,29 @@ test("a card dropped between two others lands between them, where the line said"
   expect(line.y).toBeGreaterThanOrEqual(a.y + a.height - 1);
   expect(line.y + line.height).toBeLessThanOrEqual(b.y + 1);
 
+  // The card in the hand is held by the spot it was picked up from (DEV-68).
+  const held = await page.locator(".card.ghost").boundingBox();
+  expect(Math.abs(held.x + 20 - (b.x + 20))).toBeLessThan(3);
+  expect(Math.abs(held.y + 10 - (b.y + 6))).toBeLessThan(3);
+
   // Dropped, it is second — not first, which is where naming only the card
   // below used to put it — and the click that ended the drag opened nothing.
   await page.mouse.up();
   await expect.poll(async () => (await titles()).slice(0, 3)).toEqual([first, last, second]);
   await expect(todo.locator(".drop-line")).toHaveCount(0);
+  await expect(page.locator(".card.ghost")).toHaveCount(0);
   await expect(page.locator(".detail-aside")).toHaveCount(0);
+
+  // Escape puts a held card back where it was.
+  const order = await titles();
+  const top = await cards.first().boundingBox();
+  await page.mouse.move(top.x + 20, top.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(top.x + 20, top.y + 300, { steps: 4 });
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".card.ghost")).toHaveCount(0);
+  await page.mouse.up();
+  expect(await titles()).toEqual(order);
 });
 
 // The rest of the suite runs with reduced motion; this one needs the motion.
@@ -1041,5 +1058,37 @@ test.describe(() => {
     const trail = await page.evaluate(() => window.trail);
     expect(trail.length).toBeGreaterThan(3);
     expect(Math.min(...trail)).toBeGreaterThan(Math.min(was.x, now.x) - 3);
+  });
+
+  test("a card dropped to the right lands where it was let go, not back where it came from", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/t/1/board");
+    const column = (name) => page.locator(".column", { has: page.getByRole("heading", { name }) });
+    const card = column("To Do").locator(".card").first();
+    const id = await card.getAttribute("data-id");
+    const from = await card.boundingBox();
+    const to = await column("In Progress").locator(".column-body").boundingBox();
+
+    await page.mouse.move(from.x + 20, from.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(to.x + 40, to.y + 20, { steps: 6 });
+    const letGo = (await page.locator(".card.ghost").boundingBox()).x;
+    // Every frame of the landing, until the copy is gone.
+    await page.evaluate(() => {
+      window.trail = [];
+      (function sample() {
+        const held = document.querySelector(".card.ghost");
+        if (!held) return;
+        window.trail.push(held.getBoundingClientRect().x);
+        requestAnimationFrame(sample);
+      })();
+    });
+    await page.mouse.up();
+    await expect(page.locator(".card.ghost")).toHaveCount(0);
+
+    const landed = await column("In Progress").locator(`.card[data-id="${id}"]`).boundingBox();
+    const trail = await page.evaluate(() => window.trail);
+    expect(Math.min(...trail)).toBeGreaterThan(Math.min(letGo, landed.x) - 3);
+    expect(Math.abs(trail.at(-1) - landed.x)).toBeLessThan(3);
   });
 });

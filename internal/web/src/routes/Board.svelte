@@ -17,6 +17,7 @@
   import { filterFromView } from "../lib/options.js";
   import { NAV } from "../lib/icons.js";
   import { ms, sparks, crossfade, easeOut, QUICK, GLIDE } from "../lib/motion.js";
+  import { lift } from "../lib/ghost.js";
 
   import Icon from "../components/Icon.svelte";
   import ScreenHeader from "../components/ScreenHeader.svelte";
@@ -39,6 +40,9 @@
   let focused = $state(null); // { item, comments } for the preview aside
   let menu = $state(null);    // { item, ids, x, y } for the right-click menu
   let drag = $state(null);   // { ids, x, y, live, target } while a card is held
+  let landing = $state([]);  // cards hidden under the held copy until it lands on them
+  let ghost = null;          // the held copy (ghost.js)
+  let held = null;           // the card it was picked up from
 
   // A view preference, private to this browser: it decides what is drawn,
   // never what is true.
@@ -69,7 +73,7 @@
   // nowhere, or leaves for nowhere, fades.
   const [send, receive] = crossfade({
     duration: () => ms(GLIDE), easing: easeOut,
-    fallback: (node) => fade(node, { duration: ms(QUICK) }),
+    fallback: (node, p) => fade(node, { duration: p.instant ? 0 : ms(QUICK) }),
   });
 
   // A card that was open work a moment ago and is now in the final state
@@ -161,6 +165,7 @@
       : (board?.columns || []).flatMap((c) => c.items || [])
         .map((i) => i.id).filter((id) => selected.includes(id));
     drag = { ids, x: e.clientX, y: e.clientY, live: false, target: null };
+    held = e.currentTarget;
     addEventListener("pointermove", move);
     addEventListener("pointerup", release);
     addEventListener("pointercancel", cancel);
@@ -175,7 +180,9 @@
       drag.live = true;
       getSelection()?.removeAllRanges();
       document.body.classList.add("grabbing");
+      ghost = lift(held, drag.x, drag.y, drag.ids.length); // held where it was pressed
     }
+    ghost.move(e.clientX, e.clientY);
     drag.target = targetAt(e.clientX, e.clientY);
   }
 
@@ -201,16 +208,22 @@
 
   function release() {
     const { live, target, ids } = drag;
-    cancel();
+    stop();
     if (!live) return;
     // The click that ends a drag is not a click on the card.
     const eat = (e) => { e.preventDefault(); e.stopPropagation(); };
     addEventListener("click", eat, { capture: true, once: true });
     setTimeout(() => removeEventListener("click", eat, { capture: true }));
-    if (target) drop(target, ids);
+    drop(target, ids);
   }
 
+  // Let go anywhere but a column, or Escape, and the card goes back home.
   function cancel() {
+    if (drag?.live) drag.target = null;
+    release();
+  }
+
+  function stop() {
     drag = null;
     document.body.classList.remove("grabbing");
     removeEventListener("pointermove", move);
@@ -227,14 +240,35 @@
   //
   // A refusal stops the run: the ones already moved stay moved, and the toast
   // says why.
-  async function drop({ stateId, after, before }, ids) {
-    try {
-      for (const id of ids) {
-        await api.rankItem(id, stateId, after, before);
-        after = id;
-      }
-    } catch (err) { failure(err); }
-    await load();
+  //
+  // The held copy then settles onto the card it was lifted from, wherever that
+  // card now is — its new place, or its old one if the move was refused or
+  // called off — and the card shows again under it.
+  async function drop(target, ids) {
+    const copy = ghost;
+    const home = ids.includes(+held.dataset.id) ? +held.dataset.id : ids[0];
+    const origin = held.closest(".column-body")?.dataset.state;
+    ghost = null;
+    if (target) {
+      landing = ids;
+      let { stateId, after, before } = target;
+      try {
+        for (const id of ids) {
+          await api.rankItem(id, stateId, after, before);
+          after = id;
+        }
+      } catch (err) { failure(err); }
+      await load();
+      await tick();
+    }
+    // Looked for in the column it went to, then the one it came from. The copy
+    // leaving the old column is still in the page, fading, and on a move to
+    // the right it comes first: the held card flew back to where it started.
+    const at = (state) => state &&
+      document.querySelector(`.column-body[data-state="${state}"] .card[data-id="${home}"]`);
+    const spot = at(target?.stateId) || at(origin);
+    await copy.land(spot?.getBoundingClientRect());
+    landing = [];
   }
 </script>
 
@@ -282,8 +316,14 @@
                   <i class="drop-line" style:top="{drag.target.top}px"></i>
                 {/if}
                 {#each col.items || [] as item (item.id)}
-                  <div class="card-slot" in:receive={{ key: item.id }} out:send={{ key: item.id }}
-                       animate:flip={{ duration: ms(GLIDE), easing: easeOut }}>
+                  <!-- A card that has just been carried somewhere does not also
+                       travel there: the copy in the hand already did. -->
+                  <div class="card-slot" class:landing={landing.includes(item.id)}
+                       in:receive={{ key: landing.includes(item.id) ? -item.id : item.id,
+                                     instant: landing.includes(item.id) }}
+                       out:send={{ key: item.id }}
+                       animate:flip={{ duration: landing.includes(item.id) ? 0 : ms(GLIDE),
+                                       easing: easeOut }}>
                     <Card {item} selected={selected.includes(item.id)}
                           focused={focused?.item.id === item.id} rendering={team.iconRendering}
                           dragging={drag?.live && drag.ids.includes(item.id)}
