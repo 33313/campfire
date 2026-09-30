@@ -330,7 +330,7 @@ nothing else to look at.
 | Card changing column | travels there, whoever moved it — a drop, a bulk move, a teammate's change on the stream. Cards around it close up or make room. A card from nowhere or to nowhere fades |
 | Card held in a drag | a copy follows the pointer from the spot it was picked up by, lifted to 103% and off the surface on the product's only shadow (`0 10px 24px` at 50% black). It turns about that spot with the speed it is carried at, at most 6°, and swings back upright when the hand stops. A run of cards carries its count in an `accent` badge |
 | Card dropped | the copy travels straight from the hand onto the card's new place in 180ms, on `ease-out`, and the card shows under it; the cards around it make room. Called off — Escape, or let go outside a column — it settles back where it came from |
-| Card reaching the final state | throws a handful of square embers upward once it has landed, in `accent` and `accent-hover`. Only a card that was open work on the board a moment ago: a filter that brings finished work into view has finished nothing |
+| Card reaching the final state | it feeds the fire, once it has landed. The card kindles: a wash of `accent-tint` rises through it over 1s, and its border runs `accent` → `ok` → rest, while the column's count bumps. About 26 square embers leave it. They rise on buoyancy, drift on a turbulent draft, flicker, shrink, and cool along the palette — `accent-hover`, `accent`, `alert`, `faint` — over 0.6–1.4s. One carrier ember, white-hot (`bright`) with a 64px streak cooling behind it, rises off the card and sweeps to the campfire mark in the sidebar in 0.62s. On arrival the mark roars: the flame and core leap and settle, with an `accent` glow, and it throws a few embers of its own. Drawn on one canvas that exists only while an ember is alive. Only a card that was open work on the board a moment ago: a filter that brings finished work into view has finished nothing. A run finished together feeds it one card after another, six at most |
 | Progress bar | both parts grow from the left in proportion, over 700ms, when drawn |
 | Toast | rises into the stack; the ones above make room; it fades on the way out |
 | Button | gives by 1px while pressed |
@@ -358,9 +358,10 @@ The mark is a flame over two crossed logs, in the 16px grid, square and mitred l
 
 Where it appears, and nowhere else:
 
-- **Sidebar**, 14px beside the wordmark. It is lit while the live stream is up and burns down to
-  embers while it is not, so the one piece of branding is also a status light nobody has to look
-  for. It flares once for each change that arrives.
+- **Sidebar**, 19px beside the wordmark (mono 15 / 500 caps at 0.18em, `text`), the pair centred
+  over the sidebar. It is lit while the live stream is up and burns down to embers while it is not,
+  so the one piece of branding is also a status light nobody has to look for. It flares once for
+  each change that arrives.
 - **Loading**, 32px, burning — the flame leans, the core flickers on its own beat. It fades in only
   after 300ms, so a fast boot never shows it.
 - **Sign in**, 36px, burning, above the wordmark. This is the one screen allowed a glow: a low
