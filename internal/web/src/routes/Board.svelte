@@ -6,7 +6,7 @@
 
   import { untrack, tick } from "svelte";
   import { flip } from "svelte/animate";
-  import { crossfade, fade } from "svelte/transition";
+  import { fade } from "svelte/transition";
 
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
@@ -16,7 +16,7 @@
   import { createItem } from "../lib/create.js";
   import { filterFromView } from "../lib/options.js";
   import { NAV } from "../lib/icons.js";
-  import { ms, sparks, easeOut, QUICK, GLIDE } from "../lib/motion.js";
+  import { ms, sparks, crossfade, easeOut, QUICK, GLIDE } from "../lib/motion.js";
 
   import Icon from "../components/Icon.svelte";
   import ScreenHeader from "../components/ScreenHeader.svelte";

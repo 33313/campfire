@@ -39,3 +39,50 @@ export function sparks(el) {
     a.onfinish = a.oncancel = () => s.remove();
   }
 }
+
+// Svelte's crossfade, measured the way #app is drawn. Svelte's own takes the
+// distance between two client rects and writes it into the node's transform;
+// inside the zoomed #app that transform is multiplied by the zoom, so on a
+// zoomed panel every card started its glide a quarter further away than it
+// was (DESIGN.md §1). Its flip already divides; this does the same.
+// ponytail: a port of svelte/transition's crossfade; drop it once upstream
+// accounts for zoom the way flip does.
+export function crossfade({ fallback, ...defaults }) {
+  const sending = new Map();
+  const receiving = new Map();
+
+  function glide(from, node, params) {
+    const { delay = 0, duration, easing } = { ...defaults, ...params };
+    const a = from.getBoundingClientRect();
+    const b = node.getBoundingClientRect();
+    const zoom = node.currentCSSZoom || 1;
+    const dx = (a.left - b.left) / zoom;
+    const dy = (a.top - b.top) / zoom;
+    const dw = a.width / b.width;
+    const dh = a.height / b.height;
+    const style = getComputedStyle(node);
+    const transform = style.transform === "none" ? "" : style.transform;
+    const opacity = +style.opacity;
+    return {
+      delay, easing,
+      duration: typeof duration === "function" ? duration(Math.hypot(dx, dy)) : duration,
+      css: (t, u) => `opacity: ${t * opacity}; transform-origin: top left; ` +
+        `transform: ${transform} translate(${u * dx}px, ${u * dy}px) scale(${t + u * dw}, ${t + u * dh});`,
+    };
+  }
+
+  const transition = (items, counterparts, intro) => (node, params) => {
+    items.set(params.key, node);
+    return () => {
+      if (counterparts.has(params.key)) {
+        const other = counterparts.get(params.key);
+        counterparts.delete(params.key);
+        return glide(other, node, params);
+      }
+      // Claimed by neither list: it is arriving from nowhere or leaving for it.
+      items.delete(params.key);
+      return fallback && fallback(node, params, intro);
+    };
+  };
+  return [transition(sending, receiving, false), transition(receiving, sending, true)];
+}

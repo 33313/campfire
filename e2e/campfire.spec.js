@@ -971,4 +971,37 @@ test.describe(() => {
     await page.request.post(`/api/items/${item.id}/move`, { data: { stateId: done.id } });
     await expect(page.locator(".spark").first()).toBeAttached();
   });
+
+  test("on a zoomed panel a card glides from where it was, not a quarter further", async ({ page }) => {
+    await signIn(page);
+    // 2560 wide at 1x: #app is zoomed to 1.25 (DESIGN.md §1).
+    await page.setViewportSize({ width: 2560, height: 1440 });
+    await page.goto("/t/1/board");
+    const column = (name) => page.locator(".column", { has: page.getByRole("heading", { name }) });
+    const card = column("To Do").locator(".card").first();
+    const id = await card.getAttribute("data-id");
+    const was = await card.boundingBox();
+    const into = (await (await page.request.get("/api/teams/1/states")).json())
+      .find((s) => s.name === "In Progress");
+
+    // Every frame of the card in its new column, from the moment it appears.
+    await page.evaluate((id) => {
+      window.trail = [];
+      const until = performance.now() + 2500;
+      (function sample() {
+        const col = [...document.querySelectorAll(".column")]
+          .find((c) => c.querySelector("h2")?.textContent === "In Progress");
+        const el = col?.querySelector(`.card[data-id="${id}"]`);
+        if (el) window.trail.push(el.getBoundingClientRect().x);
+        if (performance.now() < until) requestAnimationFrame(sample);
+      })();
+    }, id);
+    await page.request.post(`/api/items/${id}/move`, { data: { stateId: into.id } });
+    await page.waitForTimeout(2500);
+
+    const now = await column("In Progress").locator(`.card[data-id="${id}"]`).boundingBox();
+    const trail = await page.evaluate(() => window.trail);
+    expect(trail.length).toBeGreaterThan(3);
+    expect(Math.min(...trail)).toBeGreaterThan(Math.min(was.x, now.x) - 3);
+  });
 });
