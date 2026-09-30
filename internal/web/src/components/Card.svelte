@@ -12,7 +12,8 @@
   // Rows: the title, the bucket, the deadline, then the identifier and the
   // assignee. The bucket and the deadline are drawn only when there is one.
   // The bucket wears its colour where it has one, so a column of cards is
-  // sorted by eye without reading a title on each.
+  // sorted by eye without reading a title on each: on its border and its name,
+  // never as a fill. A filled chip on most cards outshouts the one P1 tile.
   let { item, selected = false, focused = false, rendering = "mono",
          ontoggle, ondrag, onpreview, onmenu } = $props();
 
@@ -54,8 +55,7 @@
   <p class="card-title">{item.title}</p>
   {#if item.bucketIdentifier}
     <span class="card-bucket" title="{item.bucketIdentifier}  {item.bucketTitle}"
-          style={tint ? `border-color:${tint};color:${tint};` +
-            `background:color-mix(in srgb, ${tint} 13%, transparent)` : ""}>
+          style={tint ? `border-color:${tint};color:${tint}` : ""}>
       <BucketIcon name={item.bucketIcon} size={10} {rendering} color={item.bucketColor} />
       <span class="name">{item.bucketTitle}</span>
     </span>

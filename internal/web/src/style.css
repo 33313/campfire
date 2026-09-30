@@ -29,15 +29,21 @@
   --ghost: #4a423a;
 
   /* Accent and signal */
-  --accent: #d9a05b;
-  --accent-hover: #e6b479;
-  --accent-tint: rgba(217, 160, 91, 0.12);
-  --accent-tint-weak: rgba(217, 160, 91, 0.06);
-  --alert: #c4675c;
-  --alert-tint: rgba(196, 103, 92, 0.10);
-  --ok: #a3a961;
-  --steel: #7d94a8;
+  --accent: #f0a84a;
+  --accent-hover: #f7bf6e;
+  --accent-tint: rgba(240, 168, 74, 0.18);
+  --accent-tint-weak: rgba(240, 168, 74, 0.08);
+  --alert: #e5604d;
+  --alert-tint: rgba(229, 96, 77, 0.14);
+  --ok: #b2bd52;
   --on-accent: #131110;
+
+  /* Motion (DESIGN.md §8). Short enough never to be waited on: a hover is
+     answered in one frame or two, a panel lands before the eye gets to it. */
+  --snap: 90ms;
+  --quick: 140ms;
+  --glide: 220ms;
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
 
   --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -61,6 +67,21 @@ a { color: var(--accent); text-decoration: none; }
 a:hover { color: var(--accent-hover); text-decoration: underline; }
 
 button, input, select, textarea { font: inherit; color: inherit; }
+
+/* The keyboard's focus is always visible, in the accent, square like
+   everything else. A pointer's is not: the hover state already said it. */
+:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; }
+
+/* Every control answers the pointer at once, and eases rather than snaps.
+   Colour only: nothing here moves or resizes. */
+a, .btn, .chip, .nav-item, .card, .bucket-card, .input, .bare, .label-input, .toggle,
+.check, .radio, .tab, .team-switch, .team-option, .option-row, .aside-control,
+.search-suggestion, .label-suggestion, .settings-rail button, .swatch, .load-older,
+.column-body, .table tbody tr {
+  transition: color var(--snap) ease-out, background-color var(--snap) ease-out,
+    border-color var(--snap) ease-out, box-shadow var(--snap) ease-out;
+}
 
 /* Type roles ------------------------------------------------------------ */
 
@@ -202,6 +223,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn.quiet:hover { border-color: transparent; color: var(--text); }
 .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 .btn.small { height: 26px; padding: 0 9px; font-size: 12px; }
+/* A press is felt: the button gives by a pixel under the pointer. */
+.btn:not([disabled]):active { transform: translateY(1px); }
 /* Actions in a header bar or beside a field are 28px, the height of the search
    box and the inputs they sit with; only a dialog's footer keeps the full 30px
    (DESIGN.md §5). */
@@ -212,7 +235,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
   border: 1px solid var(--border); color: var(--text); font-size: 12.5px;
 }
 .input::placeholder { color: var(--faint); }
-.input:focus { outline: none; border-color: var(--accent); color: var(--bright); caret-color: var(--accent); }
+.input:focus {
+  outline: none; border-color: var(--accent); color: var(--bright); caret-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint-weak);
+}
 .input.error { border-color: var(--alert); color: var(--alert); }
 
 /* A property edited where it is drawn: no fill and no border until the pointer
@@ -312,9 +338,13 @@ select.input {
   display: inline-flex; align-items: center; width: 30px; height: 17px; padding: 2px;
   background: var(--sunk); border: 1px solid var(--border); cursor: pointer;
 }
-.toggle > i { display: block; width: 11px; height: 11px; background: var(--ghost); }
-.toggle.on { background: var(--accent-tint); border-color: var(--accent); justify-content: flex-end; }
-.toggle.on > i { background: var(--accent); }
+.toggle > i {
+  display: block; width: 11px; height: 11px; background: var(--ghost);
+  transition: transform var(--quick) var(--ease-out), background-color var(--quick) ease-out;
+}
+.toggle.on { background: var(--accent-tint); border-color: var(--accent); }
+/* The knob travels to the on side rather than reappearing there. */
+.toggle.on > i { background: var(--accent); transform: translateX(13px); }
 
 /* Checkboxes stay square. They are controls, not status. */
 .check {
@@ -324,8 +354,11 @@ select.input {
 }
 .check:checked, .check:indeterminate { background: var(--accent); border-color: var(--accent); }
 .check:checked::after { content: ""; width: 7px; height: 4px; border: 2px solid var(--on-accent);
-  border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
-.check:indeterminate::after { content: ""; width: 8px; height: 2px; background: var(--on-accent); }
+  border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px);
+  animation: tick var(--quick) var(--ease-out); }
+.check:indeterminate::after { content: ""; width: 8px; height: 2px; background: var(--on-accent);
+  animation: tick var(--quick) var(--ease-out); }
+@keyframes tick { from { scale: 0.4; opacity: 0; } }
 
 .radio {
   appearance: none; width: 14px; height: 14px; flex: 0 0 14px; border: 1px solid var(--accent);
@@ -683,6 +716,11 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 .bucket-card .big { font-family: var(--mono); font-size: 19px; color: var(--bright); }
 .bucket-card .of { font-family: var(--mono); font-size: 12px; color: var(--faint); }
 .progress { display: flex; height: 4px; background: var(--sunk); border: 1px solid var(--border); }
+/* The bar fills from the left when it is drawn, so the number reads as how far
+   the work has come rather than as a fact that was always there. Both parts
+   grow in proportion, so the started part stays butted to the done part. */
+.progress > i { animation: fill 700ms var(--ease-out) backwards; }
+@keyframes fill { from { width: 0; } }
 .progress > i { display: block; height: 100%; background: var(--ok); }
 /* What is under way but not finished, between the done part and the rest. It
    is the same amber the interface uses for attention: work someone is holding. */
@@ -759,6 +797,79 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
   padding: 22px; display: flex; flex-direction: column; gap: 14px;
 }
 .signin-card h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.008em; color: var(--bright); }
+
+/* Motion ----------------------------------------------------------------- */
+
+/* Things arrive; they do not appear. Each panel lands from a few pixels short
+   of where it rests, in the time it takes the eye to get there, and leaves at
+   once: nobody waits for a dismissed thing to finish going. */
+
+/* A drop-down hangs from what opened it. The card menu opens at the pointer
+   and stays there: it fades in, and does not travel. */
+.team-list, .search-suggestions, .label-suggestions { animation: drop var(--quick) var(--ease-out); }
+.card-menu { animation: fade var(--quick) ease-out; }
+@keyframes drop { from { opacity: 0; translate: 0 -4px; } }
+
+.scrim { animation: fade var(--quick) ease-out; }
+.dialog { animation: rise var(--quick) var(--ease-out); }
+@keyframes fade { from { opacity: 0; } }
+@keyframes rise { from { opacity: 0; translate: 0 8px; } }
+
+/* The preview slides in from the edge it lives on. */
+.detail-aside { animation: slide var(--glide) var(--ease-out); }
+@keyframes slide { from { opacity: 0; translate: 12px 0; } }
+
+/* A screen fades up once it has something to show; the header and the rails
+   around it stay where they are. */
+.body { animation: fade var(--glide) ease-out; }
+
+/* The mark. The flame leans and settles from its base, the core flickers on
+   its own beat, so the two never move as one piece. */
+.mark { flex: 0 0 auto; overflow: visible; }
+.mark .flame { fill: var(--ghost); }
+.mark .core { fill: var(--dim); }
+.mark .logs { fill: none; stroke: var(--faint); stroke-width: 1.4; stroke-linecap: square; }
+.mark.lit .flame { fill: var(--accent); }
+.mark.lit .core { fill: var(--accent-hover); }
+.mark .flame, .mark .core {
+  transform-box: fill-box; transform-origin: 50% 100%;
+  transition: fill var(--glide) ease-out;
+}
+.mark.burning .flame { animation: lean 2.6s ease-in-out infinite; }
+.mark.burning .core { animation: flicker 1.3s ease-in-out infinite; }
+.mark.crackle .core { animation: flare 480ms var(--ease-out); }
+@keyframes lean {
+  0%, 100% { transform: none; }
+  30% { transform: scale(0.97, 1.04) skewX(-2deg); }
+  65% { transform: scale(1.02, 0.95) skewX(1.5deg); }
+}
+@keyframes flicker {
+  0%, 100% { scale: 1 1; }
+  20% { scale: 0.9 1.12; }
+  45% { scale: 1.05 0.86; }
+  70% { scale: 0.95 1.06; }
+}
+@keyframes flare { 40% { scale: 1.15 1.3; } }
+
+/* Embers off a card that has just been finished (motion.js). */
+.spark { position: fixed; z-index: 70; pointer-events: none; }
+
+/* The wordmark beside the mark, and the boot screen's slow fire, which only
+   shows itself if the boot is slow enough to need it. */
+.brand { display: flex; align-items: center; gap: 8px; }
+.loader { animation: fade 400ms ease-out 300ms backwards; }
+
+/* Sign in is the one screen with nothing to do but arrive, so it is the one
+   screen the fire is allowed to light: a low glow from below, as if from the
+   fire the card is drawn up to. */
+.signin.welcome {
+  background: radial-gradient(ellipse 55% 45% at 50% 100%, var(--accent-tint-weak), transparent);
+}
+
+/* Less motion, when asked for: everything still changes, nothing travels. */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { animation: none !important; transition: none !important; }
+}
 
 /* High-resolution displays ----------------------------------------------- */
 

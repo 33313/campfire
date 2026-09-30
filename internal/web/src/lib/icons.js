@@ -37,11 +37,12 @@ export const NAV = {
   save: '<path d="M2.6 2.6h8.4l2.4 2.4v8.4H2.6Z"/><path d="M5.4 2.6v3.8h5.2V2.6"/><path d="M4.8 13.4V9h6.4v4.4"/>',
 };
 
-// Priority is four glyphs *and* four colours. The shape carries the level on
-// its own; colour only reinforces it. It is never collapsed to a dot.
+// Priority is four glyphs and two signals. The shape carries the level on its
+// own; colour marks P1 and P2 only (DESIGN.md §3). P3 is the default and on
+// most cards, so it is silent.
 export const PRIORITY = {
-  1: { colour: "var(--accent)", body: '<path d="M4 8.5 8 4.5l4 4"/><path d="M4 12 8 8l4 4"/>', name: "P1 · Highest" },
-  2: { colour: "var(--steel)", body: '<path d="M3.8 10.2 8 6l4.2 4.2"/>', name: "P2 · High" },
+  1: { colour: "var(--alert)", body: '<path d="M4 8.5 8 4.5l4 4"/><path d="M4 12 8 8l4 4"/>', name: "P1 · Highest" },
+  2: { colour: "var(--accent)", body: '<path d="M3.8 10.2 8 6l4.2 4.2"/>', name: "P2 · High" },
   3: { colour: "var(--muted)", body: '<path d="M3.8 8h8.4"/>', name: "P3 · Medium" },
   4: { colour: "var(--faint)", body: '<path d="M3.8 5.8 8 10l4.2-4.2"/>', name: "P4 · Low" },
 };
@@ -64,14 +65,14 @@ export const BUCKET_ICONS = {
 // icons: recognition only, nothing reads one. A bucket without a colour is
 // drawn as it always was, so the set has no default member.
 export const BUCKET_COLOURS = {
-  amber: "#d9a05b", rust: "#c4675c", olive: "#a3a961", steel: "#7d94a8",
+  amber: "#d9a05b", rust: "#a27459", olive: "#a3a961", steel: "#7d94a8",
   mauve: "#b087a3", sage: "#8aa8a0", stone: "#8f8578",
 };
 
 // The colour rendering. A team picks which its surfaces use; monochrome is the
 // default and which one is in force never changes the icon a bucket carries.
 export const ICON_COLOURS = {
-  check: "#7d94a8", bug: "#c4675c", bookmark: "#b087a3", page: "#8aa8a0",
+  check: "#7d94a8", bug: "#a27459", bookmark: "#b087a3", page: "#8aa8a0",
   pen: "#d9a05b", wrench: "#8f8578", lens: "#a3a961", flag: "#7d94a8",
 };
 

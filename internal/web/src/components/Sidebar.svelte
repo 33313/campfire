@@ -1,8 +1,10 @@
 <script>
   import Icon from "./Icon.svelte";
   import Avatar from "./Avatar.svelte";
+  import Mark from "./Mark.svelte";
   import { NAV } from "../lib/icons.js";
   import { app } from "../lib/state.svelte.js";
+  import { stream } from "../lib/stream.svelte.js";
   import { route, navigate } from "../lib/router.svelte.js";
   import { openModal, failure, toast } from "../lib/ui.svelte.js";
   import { api } from "../lib/api.js";
@@ -80,7 +82,14 @@
 
 <aside class="sidebar">
   <div class="sidebar-head">
-    <div class="wordmark">Campfire</div>
+    <!-- The fire is lit while the stream is live and flares on each change that
+         arrives; it burns down while the stream is away. -->
+    <div class="brand" title={stream.status === "live" ? "Live" : stream.status}>
+      {#key stream.beat}
+        <Mark size={14} lit={stream.status === "live"} crackle={stream.beat > 0} />
+      {/key}
+      <span class="wordmark">Campfire</span>
+    </div>
     <div class="team-menu" bind:this={menu}>
       <button class="team-switch" class:on={open} aria-expanded={open} aria-haspopup="menu"
               onclick={() => (open = !open)}

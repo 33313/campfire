@@ -218,7 +218,7 @@ test("a bucket carries an icon and its tickets", async ({ page }) => {
   const card = page.locator(".card", { has: page.locator(".card-bucket") }).first();
   const chip = card.locator(":scope > .card-bucket");
   await expect(chip).toContainText("Winter readiness");
-  await expect(chip).toHaveCSS("border-color", "rgb(196, 103, 92)");
+  await expect(chip).toHaveCSS("border-color", "rgb(162, 116, 89)");
   const [title, row, foot] = await Promise.all([".card-title", ".card-bucket", ".card-foot"]
     .map((sel) => card.locator(sel).boundingBox()));
   expect(title.y + title.height).toBeLessThanOrEqual(row.y);
@@ -917,9 +917,9 @@ test("a deadline three days away or less turns amber, and red once past", async 
   }
   await page.goto("/t/1/board");
   const due = (title) => page.locator(".card", { hasText: title }).locator(".card-deadline");
-  const amber = "rgb(217, 160, 91)";
+  const amber = "rgb(240, 168, 74)";
   await expect(due("Due in three")).toHaveCSS("color", amber);
-  await expect(due("Overdue by one")).toHaveCSS("color", "rgb(196, 103, 92)");
+  await expect(due("Overdue by one")).toHaveCSS("color", "rgb(229, 96, 77)");
   await expect(due("Due in four")).not.toHaveCSS("color", amber);
 
   // A done ticket's deadline is greyed out, however late it was.
@@ -950,4 +950,58 @@ test("the board hides old done items behind a toggle the backlog does not have",
   await page.goto("/t/1/backlog");
   await expect(page.getByRole("button", { name: "Show buckets" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Show old done" })).toHaveCount(0);
+});
+
+// The rest of the suite runs with reduced motion; this one needs the motion.
+test.describe(() => {
+  test.use({ contextOptions: { reducedMotion: "no-preference" } });
+
+  test("a card finished on the board throws sparks, even when someone else finished it", async ({ page }) => {
+    await signIn(page);
+    const item = await (await page.request.post("/api/items", { data: {
+      kind: "ticket", teamId: 1, title: "Light the fire", accepted: true,
+    } })).json();
+    await page.goto("/t/1/board");
+    await expect(page.locator(".card", { hasText: "Light the fire" })).toBeVisible();
+    await expect(page.locator(".spark")).toHaveCount(0);
+
+    // Moved behind the board's back: it hears of it on the stream.
+    const done = (await (await page.request.get("/api/teams/1/states")).json())
+      .find((s) => s.role === "final");
+    await page.request.post(`/api/items/${item.id}/move`, { data: { stateId: done.id } });
+    await expect(page.locator(".spark").first()).toBeAttached();
+  });
+
+  test("on a zoomed panel a card glides from where it was, not a quarter further", async ({ page }) => {
+    await signIn(page);
+    // 2560 wide at 1x: #app is zoomed to 1.25 (DESIGN.md §1).
+    await page.setViewportSize({ width: 2560, height: 1440 });
+    await page.goto("/t/1/board");
+    const column = (name) => page.locator(".column", { has: page.getByRole("heading", { name }) });
+    const card = column("To Do").locator(".card").first();
+    const id = await card.getAttribute("data-id");
+    const was = await card.boundingBox();
+    const into = (await (await page.request.get("/api/teams/1/states")).json())
+      .find((s) => s.name === "In Progress");
+
+    // Every frame of the card in its new column, from the moment it appears.
+    await page.evaluate((id) => {
+      window.trail = [];
+      const until = performance.now() + 2500;
+      (function sample() {
+        const col = [...document.querySelectorAll(".column")]
+          .find((c) => c.querySelector("h2")?.textContent === "In Progress");
+        const el = col?.querySelector(`.card[data-id="${id}"]`);
+        if (el) window.trail.push(el.getBoundingClientRect().x);
+        if (performance.now() < until) requestAnimationFrame(sample);
+      })();
+    }, id);
+    await page.request.post(`/api/items/${id}/move`, { data: { stateId: into.id } });
+    await page.waitForTimeout(2500);
+
+    const now = await column("In Progress").locator(`.card[data-id="${id}"]`).boundingBox();
+    const trail = await page.evaluate(() => window.trail);
+    expect(trail.length).toBeGreaterThan(3);
+    expect(Math.min(...trail)).toBeGreaterThan(Math.min(was.x, now.x) - 3);
+  });
 });

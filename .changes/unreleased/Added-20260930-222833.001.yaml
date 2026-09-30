@@ -1,0 +1,3 @@
+kind: Added
+body: 'A campfire mark: lit while live updates are connected, it flares when a change arrives, and it is the loading screen. Screens, dialogs, menus, toasts and cards move instead of appearing, and a card that reaches the final state throws sparks. Reduced motion turns all of it off.'
+time: 2026-09-30T22:28:33.818615707+02:00

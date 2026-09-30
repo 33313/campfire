@@ -4,7 +4,9 @@
   // share their filter bar, their selection and their bulk actions, because
   // they are one view split by state (SPEC.md §7.2).
 
-  import { untrack } from "svelte";
+  import { untrack, tick } from "svelte";
+  import { flip } from "svelte/animate";
+  import { fade } from "svelte/transition";
 
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
@@ -14,6 +16,7 @@
   import { createItem } from "../lib/create.js";
   import { filterFromView } from "../lib/options.js";
   import { NAV } from "../lib/icons.js";
+  import { ms, sparks, crossfade, easeOut, QUICK, GLIDE } from "../lib/motion.js";
 
   import Icon from "../components/Icon.svelte";
   import ScreenHeader from "../components/ScreenHeader.svelte";
@@ -61,10 +64,37 @@
     load();
   });
 
+  // A card that changes column travels there, whoever moved it: a drop, a bulk
+  // move, or a teammate's change arriving on the stream. One that arrives from
+  // nowhere, or leaves for nowhere, fades.
+  const [send, receive] = crossfade({
+    duration: () => ms(GLIDE), easing: easeOut,
+    fallback: (node) => fade(node, { duration: ms(QUICK) }),
+  });
+
+  // A card that was open work a moment ago and is now in the final state
+  // throws sparks once it has landed. Only one that was on the board before:
+  // a filter that brings finished work into view has finished nothing.
+  function finished(before, after) {
+    const open = new Set(before.columns.filter((c) => c.state.role !== "final")
+      .flatMap((c) => (c.items || []).map((i) => i.id)));
+    return after.columns.filter((c) => c.state.role === "final")
+      .flatMap((c) => (c.items || []).map((i) => i.id)).filter((id) => open.has(id));
+  }
+
   async function load() {
     try {
       if (!team) [team, states] = await Promise.all([api.getTeam(teamId), api.listWorkStates(teamId)]);
+      const before = board;
       board = await api.getBoard(teamId, filter, showBuckets, allDone);
+      if (before) {
+        const done = finished(before, board);
+        if (done.length) {
+          await tick();
+          setTimeout(() => done.forEach((id) =>
+            sparks(document.querySelector(`.card[data-id="${id}"]`))), ms(GLIDE));
+        }
+      }
       if (focused) focused = await fetchFocus(focused.item.id).catch(() => null);
       error = null;
     } catch (err) {
@@ -208,10 +238,13 @@
                    ondragleave={(e) => e.currentTarget.classList.remove("over")}
                    ondrop={(e) => drop(e, col)}>
                 {#each col.items || [] as item (item.id)}
-                  <Card {item} selected={selected.includes(item.id)}
-                        focused={focused?.item.id === item.id} rendering={team.iconRendering}
-                        ontoggle={toggle} ondrag={(it) => (dragging = it)} onpreview={preview}
-                        onmenu={openMenu} />
+                  <div class="card-slot" in:receive={{ key: item.id }} out:send={{ key: item.id }}
+                       animate:flip={{ duration: ms(GLIDE), easing: easeOut }}>
+                    <Card {item} selected={selected.includes(item.id)}
+                          focused={focused?.item.id === item.id} rendering={team.iconRendering}
+                          ontoggle={toggle} ondrag={(it) => (dragging = it)} onpreview={preview}
+                          onmenu={openMenu} />
+                  </div>
                 {/each}
                 {#if !col.items?.length}
                   <div class="explain" style="padding:6px 2px">Nothing here.</div>

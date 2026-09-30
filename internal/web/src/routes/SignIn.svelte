@@ -1,5 +1,6 @@
 <script>
   import { api } from "../lib/api.js";
+  import Mark from "../components/Mark.svelte";
 
   // Sign in, the first-run account, and redeeming a link.
   //
@@ -42,8 +43,11 @@
   }
 </script>
 
-<div class="signin">
-  <div class="wordmark">Campfire</div>
+<div class="signin welcome">
+  <div class="brand" style="flex-direction:column;gap:12px">
+    <Mark size={36} burning />
+    <span class="wordmark">Campfire</span>
+  </div>
   <form class="signin-card" onsubmit={submit}>
     <h1>{TITLES[mode]}</h1>
 
@@ -88,5 +92,4 @@
       {mode === "signin" ? "Sign in" : mode === "bootstrap" ? "Create account" : "Continue"}
     </button>
   </form>
-  <div class="eyebrow">Campfire 1.0</div>
 </div>
