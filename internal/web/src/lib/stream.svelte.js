@@ -6,7 +6,9 @@
 
 import { refreshBacklogCount } from "./state.svelte.js";
 
-export const stream = $state({ status: "connecting" }); // connecting | live | reconnecting | stale
+// `beat` counts the changes that have arrived, so the sidebar's fire can flare
+// on each one.
+export const stream = $state({ status: "connecting", beat: 0 }); // connecting | live | reconnecting | stale
 
 let source = null;
 let cursor = 0;
@@ -37,6 +39,7 @@ export function openStream() {
     // Unrecognised kinds are ignored, so adding one is not a breaking change
     // (SPEC.md §12.4). "hello" is the opening frame and needs no refetch.
     if (n.kind === "hello") return;
+    stream.beat++;
     scheduleRefresh();
   };
 

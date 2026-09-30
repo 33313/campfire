@@ -218,7 +218,7 @@ test("a bucket carries an icon and its tickets", async ({ page }) => {
   const card = page.locator(".card", { has: page.locator(".card-bucket") }).first();
   const chip = card.locator(":scope > .card-bucket");
   await expect(chip).toContainText("Winter readiness");
-  await expect(chip).toHaveCSS("border-color", "rgb(196, 103, 92)");
+  await expect(chip).toHaveCSS("border-color", "rgb(162, 116, 89)");
   const [title, row, foot] = await Promise.all([".card-title", ".card-bucket", ".card-foot"]
     .map((sel) => card.locator(sel).boundingBox()));
   expect(title.y + title.height).toBeLessThanOrEqual(row.y);
@@ -950,4 +950,25 @@ test("the board hides old done items behind a toggle the backlog does not have",
   await page.goto("/t/1/backlog");
   await expect(page.getByRole("button", { name: "Show buckets" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Show old done" })).toHaveCount(0);
+});
+
+// The rest of the suite runs with reduced motion; this one needs the motion.
+test.describe(() => {
+  test.use({ contextOptions: { reducedMotion: "no-preference" } });
+
+  test("a card finished on the board throws sparks, even when someone else finished it", async ({ page }) => {
+    await signIn(page);
+    const item = await (await page.request.post("/api/items", { data: {
+      kind: "ticket", teamId: 1, title: "Light the fire", accepted: true,
+    } })).json();
+    await page.goto("/t/1/board");
+    await expect(page.locator(".card", { hasText: "Light the fire" })).toBeVisible();
+    await expect(page.locator(".spark")).toHaveCount(0);
+
+    // Moved behind the board's back: it hears of it on the stream.
+    const done = (await (await page.request.get("/api/teams/1/states")).json())
+      .find((s) => s.role === "final");
+    await page.request.post(`/api/items/${item.id}/move`, { data: { stateId: done.id } });
+    await expect(page.locator(".spark").first()).toBeAttached();
+  });
 });

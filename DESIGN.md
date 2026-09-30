@@ -71,14 +71,13 @@ Nothing in the interface uses a colour that is not on this list.
 
 | Token | Hex | Rule |
 |---|---|---|
-| `accent` | `#f0a84a` | amber. Active nav, P1, primary buttons, selection, focus, identifiers in context. |
+| `accent` | `#f0a84a` | amber. Active nav, P2, primary buttons, selection, focus, identifiers in context, a deadline three days away or less. |
 | `accent-hover` | `#f7bf6e` | link hover only. |
 | `accent-tint` | `rgba(240,168,74,0.18)` | selection, active nav, drop targets, the on-state of a toggle. |
 | `accent-tint-weak` | `rgba(240,168,74,0.08)` | a selected table row, a drag placeholder. |
-| `alert` | `#e5604d` | clay. **Errors, rejection and overdue deadlines only.** Never decoration. |
+| `alert` | `#e5604d` | clay. **Errors, rejection, overdue deadlines and P1 only** — one meaning: act now. Never decoration. |
 | `alert-tint` | `rgba(229,96,77,0.14)` | the count block in a destructive confirm. |
 | `ok` | `#b2bd52` | olive. Terminal states, progress fill, verified snapshots, the live dot. |
-| `steel` | `#79a4cc` | P2 only. |
 
 `on-accent` is `#131110` — text on an amber or clay fill.
 
@@ -167,8 +166,9 @@ that writes a client coordinate into a style inside `#app` divides by `currentCS
 3. **A ticket has no type.** There is no `type` field, no per-team type list, no type filter, no type
    column, and no type on a card. See `SPEC.md` §3.2. If you find yourself adding one back, the
    answer is in Appendix B.
-4. **Priority is four glyphs *and* four colours.** The shape carries the level on its own; colour
-   only reinforces it. Do not collapse it to a coloured dot.
+4. **Priority is four glyphs, two signals, one alarm.** The shape carries the level on its own;
+   colour marks P1 and P2 only. Do not collapse it to a coloured dot, and do not give the default
+   level a colour: it is on most cards.
 5. **Labels never appear on a board card.** They live on the item detail view. `SPEC.md` §8.1.
 
 ---
@@ -180,10 +180,18 @@ Four levels. Rendered at 14px on cards and rows, 16px in a legend, `stroke-width
 
 | Level | Colour | Glyph | Path |
 |---|---|---|---|
-| P1 Highest | `#f0a84a` accent | double chevron up | `M4 8.5 8 4.5l4 4` + `M4 12 8 8l4 4` |
-| P2 High | `#79a4cc` steel | chevron up | `M3.8 10.2 8 6l4.2 4.2` |
-| P3 Medium *(default)* | `#8f8578` muted | bar | `M3.8 8h8.4` |
-| P4 Low | `#5f574d` faint | chevron down | `M3.8 5.8 8 10l4.2-4.2` |
+| P1 Highest | `alert` | double chevron up | `M4 8.5 8 4.5l4 4` + `M4 12 8 8l4 4` |
+| P2 High | `accent` | chevron up | `M3.8 10.2 8 6l4.2 4.2` |
+| P3 Medium *(default)* | `muted` | bar | `M3.8 8h8.4` |
+| P4 Low | `faint` | chevron down | `M3.8 5.8 8 10l4.2-4.2` |
+
+P1 wears the one red the interface already has, because red already means act now. Every glyph is a
+stroke: none has a fill or a background, so the four read as one family. Blue is out of priority;
+steel is a bucket colour only.
+
+This mapping is provisional. Cool hues pop harder in a warm room, and a violet P1 was measured to
+out-pull this red, but no cool pairing has been settled on yet. The measurements and the candidates
+are in `priority-colour-handoff.md` and `priority-lineup.html` in the design directory.
 
 ---
 
@@ -207,7 +215,7 @@ Rendered at 9–11px inline, 16px in the picker, `stroke-width` 1.3–1.8, `view
 | `flag` | `M4.1 2.5v11.1` + `M4.1 3.3h7.5L10 5.9l1.6 2.6H4.1` |
 
 A monochrome set (`muted-soft`) is the default. A colour set exists — `check` `#7d94a8`, `bug`
-`#c4675c`, `bookmark` `#b087a3`, `page` `#8aa8a0`, `pen` `#d9a05b`, `wrench` `#8f8578`, `lens`
+`#a27459`, `bookmark` `#b087a3`, `page` `#8aa8a0`, `pen` `#d9a05b`, `wrench` `#8f8578`, `lens`
 `#a3a961`, `flag` `#7d94a8`. A team picks which rendering its surfaces use (`SPEC.md` §6.2), so both
 ship. Monochrome is the default and the one every artboard here draws.
 
@@ -220,7 +228,7 @@ exactly as it always was.
 | Key | Hex |
 |---|---|
 | `amber` | `#d9a05b` |
-| `rust` | `#c4675c` |
+| `rust` | `#a27459` — a brown, whatever its key says: red on a card means urgent or late |
 | `olive` | `#a3a961` |
 | `steel` | `#7d94a8` |
 | `mauve` | `#b087a3` |
@@ -228,8 +236,9 @@ exactly as it always was.
 | `stone` | `#8f8578` |
 
 Where a bucket has one, its colour beats both the team's rendering and the icon's own default: it
-was chosen for this bucket. It tints the bucket chip on a card — border and text in the colour, a
-13% mix of it as the fill — and the bucket's icon wherever that is drawn.
+was chosen for this bucket. It tints the bucket chip on a card — border and text in the colour, never
+a fill: a filled chip on most cards outshouts the priority glyph beside it — and the bucket's icon wherever that
+is drawn.
 
 The **pail** glyph (`M3.2 5.2h9.6l-1 8a1.1 1.1 0 0 1-1.1 1H5.3a1.1 1.1 0 0 1-1.1-1Z` +
 `M5.5 5.2a2.5 2.5 0 0 1 5 0`) is *not* a bucket icon. It is the sidebar's Buckets section icon and
@@ -247,7 +256,7 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | **Input** | rest (`sunk` + `border`, `faint` placeholder) · focused (1px `accent`, `bright` text, 1px accent caret) · error (1px `alert`, alert text) |
 | **Checkbox** | 13–15px square. Checked: accent fill, `on-accent` tick. Unchecked: 1px `border-strong`. Indeterminate: accent fill, `on-accent` bar — used by select-all when the selection is partial. |
 | **Radio** | 14px square, 1px accent, 6px square accent dot. Square by design. |
-| **Toggle** | 30×17px. On: `accent-tint` field, 1px accent, 11px accent knob, right. Off: `sunk`, 1px `border`, `ghost` knob, left. |
+| **Toggle** | 30×17px. On: `accent-tint` field, 1px accent, 11px accent knob, right. Off: `sunk`, 1px `border`, `ghost` knob, left. The knob travels between the two (§8). |
 | **Label chip** | 1px `border`, `muted-soft`, 3px 8px. Not clickable, not coloured, never on a card. |
 | **Label editor** | one component wherever labels are added — the item detail and the create dialog. Chips and a 104px × 24px `sunk` box on one wrapping line, the box always present and carrying no placeholder; 1px `accent` when focused. Existing labels that start with what has been typed drop under it in the drop-down panel (`surface`, 1px `border-strong`), the typed prefix in `accent`; ↑↓ move, Enter takes the highlighted one or what was typed, Backspace on an empty box takes back the last chip. A label already on the item is never offered. |
 | **Filter chip** | 26px, 1px `border`, `muted`, chevron. Active chip carries the accent treatment and an × to clear. |
@@ -314,7 +323,67 @@ Behaviour is in `SPEC.md` §6.5. What the design fixes:
 
 ---
 
-## 8. What the design does not cover
+## 8. Motion
+
+Things arrive; they do not appear. Motion says where something came from and where it went, and is
+over before anyone could wait for it. Nothing loops except the fire (§9), and only where there is
+nothing else to look at.
+
+| Token | Value | Used for |
+|---|---|---|
+| `snap` | 90ms | colour, border and background answering the pointer — every control |
+| `quick` | 140ms | a drop-down, a dialog, a toast leaving, the selection bar, a tick in a checkbox, the toggle knob |
+| `glide` | 220ms | a card travelling, the preview sliding in, a screen fading up, a toast arriving |
+| `ease-out` | `cubic-bezier(0.33, 1, 0.68, 1)` | the one curve: fast out, soft landing. Colour changes use plain `ease-out` |
+
+| What | How |
+|---|---|
+| Drop-down (team, search, labels) | fades in from 4px above: it hangs from what opened it |
+| Card menu | fades in where the pointer is, and does not travel |
+| Dialog | the scrim fades; the dialog rises 8px into place |
+| Preview aside | slides in 12px from the right edge it lives on |
+| Screen | its body fades up once it has something to show; header and rails stay put |
+| Card changing column | travels there, whoever moved it — a drop, a bulk move, a teammate's change on the stream. Cards around it close up or make room. A card from nowhere or to nowhere fades |
+| Card reaching the final state | throws a handful of square embers upward once it has landed, in `accent` and `accent-hover`. Only a card that was open work on the board a moment ago: a filter that brings finished work into view has finished nothing |
+| Progress bar | both parts grow from the left in proportion, over 700ms, when drawn |
+| Toast | rises into the stack; the ones above make room; it fades on the way out |
+| Button | gives by 1px while pressed |
+| Focus | `:focus-visible` is a 1px `accent` outline; a focused input also carries a 3px `accent-tint-weak` halo |
+
+Exits are instant or `quick`, never `glide`: nobody waits for a dismissed thing to finish going.
+
+**Reduced motion** turns every animation and transition off, scripted ones included — things still
+change, nothing travels. The end-to-end suite runs that way, because it checks where things land.
+
+---
+
+## 9. The mark
+
+Campfire is where people stop to warm up and plan their next move. The brand says so once, quietly,
+and then gets out of the way: the product is about the work, not about itself.
+
+The mark is a flame over two crossed logs, in the 16px grid, square and mitred like every glyph:
+
+| Part | Path | Lit | Out |
+|---|---|---|---|
+| flame | `M8 1.2 12.6 9.2 10.8 12H5.2L3.4 9.2Z` | `accent` | `ghost` |
+| core | `M8 5.6 10.4 9.6 9.4 12H6.6L5.6 9.6Z` | `accent-hover` | `dim` |
+| logs | `M2.8 12.6 13.2 14.8M2.8 14.8 13.2 12.6`, stroke 1.4 | `faint` | `faint` |
+
+Where it appears, and nowhere else:
+
+- **Sidebar**, 14px beside the wordmark. It is lit while the live stream is up and burns down to
+  embers while it is not, so the one piece of branding is also a status light nobody has to look
+  for. It flares once for each change that arrives.
+- **Loading**, 32px, burning — the flame leans, the core flickers on its own beat. It fades in only
+  after 300ms, so a fast boot never shows it.
+- **Sign in**, 36px, burning, above the wordmark. This is the one screen allowed a glow: a low
+  `accent-tint-weak` ellipse from the bottom edge, as if from the fire the card is drawn up to.
+- **Favicon**, lit, on `page`.
+
+---
+
+## 10. What the design does not cover
 
 Ask rather than invent:
 
@@ -322,7 +391,6 @@ Ask rather than invent:
 - Mobile and narrow layouts. The rails are fixed; the board columns flex and an unscaled large panel
   is zoomed (§1), and that is the whole of it. Narrower than the rails allow, the interface scrolls
   rather than reflows.
-- Motion, beyond the selection bar's fade (§5). No other transition, easing or duration is specified.
 - Empty states beyond the board's empty column, the log's end-of-list, and the one-line `empty-note`
   a list falls back to.
 - Error and validation copy beyond the input error state, the per-field message under a refused

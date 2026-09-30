@@ -7,6 +7,7 @@
   import { stream, openStream } from "./lib/stream.svelte.js";
 
   import Sidebar from "./components/Sidebar.svelte";
+  import Mark from "./components/Mark.svelte";
   import Modals from "./components/Modals.svelte";
   import Toasts from "./components/Toasts.svelte";
   import ErrorPanel from "./components/ErrorPanel.svelte";
@@ -112,7 +113,11 @@
 </script>
 
 {#if !booted}
-  <div class="signin"><div class="eyebrow">Loading</div></div>
+  <!-- Kindling: the fire, burning, where a word used to say Loading. It shows
+       only once the boot has taken long enough to be noticed. -->
+  <div class="signin"><div class="loader" role="status" aria-label="Loading">
+    <Mark size={32} burning />
+  </div></div>
 {:else if bootError}
   <ErrorPanel error={bootError} retry={boot} />
 {:else if needsBootstrap}
