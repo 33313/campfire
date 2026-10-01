@@ -1,23 +1,61 @@
 <script>
+  import { untrack } from "svelte";
   import Dialog from "../components/Dialog.svelte";
+  import FilterEditor from "../components/FilterEditor.svelte";
+  import { failure } from "../lib/ui.svelte.js";
 
-  let { close } = $props();
+  // A view's name, its filter and its pins. A new view starts from the query
+  // it was saved from; an existing one from what it stores. The filter is
+  // edited as in the filter bar, chips or CSQL, but nothing runs until Save;
+  // a query the server cannot read is shown here, where it can be fixed, and
+  // the dialog stays.
+  let { view = null, query: start = "", save, close } = $props();
 
-  let name = $state("");
-  let pinBoard = $state(true);
-  let pinBacklog = $state(false);
+  const from = untrack(() => view);
+  let name = $state(from?.name ?? "");
+  let query = $state(from ? from.query : untrack(() => start)); // as the chips last set it
+  let draft = $state("");                                         // what the editor holds now
+  let pinBoard = $state(from ? from.pinBoard : true);
+  let pinBacklog = $state(from ? from.pinBacklog : false);
+  let error = $state(null);
+  let busy = $state(false);
+
+  async function submit() {
+    busy = true;
+    try {
+      close(await save({ name: name.trim(), query: draft, pinBoard, pinBacklog }));
+    } catch (err) {
+      // Shown while the query it was about is still the one in the editor.
+      if (err.field === "query") error = { message: err.message, span: err.span, query: draft };
+      else failure(err);
+    } finally {
+      busy = false;
+    }
+  }
 </script>
 
-<Dialog title="Save as view" {close}>
+<Dialog title={view ? "Edit view" : "Save as view"} {close} wide>
   {#snippet body()}
     <p class="explain">
-      A name attached to the filter you already have. Everyone can apply it;
-      anyone in this team can edit or delete it.
+      {view ? "A change here is a change for everyone who uses the view."
+        : "Everyone can switch it on; anyone in this team can edit or delete it."}
+      With other views on, each one narrows: they are and-ed.
     </p>
     <label class="field">
       <span class="field-label">Name</span>
-      <input class="input" placeholder="Assigned to marta" bind:value={name} />
+      <input class="input" placeholder="Mine, in the garden" bind:value={name} />
     </label>
+    <div class="field">
+      <span class="field-label">Filter</span>
+      <div class="filter-row">
+        <FilterEditor value={query} bind:draft error={error?.query === draft ? error : null} onapply={(q) => { query = q; error = null; return { ok: true }; }} />
+      </div>
+    </div>
+    {#if view?.missing?.length}
+      <p class="explain" style="color:var(--alert)">
+        Names what has been deleted, which matches nothing: {view.missing.join(", ")}.
+      </p>
+    {/if}
     <label style="display:flex;gap:8px;align-items:center">
       <input class="check" type="checkbox" bind:checked={pinBoard} />
       <span>Pin to the board</span>
@@ -28,11 +66,10 @@
     </label>
   {/snippet}
   {#snippet footer()}
-    <span class="consequence">Stored as clauses, not a query string</span>
+    <span class="consequence">Stored as CSQL</span>
     <div class="actions">
       <button class="btn" onclick={() => close(undefined)}>Cancel</button>
-      <button class="btn primary" disabled={!name.trim()}
-              onclick={() => close({ name: name.trim(), pinBoard, pinBacklog })}>Save</button>
+      <button class="btn primary" disabled={!name.trim() || busy} onclick={submit}>Save</button>
     </div>
   {/snippet}
 </Dialog>

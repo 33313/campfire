@@ -347,6 +347,9 @@ paths:
         - { $ref: "#/components/parameters/FilterBucket" }
         - { $ref: "#/components/parameters/FilterPriority" }
         - { $ref: "#/components/parameters/FilterText" }
+        - { $ref: "#/components/parameters/FilterQuery" }
+        - { $ref: "#/components/parameters/FilterView" }
+        - { $ref: "#/components/parameters/FilterZone" }
       responses:
         "200": { $ref: "#/components/responses/Ok" }
 
@@ -365,6 +368,9 @@ paths:
         - { $ref: "#/components/parameters/FilterBucket" }
         - { $ref: "#/components/parameters/FilterPriority" }
         - { $ref: "#/components/parameters/FilterText" }
+        - { $ref: "#/components/parameters/FilterQuery" }
+        - { $ref: "#/components/parameters/FilterView" }
+        - { $ref: "#/components/parameters/FilterZone" }
       responses:
         "200": { $ref: "#/components/responses/Ok" }
 
@@ -380,7 +386,7 @@ paths:
   /api/views:
     post:
       operationId: createSavedView
-      summary: Save a filter under a name
+      summary: Save a CSQL query under a name
       x-agent: true
       requestBody: { $ref: "#/components/requestBodies/Json" }
       responses:
@@ -389,7 +395,7 @@ paths:
   /api/views/{id}:
     patch:
       operationId: updateSavedView
-      summary: Rename, repin or re-clause a saved view
+      summary: Rename, repin or rewrite the query of a saved view
       x-agent: true
       parameters: [{ $ref: "#/components/parameters/Id" }]
       requestBody: { $ref: "#/components/requestBodies/Json" }
@@ -419,10 +425,9 @@ paths:
   /api/items:
     get:
       operationId: listItems
-      summary: Items matching a structured filter, or a saved view
+      summary: Items matching a CSQL query, a structured filter, or a saved view
       x-agent: true
       parameters:
-        - { name: view, in: query, schema: { type: integer } }
         - { $ref: "#/components/parameters/Cursor" }
         - { $ref: "#/components/parameters/Limit" }
         - { $ref: "#/components/parameters/FilterTeam" }
@@ -433,6 +438,9 @@ paths:
         - { $ref: "#/components/parameters/FilterBucket" }
         - { $ref: "#/components/parameters/FilterPriority" }
         - { $ref: "#/components/parameters/FilterText" }
+        - { $ref: "#/components/parameters/FilterQuery" }
+        - { $ref: "#/components/parameters/FilterView" }
+        - { $ref: "#/components/parameters/FilterZone" }
       responses:
         "200": { $ref: "#/components/responses/Ok" }
     post:
@@ -738,6 +746,25 @@ components:
     FilterBucket: { name: bucket, in: query, schema: { type: array, items: { type: integer } } }
     FilterPriority: { name: priority, in: query, schema: { type: array, items: { type: integer, minimum: 1, maximum: 4 } } }
     FilterText: { name: q, in: query, description: Free text over title and description, schema: { type: string } }
+    FilterZone:
+      name: tz
+      in: query
+      description: The reader's time zone, an IANA name such as Europe/Warsaw. A day in the query is read in it. UTC when absent.
+      schema: { type: string }
+    FilterView:
+      name: view
+      in: query
+      description: Saved views switched on. Each one's query is and-ed with the rest.
+      schema: { type: array, items: { type: integer } }
+    FilterQuery:
+      name: csql
+      in: query
+      description: >-
+        A CSQL query (SPEC.md §9.2), and-ed with any other filter given. For example
+        `assignee in (marta, me) and (bucket = SOL-6 or label = roses) and not priority = 4`,
+        or `due < today and completed = none`.
+        A query that does not read is refused with field `query` and the span it went wrong at.
+      schema: { type: string }
 
   schemas:
     ErrorBody:
@@ -752,6 +779,10 @@ components:
               enum: [invalid, unauthenticated, forbidden, not_found, conflict, rate_limited, too_far_behind, internal]
             message: { type: string }
             field: { type: string }
+            span:
+              type: array
+              description: The [start, end) byte range of a query the error is about
+              items: { type: integer }
 
     Item:
       type: object

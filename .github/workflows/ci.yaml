@@ -43,6 +43,11 @@ jobs:
       - name: Test
         run: go test -race ./...
 
+      # The client's CSQL parser answers to the same corpus as the server's
+      # (SPEC.md §9.2).
+      - name: Test the client's parser
+        run: npm test
+
       # Only Linux runs the tests, but a release ships every platform. A
       # platform that does not build would stop the release after the merge;
       # this finds it before.

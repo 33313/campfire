@@ -221,13 +221,14 @@ that.
 
 `build.sh` compiles the Svelte client into `internal/web/app`, then builds the binary that embeds
 it; Node is needed for that step only. `./build.sh release <version>` builds every released platform
-into `dist/`. `go test ./...` covers the server; `npx playwright test` drives the built binary in a
-browser.
+into `dist/`. `go test ./...` covers the server; `npm test` runs the client's CSQL parser against the
+same corpus as the server's; `npx playwright test` drives the built binary in a browser.
 
 | Path | What is there |
 |---|---|
 | `main.go`, `backup.go`, `mcp.go` | The command: serve, init, check, snapshot, restore, version. |
 | `internal/store` | The schema, the migrations, and every query. One SQLite file behind a single writer and a read pool. |
+| `internal/csql` | CSQL, the filter language: parser, printer and compiler to SQL. `testdata/corpus.json` is what it and the client's parser must both say. |
 | `internal/core` | The application. Every operation exists here exactly once, behind one permission check and one validation. |
 | `internal/api` | The HTTP interface described by [`api/openapi.yaml`](api/openapi.yaml), plus the event stream. |
 | `internal/mcp` | The agent interface: a second interface over the same handlers. |

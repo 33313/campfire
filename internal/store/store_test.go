@@ -3,8 +3,13 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
+
+	"github.com/campfire/campfire/internal/csql"
 )
 
 // Testing opens a fresh migrated database in the test's temporary directory.
@@ -153,32 +158,112 @@ func TestItemKindConstraints(t *testing.T) {
 	}
 }
 
-// SPEC.md §9.4: a clause is kept when its referent is deleted. It must match
-// nothing, not disappear — a view that quietly repairs itself is a view
-// nobody can trust.
-func TestSavedViewClauseSurvivesReferentDeletion(t *testing.T) {
-	db := Testing(t)
-	seedTeam(t, db)
-	if _, err := db.W.Exec(`INSERT INTO labels (id, name, name_folded, created_at) VALUES (7,'api','api',1)`); err != nil {
+// Migration 0005 writes each saved view's clauses as the CSQL query they
+// always meant, and keeps what they named by id, which is still not removed
+// when its referent is deleted (SPEC.md §9.4).
+func TestClausesBecomeTheQueryTheyMeant(t *testing.T) {
+	path, raw := migratedTo(t, 4)
+	seedTeam(t, &DB{W: raw})
+	for _, stmt := range []string{
+		`INSERT INTO labels (id, name, name_folded, created_at) VALUES (7,'api','api',1)`,
+		`INSERT INTO saved_views (id, team_id, name, name_folded, created_at, updated_at) VALUES (1,1,'Mine','mine',1,1)`,
+		`INSERT INTO saved_views (id, team_id, name, name_folded, created_at, updated_at) VALUES (2,1,'All','all',1,1)`,
+		`INSERT INTO saved_view_clauses (view_id, dimension, ref_id, text_value) VALUES
+		   (1,'label',7,NULL), (1,'label',8,NULL), (1,'assignee',0,NULL), (1,'assignee',1,NULL),
+		   (1,'priority',1,NULL), (1,'priority',2,NULL), (1,'bucket',60,NULL), (1,'text',NULL,'say "hi"')`,
+	} {
+		if _, err := raw.Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	raw.Close()
+
+	db, err := Open(path)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.W.Exec(`INSERT INTO saved_views (id, team_id, name, name_folded, created_at, updated_at)
-	                        VALUES (1, 1, 'API work', 'api work', 1, 1)`); err != nil {
+	defer db.Close()
+	v, err := SavedViewByID(context.Background(), db.R, 1)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.W.Exec(`INSERT INTO saved_view_clauses (view_id, dimension, ref_id) VALUES (1, 'label', 7)`); err != nil {
-		t.Fatal(err)
+	n, err := csql.Parse(v.Query)
+	if err != nil {
+		t.Fatalf("migrated %q does not parse: %v", v.Query, err)
 	}
+	// Dimensions and-ed; within one, any-of; labels every-one-of.
+	parts := strings.Split(csql.Canonical(n), " and ")
+	slices.Sort(parts)
+	want := []string{"assignee in (none, #1)", "bucket in (#60)", "label = #7", "label = #8",
+		"priority in (1, 2)", `text ~ "say \"hi\""`}
+	if !slices.Equal(parts, want) {
+		t.Fatalf("migrated to %q: %q", v.Query, parts)
+	}
+	if empty, _ := SavedViewByID(context.Background(), db.R, 2); empty.Query != "" {
+		t.Fatalf("a view with no clauses became %q", empty.Query)
+	}
+
+	// What it names by id is kept, and outlives its referent.
 	if _, err := db.W.Exec(`DELETE FROM labels WHERE id = 7`); err != nil {
 		t.Fatal(err)
 	}
-	var n int
-	if err := db.R.QueryRow(`SELECT count(*) FROM saved_view_clauses WHERE view_id = 1`).Scan(&n); err != nil {
+	refs, _ := ViewRefs(context.Background(), db.R, 1)
+	if len(refs) != 4 {
+		t.Fatalf("refs %+v, want label 7 and 8, assignee 1, bucket 60", refs)
+	}
+	for _, r := range refs {
+		if r.Field == "label" && r.ID == 7 && r.Name != "" {
+			t.Fatal("a deleted label still has a name")
+		}
+	}
+}
+
+// The first draft of CSQL wrote an empty field as `is empty`; migration 0006
+// rewrites what it saved as none.
+func TestIsEmptyBecomesNone(t *testing.T) {
+	path, raw := migratedTo(t, 5)
+	seedTeam(t, &DB{W: raw})
+	if _, err := raw.Exec(`INSERT INTO saved_views (id, team_id, name, name_folded, query, created_at, updated_at)
+	    VALUES (1,1,'Loose','loose','assignee is empty or (bucket is not empty and text ~ "is empty")',1,1)`); err != nil {
 		t.Fatal(err)
 	}
-	if n != 1 {
-		t.Fatalf("clause count after deleting its label = %d, want 1", n)
+	raw.Close()
+	db, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer db.Close()
+	v, _ := SavedViewByID(context.Background(), db.R, 1)
+	// The phrase is left alone: it opens with a quote, not the space the
+	// rewrite looks for.
+	if want := `assignee = none or (bucket != none and text ~ "is empty")`; v.Query != want {
+		t.Fatalf("rewritten to %q, want %q", v.Query, want)
+	}
+	if _, err := csql.Parse(v.Query); err != nil {
+		t.Fatalf("%q does not parse: %v", v.Query, err)
+	}
+}
+
+// migratedTo opens a database at path with the first n migrations applied by
+// hand, as an instance of that version would have it.
+func migratedTo(t *testing.T, n int) (string, *sql.DB) {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "campfire.db")
+	raw, err := sql.Open("sqlite", dsn(path, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, _ := migrations.ReadDir("migrations")
+	for _, e := range entries[:n] {
+		body, _ := migrations.ReadFile("migrations/" + e.Name())
+		if _, err := raw.Exec(string(body)); err != nil {
+			t.Fatalf("%s: %v", e.Name(), err)
+		}
+	}
+	if _, err := raw.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, n)); err != nil {
+		t.Fatal(err)
+	}
+	return path, raw
 }
 
 func seedTeam(t *testing.T, db *DB) {

@@ -381,6 +381,10 @@ type ItemFilter struct {
 	InAnyBucket  bool
 	Priorities   []int64
 	Text         string
+	// Where is a compiled CSQL condition over the aliases i and s, and its
+	// arguments; it narrows whatever else the filter says.
+	Where     string
+	WhereArgs []any
 	// EndedSince drops items that reached a terminal state before this time.
 	// Items still open carry no actual end and always pass.
 	EndedSince int64
@@ -423,9 +427,18 @@ func (f ItemFilter) where() (string, []any) {
 			args = append(args, r)
 		}
 	}
-	add("i.assignee_id", f.AssigneeIDs)
-	if f.Unassigned {
+	// Unassigned is one more value of the assignee dimension: picked beside
+	// people, it widens the choice like any other value.
+	switch {
+	case f.Unassigned && len(f.AssigneeIDs) > 0:
+		w = append(w, "(i.assignee_id IS NULL OR i.assignee_id IN ("+placeholders(len(f.AssigneeIDs))+"))")
+		for _, v := range f.AssigneeIDs {
+			args = append(args, v)
+		}
+	case f.Unassigned:
 		w = append(w, "i.assignee_id IS NULL")
+	default:
+		add("i.assignee_id", f.AssigneeIDs)
 	}
 	add("i.reporter_id", f.ReporterIDs)
 	add("i.bucket_id", f.BucketIDs)
@@ -450,6 +463,10 @@ func (f ItemFilter) where() (string, []any) {
 		w = append(w, "(i.title LIKE ? ESCAPE '\\' OR i.description LIKE ? ESCAPE '\\')")
 		pattern := "%" + escapeLike(q) + "%"
 		args = append(args, pattern, pattern)
+	}
+	if f.Where != "" {
+		w = append(w, f.Where)
+		args = append(args, f.WhereArgs...)
 	}
 	if len(w) == 0 {
 		return "", nil

@@ -268,18 +268,246 @@ test("the log says what changed in words, and nothing where there was nothing", 
   await expect(change("state")).toContainText("→");
 });
 
-test("the filter bar narrows the board and clears again", async ({ page }) => {
+// The filter chips: a click cycles a value [ ] → [+] → [−]; the dropdown
+// applies when it closes and Escape leaves it as it was (SPEC.md §9.2).
+test("the filter chips take [+] and [−] values, days and more fields, and clear", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  const bar = page.locator(".filter-bar");
+  const cards = page.locator(".card");
+  const pop = page.locator(".filter-pop");
+  await expect(cards).toHaveCount(1);
+
+  // [+] P1: only P1, and the P3 boiler goes.
+  await bar.getByRole("button", { name: "Priority" }).click();
+  await pop.getByRole("option", { name: /P1 · Highest/ }).click();
+  await expect(pop.getByRole("option", { name: /P1 · Highest/ })).toHaveText(/\[\+\]/);
+  await page.keyboard.press("Enter");
+  await expect(pop).toHaveCount(0);
+  await expect(cards).toHaveCount(0);
+  await expect(bar.getByRole("button", { name: "Priority: P1", exact: true })).toBeVisible();
+
+  // Again: [−] P1, everything but P1.
+  await bar.getByRole("button", { name: "Priority: P1", exact: true }).click();
+  await pop.getByRole("option", { name: /P1 · Highest/ }).click();
+  await page.keyboard.press("Enter");
+  await expect(cards).toHaveCount(1);
+  await expect(bar.getByRole("button", { name: "Priority: −P1", exact: true })).toBeVisible();
+
+  // Escape undoes what the dropdown did.
+  await bar.getByRole("button", { name: "Priority: −P1", exact: true }).click();
+  await pop.getByRole("option", { name: /P3 · Medium/ }).click();
+  await page.keyboard.press("Escape");
+  await expect(pop).toHaveCount(0);
+  await expect(bar.getByRole("button", { name: "Priority: −P1", exact: true })).toBeVisible();
+  await expect(cards).toHaveCount(1);
+
+  // A field from + More, and a day preset.
+  await bar.getByRole("button", { name: "+ More" }).click();
+  await page.locator(".pop").getByRole("menuitem", { name: "Created" }).click();
+  await bar.getByRole("button", { name: "Created" }).click();
+  await page.locator(".day-pop").getByRole("button", { name: "Last 7 days" }).click();
+  await expect(bar.getByRole("button", { name: "Created: Last 7 days" })).toBeVisible();
+  await expect(cards).toHaveCount(1);
+
+  // Clear takes it all off.
+  await bar.getByRole("button", { name: "Clear", exact: true }).click();
+  await expect(bar.getByRole("button", { name: "Priority", exact: true })).toBeVisible();
+  await expect(bar.getByRole("button", { name: "Created" })).toHaveCount(0);
+});
+
+test("raw CSQL offers what comes next, says what is wrong, and never applies a refused query", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  const bar = page.locator(".filter-bar");
+  const cards = page.locator(".card");
+
+  // The chips' filter is the raw query's starting point.
+  await bar.getByRole("button", { name: "Priority" }).click();
+  await page.locator(".filter-pop").getByRole("option", { name: /P3 · Medium/ }).click();
+  await page.keyboard.press("Enter");
+  await bar.getByRole("button", { name: "</>" }).click();
+  const query = bar.getByLabel("Query");
+  await expect(query).toHaveValue("priority = 3");
+
+  // The box is short, and the mode switch leads the bar in both modes, so it
+  // is never across the screen from where you were.
+  expect((await query.boundingBox()).width).toBeLessThanOrEqual(420);
+  const toggle = bar.getByRole("button", { name: "</>" });
+  const leading = (await toggle.boundingBox()).x;
+
+  // or, which the chips cannot say: applied on Enter, and the chips decline it,
+  // offering to clear it rather than leaving you stuck.
+  await query.fill("priority = 1 or label = plumbing");
+  await query.press("Enter");
+  await expect(cards).toHaveCount(1);
+  await toggle.click();
+  await expect(bar.getByRole("alert")).toHaveText("The chips can't show this query.");
+  await expect(bar.getByRole("button", { name: "Clear filter" })).toBeVisible();
+  await expect(query).toBeVisible();
+
+  // A syntax error is the browser's to say, at once and where it is.
+  await query.fill("priority = 9 and label = plumbing");
+  await expect(query).toHaveAttribute("aria-invalid", "true");
+  const offers = page.locator(".query-offers");
+  await expect(offers.locator(".query-error")).toHaveText("priority is 1 to 4, or P1 to P4");
+  // A name is the server's: refused, and the board stays as it was.
+  await query.fill("label = plumbing and assignee = nobody-yet");
+  await query.press("Enter");
+  await expect(offers.locator(".query-error")).toHaveText(/no user is called "nobody-yet"/);
+  await expect(cards).toHaveCount(1);
+  // Nothing has to be fixed: Discard puts back the query in use.
+  await bar.getByRole("button", { name: "Discard" }).click();
+  await expect(query).toHaveValue("priority = 1 or label = plumbing");
+  await expect(query).toHaveAttribute("aria-invalid", "false");
+  await expect(bar.getByRole("button", { name: "Discard" })).toHaveCount(0);
+
+  // What can come next is offered: a field, its operators, its values.
+  await query.fill("");
+  await query.pressSequentially("pri");
+  await expect(offers.getByRole("option", { name: /^priority/ })).toBeVisible();
+  await query.press("Tab");
+  await expect(query).toHaveValue("priority ");
+  await expect(offers.getByRole("option", { name: /^<=/ })).toBeVisible();
+  await query.press("Tab");
+  await expect(query).toHaveValue("priority = ");
+  await expect(offers.getByRole("option", { name: /^1 Highest$/ })).toBeVisible();
+  await query.pressSequentially("3");
+  await query.press("Tab");
+  await expect(query).toHaveValue("priority = 3 ");
+  await expect(offers.getByRole("option", { name: /^and/ })).toBeVisible();
+  await query.press("Enter");
+  await expect(cards).toHaveCount(1);
+
+  // A value is found by any part of it, not only its start.
+  await query.fill("");
+  await query.pressSequentially("state = prog");
+  await expect(offers.getByRole("option", { name: /^"In Progress"/ })).toBeVisible();
+  await query.press("Tab");
+  await expect(query).toHaveValue('state = "In Progress" ');
+  await query.fill("priority = 3");
+
+  // The cheat sheet keeps to the window, however small, and scrolls inside.
+  for (const size of [{ width: 1280, height: 800 }, { width: 640, height: 420 }]) {
+    await page.setViewportSize(size);
+    await bar.getByRole("button", { name: "CSQL help" }).click();
+    const help = page.getByRole("dialog", { name: "How to write a query" });
+    await expect(help).toBeVisible();
+    const box = await help.boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(size.height);
+    expect(box.x + box.width).toBeLessThanOrEqual(size.width);
+    await page.keyboard.press("Escape");
+    await expect(help).toHaveCount(0);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+
+  // Back to the chips, which can show it; the switch has not moved.
+  await toggle.click();
+  await expect(bar.getByRole("button", { name: "Priority: P3", exact: true })).toBeVisible();
+  expect((await toggle.boundingBox()).x).toBe(leading);
+  await bar.getByRole("button", { name: "Clear", exact: true }).click();
+});
+
+// SPEC.md §9.2: typing costs no requests, each applied change exactly one,
+// and a refused draft never rides along with the next request.
+test("filtering costs one request per change and none per keystroke", async ({ page }) => {
   await signIn(page);
   await page.goto("/t/1/board");
   await expect(page.locator(".card")).toHaveCount(1);
+  const bar = page.locator(".filter-bar");
+  const sidebar = page.locator(".sidebar");
+  let asked = [];
+  page.on("request", (r) => {
+    const u = new URL(r.url());
+    if (u.pathname.startsWith("/api/") && u.pathname !== "/api/stream") asked.push(u.pathname + u.search);
+  });
+  // Our own writes come back on the stream, and refresh the board 300–700ms
+  // later (SPEC.md §12.4): wait those out, so only what an action costs counts.
+  const settle = async () => { await page.waitForTimeout(900); await page.waitForLoadState("networkidle"); };
 
-  await page.locator(".filter-bar").getByRole("button", { name: "Priority" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "P1 · Highest" }).click();
+  // A view to switch.
+  await sidebar.getByRole("button", { name: "New view" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Name").fill("P1 only");
+  await dialog.getByRole("button", { name: "</>" }).click();
+  await dialog.getByLabel("Query").fill("priority = 1");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  const p1 = sidebar.getByRole("button", { name: "P1 only", exact: true });
+  await expect(p1).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".card")).toHaveCount(0);
+  await settle();
 
-  await page.locator(".filter-bar").getByRole("button", { name: "P1", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Any" }).click();
+  // Typing: nothing.
+  await bar.getByRole("button", { name: "</>" }).click();
+  const query = bar.getByLabel("Query");
+  asked = [];
+  await query.pressSequentially("label in (plumbing, heating) and priority != 4", { delay: 20 });
+  await page.waitForTimeout(600);
+  expect(asked).toEqual([]);
+
+  // Enter: one.
+  await query.press("Enter");
+  await settle();
+  expect(asked.filter((u) => u.includes("/board"))).toHaveLength(1);
+  expect(asked).toHaveLength(1);
+
+  // A refused draft, then a view switched off: the board changes anyway, in
+  // one request, and the refused draft is not in it.
+  await query.fill("assignee = nobody-yet");
+  await query.press("Enter");
+  await expect(page.locator(".query-offers .query-error")).toBeVisible();
+  await settle();
+  asked = [];
+  await p1.click();
   await expect(page.locator(".card")).toHaveCount(1);
+  await settle();
+  expect(asked).toHaveLength(1);
+  expect(asked[0]).not.toContain("nobody-yet");
+
+  // Leaving the refused draft for the chips is never blocked: it is offered
+  // to Discard, which goes back to the chips with the filter in use.
+  await bar.getByRole("button", { name: "</>" }).click();
+  await expect(bar.getByRole("alert")).toHaveText("Not applied. Discard it to go back to the chips.");
+  await bar.getByRole("button", { name: "Discard" }).click();
+  await expect(bar.getByRole("button", { name: /^Label: plumbing, heating/ })).toBeVisible();
+  await bar.getByRole("button", { name: "Clear", exact: true }).click();
+
+  // A chip: opening it and picking twice is one request, on close.
+  await settle();
+  asked = [];
+  await bar.getByRole("button", { name: "Priority" }).click();
+  await page.locator(".filter-pop").getByRole("option", { name: /P1 · Highest/ }).click();
+  await page.locator(".filter-pop").getByRole("option", { name: /P3 · Medium/ }).click();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".card")).toHaveCount(1);
+  await settle();
+  expect(asked).toHaveLength(1);
+  await bar.getByRole("button", { name: "Clear", exact: true }).click();
+});
+
+// SPEC.md §9.2: a cached list goes stale on the events that change it and is
+// fetched again when next needed.
+test("a label made elsewhere is offered without a reload", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  const bar = page.locator(".filter-bar");
+  await bar.getByRole("button", { name: "Label" }).click();
+  await expect(page.locator(".filter-pop").getByRole("option", { name: /ferns/ })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
+  // Someone else labels a ticket "ferns": the stream says so.
+  await page.evaluate(async () => {
+    await fetch("/api/items/1/labels", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "ferns" }) });
+  });
+  await expect.poll(async () => {
+    await bar.getByRole("button", { name: "Label" }).click();
+    const n = await page.locator(".filter-pop").getByRole("option", { name: /ferns/ }).count();
+    await page.keyboard.press("Escape");
+    return n;
+  }).toBe(1);
+  await page.evaluate(() => fetch("/api/items/1/labels/ferns", { method: "DELETE" }));
 });
 
 test("search suggests as you type, without a request per keystroke", async ({ page }) => {
@@ -305,22 +533,93 @@ test("search suggests as you type, without a request per keystroke", async ({ pa
   await expect(page).toHaveURL(/\/SOL-1$/);
 });
 
-test("a saved view is stored as clauses and appears in the sidebar", async ({ page }) => {
+test("saved views are named queries, switched on in the sidebar and and-ed", async ({ page }) => {
   await signIn(page);
   await page.goto("/t/1/board");
+  const bar = page.locator(".filter-bar");
+  const sidebar = page.locator(".sidebar");
+  const cards = page.locator(".card");
 
-  await page.locator(".filter-bar").getByRole("button", { name: "Priority" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "P3 · Medium" }).click();
+  // Saving the bar's filter moves it into a view that is on: the bar clears,
+  // the sidebar lights the view, and Board stays the place you are.
+  await bar.getByRole("button", { name: "Priority" }).click();
+  await page.locator(".filter-pop").getByRole("option", { name: /P1 · Highest/ }).click();
+  await page.keyboard.press("Enter");
+  await expect(cards).toHaveCount(0);
+  await bar.getByRole("button", { name: "Save as view" }).click();
+  let dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("button", { name: "Priority: P1", exact: true })).toBeVisible();
+  await dialog.getByLabel("Name").fill("Urgent");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  const urgent = sidebar.getByRole("button", { name: "Urgent", exact: true });
+  await expect(urgent).toHaveAttribute("aria-pressed", "true");
+  await expect(bar.getByRole("button", { name: "Priority", exact: true })).toBeVisible();
+  await expect(sidebar.getByRole("link", { name: "Board" })).toHaveClass(/\bon\b/);
+  await expect(cards).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Save as view" }).click();
-  const view = page.getByRole("dialog");
-  await view.getByLabel("Name").fill("Medium work");
-  await view.getByRole("button", { name: "Save" }).click();
+  // A click switches it off, and on again.
+  await urgent.click();
+  await expect(urgent).toHaveAttribute("aria-pressed", "false");
+  await expect(cards).toHaveCount(1);
+  await urgent.click();
+  await expect(cards).toHaveCount(0);
 
-  await expect(page.locator(".sidebar").getByRole("link", { name: "Medium work" })).toBeVisible();
-  await page.locator(".sidebar").getByRole("link", { name: "Medium work" }).click();
-  await expect(page).toHaveURL(/view=\d+$/);
-  await expect(page.locator(".card")).toHaveCount(1);
+  // Views that are on are and-ed: P1 and plumbing is nothing; plumbing alone
+  // is the boiler.
+  await sidebar.getByRole("button", { name: "New view" }).click();
+  await dialog.getByLabel("Name").fill("Plumbing");
+  await dialog.getByRole("button", { name: "Label" }).click();
+  await page.locator(".filter-pop").getByRole("option", { name: /plumbing/ }).click();
+  await page.keyboard.press("Enter");
+  await expect(dialog.getByRole("button", { name: "Label: plumbing", exact: true })).toBeVisible();
+  await expect(cards).toHaveCount(0); // nothing runs until Save
+  await dialog.getByRole("button", { name: "Save" }).click();
+  const plumbing = sidebar.getByRole("button", { name: "Plumbing", exact: true });
+  await expect(plumbing).toHaveAttribute("aria-pressed", "true");
+  await expect(cards).toHaveCount(0);
+  await urgent.click();
+  await expect(cards).toHaveCount(1);
+
+  // Which views are on outlasts a reload.
+  await page.reload();
+  await expect(plumbing).toHaveAttribute("aria-pressed", "true");
+  await expect(urgent).toHaveAttribute("aria-pressed", "false");
+
+  // A link from before views were switches still switches its view on.
+  const id = await page.evaluate(async () =>
+    (await (await fetch("/api/teams/1/views")).json()).find((v) => v.name === "Urgent").id);
+  await page.goto(`/t/1/board?view=${id}`);
+  await expect(page).toHaveURL(/board$/);
+  await expect(urgent).toHaveAttribute("aria-pressed", "true");
+  await expect(cards).toHaveCount(0);
+
+  // Changing a view is a right-click on it, apart from using it. A query that
+  // cannot be read keeps the dialog up and says why; Escape in the box closes
+  // its list, not the dialog.
+  await urgent.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Edit…" }).click();
+  await dialog.getByRole("button", { name: "</>" }).click();
+  const q = dialog.getByLabel("Query");
+  await expect(q).toHaveValue("priority = 1");
+  await q.fill("priority = 9");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(q).toHaveAttribute("aria-invalid", "true");
+  await q.press("Escape");
+  await expect(dialog).toHaveCount(1);
+  await q.fill("priority = 1 or priority = 3");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(cards).toHaveCount(1);
+
+  // All off, then deleting one that is on switches it off with it.
+  await sidebar.getByRole("button", { name: "All off" }).click();
+  await expect(urgent).toHaveAttribute("aria-pressed", "false");
+  await plumbing.click();
+  await plumbing.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Delete…" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
+  await expect(plumbing).toHaveCount(0);
+  await expect(cards).toHaveCount(1);
 });
 
 test("work states can be added and the team renamed", async ({ page }) => {
@@ -1032,6 +1331,43 @@ test.describe(() => {
     await expect(page.locator(".sidebar .mark.roar")).toBeAttached();
     // And the canvas goes once the last ember is out.
     await expect(page.locator("canvas.embers")).toHaveCount(0, { timeout: 5000 });
+  });
+
+  test("a card that leaves the filter in view kindles in Done and stays, faded, until the filter changes", async ({ page }) => {
+    await signIn(page);
+    const states = await (await page.request.get("/api/teams/1/states")).json();
+    const done = states.find((s) => s.role === "final");
+    const todo = states.find((s) => s.role === "accepted");
+    const item = await (await page.request.post("/api/items", { data: {
+      kind: "ticket", teamId: 1, title: "Sweep the hearth", accepted: true,
+    } })).json();
+    await page.goto("/t/1/board");
+    const bar = page.locator(".filter-bar");
+    const query = bar.getByLabel("Query");
+    await bar.getByRole("button", { name: "</>" }).click();
+    await query.fill(`state = "${todo.name}"`);
+    await query.press("Enter");
+    const doneColumn = page.locator(".column", { has: page.getByRole("heading", { name: "Done" }) });
+    await expect(page.locator(".card", { hasText: "Sweep the hearth" })).toBeVisible();
+    await expect(doneColumn.locator(".card")).toHaveCount(0);
+
+    // Finished elsewhere: it no longer matches, and goes to Done anyway,
+    // kindling there, and stays, kept.
+    await page.request.post(`/api/items/${item.id}/move`, { data: { stateId: done.id } });
+    await expect(doneColumn.locator(".card.kindled", { hasText: "Sweep the hearth" })).toBeAttached();
+    const kept = doneColumn.locator(".card-slot.kept", { hasText: "Sweep the hearth" });
+    await expect(kept).toBeVisible();
+
+    // A later refresh keeps it: another write lands on the stream.
+    await page.request.post("/api/items", { data: { kind: "ticket", teamId: 1, title: "Stack the logs", accepted: true } });
+    await expect(page.locator(".card", { hasText: "Stack the logs" })).toBeVisible();
+    await expect(kept).toBeVisible();
+
+    // A new filter starts from what matches it.
+    await query.fill(`state = "${todo.name}" and priority != 4`);
+    await query.press("Enter");
+    await expect(page.locator(".card", { hasText: "Stack the logs" })).toBeVisible();
+    await expect(page.locator(".card", { hasText: "Sweep the hearth" })).toHaveCount(0);
   });
 
   test("on a large panel a card glides from where it was, not a quarter further", async ({ page }) => {

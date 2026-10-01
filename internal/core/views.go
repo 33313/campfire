@@ -29,10 +29,16 @@ type Board struct {
 	Columns []Column   `json:"columns"`
 }
 
-// Filter is the structured filter of SPEC.md §9.2 as an interface takes it.
-// There is no query language: these are the dimensions, and a saved view is
-// the same thing under a name.
+// Filter is what an interface asks for items by: a CSQL query (SPEC.md §9.2),
+// and the structured dimensions an agent may pass instead or as well. All of
+// it narrows: the query and every dimension given are and-ed.
 type Filter struct {
+	Query string `json:"query,omitempty"`
+	// ViewIDs are saved views switched on: each one's query is and-ed in.
+	ViewIDs []int64 `json:"viewIds,omitempty"`
+	// TZ is the reader's time zone, an IANA name; a day in a query is read in
+	// it. Empty is UTC.
+	TZ          string   `json:"tz,omitempty"`
 	StateIDs    []int64  `json:"stateIds,omitempty"`
 	LabelIDs    []int64  `json:"labelIds,omitempty"`
 	AssigneeIDs []int64  `json:"assigneeIds,omitempty"`
@@ -77,6 +83,10 @@ func (s *Service) Board(ctx context.Context, a Actor, teamID int64, f Filter, sh
 	if err != nil {
 		return nil, mapErr(err)
 	}
+	sf, err := s.storeFilter(ctx, a, f)
+	if err != nil {
+		return nil, err
+	}
 	b := &Board{Team: team}
 	for _, st := range states {
 		if st.Role == store.RoleDefault || st.Role == store.RoleRejected {
@@ -86,7 +96,7 @@ func (s *Service) Board(ctx context.Context, a Actor, teamID int64, f Filter, sh
 		if st.Role == store.RoleFinal && !allDone {
 			endedSince = s.now() - DoneFor
 		}
-		col, err := s.column(ctx, teamID, st, f, showBuckets, endedSince, perColumn)
+		col, err := s.column(ctx, teamID, st, sf, showBuckets, endedSince, perColumn)
 		if err != nil {
 			return nil, err
 		}
@@ -104,17 +114,20 @@ func (s *Service) Backlog(ctx context.Context, a Actor, teamID int64, f Filter, 
 	if err != nil {
 		return nil, mapErr(err)
 	}
-	col, err := s.column(ctx, teamID, st, f, showBuckets, 0, limit)
+	sf, err := s.storeFilter(ctx, a, f)
+	if err != nil {
+		return nil, err
+	}
+	col, err := s.column(ctx, teamID, st, sf, showBuckets, 0, limit)
 	return &col, err
 }
 
-func (s *Service) column(ctx context.Context, teamID int64, st store.WorkState, f Filter, showBuckets bool, endedSince int64, limit int) (Column, error) {
-	sf := f.store()
+func (s *Service) column(ctx context.Context, teamID int64, st store.WorkState, sf store.ItemFilter, showBuckets bool, endedSince int64, limit int) (Column, error) {
 	sf.TeamIDs = []int64{teamID}
 	sf.EndedSince = endedSince
-	// A saved view may carry a state clause of its own. The column is that
-	// clause intersected with the column's own state, never the column's state
-	// silently replacing it (SPEC.md §9.4).
+	// A filter may name states of its own. The column is those intersected
+	// with the column's own state, never the column's state silently
+	// replacing them. A query's state conditions are and-ed the same way.
 	if len(sf.StateIDs) > 0 && !slices.Contains(sf.StateIDs, st.ID) {
 		return Column{State: st, Items: []store.Item{}}, nil
 	}
@@ -153,7 +166,10 @@ func (s *Service) ListItems(ctx context.Context, a Actor, f Filter, cursor strin
 	if err := requireUser(a); err != nil {
 		return nil, err
 	}
-	sf := f.store()
+	sf, err := s.storeFilter(ctx, a, f)
+	if err != nil {
+		return nil, err
+	}
 	items, next, err := store.ListItems(ctx, s.DB.R, sf, cursor, clampLimit(limit))
 	if err != nil {
 		return nil, mapErr(err)

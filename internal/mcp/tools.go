@@ -131,6 +131,7 @@ func (s *Server) toolset() []tool {
 				"teamId": pInt, "showBuckets": pBool, "allDone": pBool, "limit": pInt,
 				"assigneeIds": pIntList, "labelIds": pIntList, "priorities": pIntList,
 				"bucketIds": pIntList, "text": pString,
+				"query": map[string]any{"type": "string", "description": csqlHelp}, "viewIds": pIntList, "tz": pString,
 			}, "teamId"),
 			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
 				var in struct {
@@ -153,6 +154,7 @@ func (s *Server) toolset() []tool {
 				"teamId": pInt, "showBuckets": pBool, "limit": pInt,
 				"assigneeIds": pIntList, "labelIds": pIntList, "priorities": pIntList,
 				"bucketIds": pIntList, "text": pString,
+				"query": map[string]any{"type": "string", "description": csqlHelp}, "viewIds": pIntList, "tz": pString,
 			}, "teamId"),
 			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
 				var in struct {
@@ -169,13 +171,14 @@ func (s *Server) toolset() []tool {
 		},
 		{
 			Name: "list_items", Operation: "listItems",
-			Description: "Items matching a structured filter. There is no query language: " +
-				"compose the dimensions here. Keyset-paginated; pass the returned cursor back.",
+			Description: "Items matching a CSQL query and any structured dimensions given, " +
+				"all and-ed. Keyset-paginated; pass the returned cursor back.",
 			Schema: obj(map[string]any{
 				"teamIds": pIntList, "stateIds": pIntList, "labelIds": pIntList,
 				"assigneeIds": pIntList, "unassigned": pBool, "reporterIds": pIntList,
 				"bucketIds": pIntList, "priorities": pIntList, "kinds": pStrList,
 				"text": pString, "cursor": pString, "limit": pInt,
+				"query": map[string]any{"type": "string", "description": csqlHelp}, "viewIds": pIntList, "tz": pString,
 			}),
 			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
 				var in struct {
@@ -531,8 +534,8 @@ func (s *Server) toolset() []tool {
 		},
 		{
 			Name: "list_saved_views", Operation: "listSavedViews",
-			Description: "A team's saved views. A saved view is a named filter over the same " +
-				"dimensions list_items takes.",
+			Description: "A team's saved views. A saved view is a named CSQL query; missing " +
+				"lists what it names that has been deleted.",
 			Schema: obj(map[string]any{"teamId": pInt}, "teamId"),
 			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
 				var in struct{ TeamID int64 }
@@ -544,14 +547,10 @@ func (s *Server) toolset() []tool {
 		},
 		{
 			Name: "create_saved_view", Operation: "createSavedView",
-			Description: "Save a filter under a name, owned by one team. Clauses reference " +
-				"their target by id: dimension is state, label, assignee, reporter, bucket, " +
-				"priority, team or text.",
+			Description: "Save a CSQL query under a name, owned by one team.",
 			Schema: obj(map[string]any{
 				"teamId": pInt, "name": pString, "pinBoard": pBool, "pinBacklog": pBool,
-				"clauses": map[string]any{"type": "array", "items": obj(map[string]any{
-					"dimension": pString, "refId": pInt, "text": pString,
-				}, "dimension")},
+				"query": map[string]any{"type": "string", "description": csqlHelp},
 			}, "teamId", "name"),
 			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
 				var in core.ViewInput
@@ -563,13 +562,11 @@ func (s *Server) toolset() []tool {
 		},
 		{
 			Name: "update_saved_view", Operation: "updateSavedView",
-			Description: "Rewrite a saved view: its name, its pinning and its clauses.",
+			Description: "Rewrite a saved view: its name, its pinning and its query.",
 			Schema: obj(map[string]any{
 				"viewId": pInt, "teamId": pInt, "name": pString,
 				"pinBoard": pBool, "pinBacklog": pBool,
-				"clauses": map[string]any{"type": "array", "items": obj(map[string]any{
-					"dimension": pString, "refId": pInt, "text": pString,
-				}, "dimension")},
+				"query": map[string]any{"type": "string", "description": csqlHelp},
 			}, "viewId", "name"),
 			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
 				var in struct {
@@ -596,3 +593,13 @@ func (s *Server) toolset() []tool {
 		},
 	}
 }
+
+// csqlHelp is how an agent learns CSQL: the whole language in one breath.
+const csqlHelp = "A CSQL query. Conditions are field, operator, value, joined by and, or, not " +
+	"and parentheses: assignee in (marta, me) and (bucket = SOL-6 or label = roses) and not priority = 4. " +
+	"Fields: assignee, reporter (a username or me), label, bucket (an identifier such as SOL-6, or a " +
+	"title in quotes), priority (1-4; also < <= > >=), state (a state's name), team (short code), " +
+	"created, started, completed, due (a day: 2026-09-01, today, -7d, +2w; also < <= > >=), " +
+	"text (~ or !~ and a phrase). Operators: = != in (...) not in (...). none is the value of an empty " +
+	"field: assignee = none, label = none, due = none. != is exactly not =. #12 names a thing by id. " +
+	"Days are read in tz, an IANA zone name, or UTC."

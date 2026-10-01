@@ -23,39 +23,3 @@ export async function bucketOptions() {
 export function userOptions() {
   return app.users.map((u) => ({ value: u.id, label: u.username, icon: { avatar: u.username } }));
 }
-
-/** A saved view's clauses, as the filter every list endpoint already takes. */
-export function filterFromView(view) {
-  const filter = {
-    stateIds: [], labelIds: [], assigneeIds: [], reporterIds: [],
-    bucketIds: [], priorities: [], teamIds: [], text: "",
-  };
-  const into = {
-    state: "stateIds", label: "labelIds", assignee: "assigneeIds",
-    reporter: "reporterIds", bucket: "bucketIds", priority: "priorities", team: "teamIds",
-  };
-  for (const c of view.clauses || []) {
-    if (c.dimension === "text") filter.text = c.text;
-    // Zero is a real value of the assignee dimension: unassigned.
-    else if (c.dimension === "assignee" && c.refId === 0) filter.unassigned = true;
-    // A clause naming something deleted keeps its identifier, which matches
-    // nothing. That is the point: an empty result, never a wider one.
-    else if (into[c.dimension]) filter[into[c.dimension]].push(c.refId);
-  }
-  return filter;
-}
-
-/** A filter, as the clauses a saved view stores. */
-export function clausesFromFilter(filter) {
-  const clauses = [];
-  const from = {
-    labelIds: "label", assigneeIds: "assignee", reporterIds: "reporter",
-    bucketIds: "bucket", priorities: "priority", stateIds: "state",
-  };
-  for (const [key, dimension] of Object.entries(from)) {
-    for (const refId of filter[key] || []) clauses.push({ dimension, refId });
-  }
-  if (filter.unassigned) clauses.push({ dimension: "assignee", refId: 0 });
-  if (filter.text) clauses.push({ dimension: "text", text: filter.text });
-  return clauses;
-}

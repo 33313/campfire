@@ -283,8 +283,49 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | *(none)* | Profile | A person at `/users/<name>`, and where the identity block at the foot of the sidebar goes. Fits the viewport: the picture, name, email, last seen, bio and teams are fixed at the top, and only the activity panel below them scrolls. Memberships sit side by side in a 230px-minimum grid, not stacked. Your own carries Edit profile and Settings; in edit mode the picture *is* the file control (a mono-caps `Change` strip across its foot) and the email and bio are inputs in place, with Save and Cancel in the screen header. Never drawn. |
 | `Dialogs.dc.html` | Dialogs and states | Create item · Reject · New bucket · Split · Bulk move · Bulk edit · delete confirms · second factor · stream banners. |
 
-The sidebar also lists the saved views of `SPEC.md` §9.3 under a `Views` section heading, between
-the main navigation and team settings.
+The sidebar also lists the saved views of `SPEC.md` §9.4 under a `Views` section heading, between
+the main navigation and team settings. A view is a switch, not a place: a click turns it on or
+off, several can be on, and Board or Backlog stays the marked place. A view that is on is
+accent-coloured on `accent-tint-weak`, without the place's left bar, with a mono-caps `ON` at its
+right; `All off` appears in the section heading once two are on. Which are on is remembered per
+team in the browser, and an old `?view=` link switches its view on. A view appears only in the
+sidebar, never in the bar.
+
+The filter bar edits one CSQL query (`SPEC.md` §9.2) two ways, and opens on the first.
+
+The `</>` mode switch leads the bar, right after the `Filter` eyebrow, in both modes: it never moves,
+so switching back is where switching there was.
+
+- **Chips.** Assignee, State, Label, Bucket and Priority, then `+ More` (Reporter, Team, Created,
+  Started, Completed, Due) and `Clear` once anything is set. A chip opens a dropdown in place, the card menu's panel, with a search box once it
+  lists more than seven values. Each value row leads with a mono box that a click cycles: `[ ]`
+  not in the filter, `[+]` is (accent), `[−]` isn't (alert, the name struck through). A mono hint
+  at the foot says so: `Click: [+] is · [−] isn't · Esc undoes`. The dropdown applies when it
+  closes; Escape leaves the filter as it was. A set chip reads `Label: api, −roses` (two values,
+  then `+N`) in the accent, with its own clear. A date chip offers presets (Today, Last 7 days,
+  Last 30 days; Due: Before today, Today, Next 7 days, No due date; Started and Completed: Not yet)
+  and a From–To range; a preset applies at once. A field from `+ More` stays on the bar while it
+  holds something; `Clear` takes the bar back to the five.
+- **Raw.** `</>` (accent while on) turns the chips into the query they make, in a mono box at most
+  420px wide, with a `?` beside it for a cheat sheet: three short sections (Fields, Operators,
+  Examples) under mono-caps eyebrows, at most 520px wide, kept inside the window and scrolling
+  within itself when the window is short. As you type, a list under the box
+  offers what can come next at the caret — a field, its operators, its values, then `and` or `or`.
+  A muted note follows an offer only where the offer alone does not say it: a bucket's title, a
+  team's name, a priority's word, what `-7d` means. Tab takes the first offer, or the one moved to with the arrows; Enter runs
+  the query unless an offer was moved to. Nothing runs while typing. A mistake is underlined wavy
+  in `alert` where it is, and its sentence heads the list, unless the caret is in it, which is a
+  word still being typed. A query the server refuses keeps the board as it was. Nothing in the box
+  ever blocks: whenever it holds something not in use, `Discard` beside it puts the query in use
+  back. `</>` goes back to the chips at once when they can show the query, applying the box on the
+  way; a box that cannot be applied says "Not applied. Discard it to go back to the chips.", and
+  Discard then goes back; a query in use that the chips cannot show says so and offers `Clear
+  filter`.
+
+The views that are on are and-ed with the bar. Save as view (shown once the bar holds a filter) and
+the sidebar's + open a dialog with the name, the same two-way editor (chips wrapping, nothing run
+until Save) and the pins; right-clicking a view opens a menu (the card menu's panel) with Edit… and
+Delete…. Saving the bar's filter clears the bar and switches the new view on.
 
 `canvas.json` in the design directory holds the layout and the annotations; the annotations are
 design intent in prose and are worth reading once.
@@ -330,7 +371,8 @@ nothing else to look at.
 | Card changing column | travels there, whoever moved it — a drop, a bulk move, a teammate's change on the stream. Cards around it close up or make room. A card from nowhere or to nowhere fades |
 | Card held in a drag | a copy follows the pointer from the spot it was picked up by, lifted to 103% and off the surface on the product's only shadow (`0 10px 24px` at 50% black). It turns about that spot with the speed it is carried at, at most 6°, and swings back upright when the hand stops. A run of cards carries its count in an `accent` badge |
 | Card dropped | the copy travels straight from the hand onto the card's new place in 180ms, on `ease-out`, and the card shows under it; the cards around it make room. Called off — Escape, or let go outside a column — it settles back where it came from |
-| Card reaching the final state | it feeds the fire, once it has landed. The card kindles: a wash of `accent-tint` rises through it over 1s, and its border runs `accent` → `ok` → rest, while the column's count bumps. About 26 square embers leave it. They rise on buoyancy, drift on a turbulent draft, flicker, shrink, and cool along the palette — `accent-hover`, `accent`, `alert`, `faint` — over 0.6–1.4s. One carrier ember, white-hot (`bright`) with a 64px streak cooling behind it, rises off the card and sweeps to the campfire mark in the sidebar in 0.62s. On arrival the mark roars: the flame and core leap and settle, with an `accent` glow, and it throws a few embers of its own. Drawn on one canvas that exists only while an ember is alive. Only a card that was open work on the board a moment ago: a filter that brings finished work into view has finished nothing. A run finished together feeds it one card after another, six at most |
+| Card reaching the final state | it feeds the fire, once it has landed. The card kindles: a wash of `accent-tint` rises through it over 1s, and its border runs `accent` → `ok` → rest, while the column's count bumps. About 26 square embers leave it. They rise on buoyancy, drift on a turbulent draft, flicker, shrink, and cool along the palette — `accent-hover`, `accent`, `alert`, `faint` — over 0.6–1.4s. One carrier ember, white-hot (`bright`) with a 64px streak cooling behind it, rises off the card and sweeps to the campfire mark in the sidebar in 0.62s. On arrival the mark roars: the flame and core leap and settle, with an `accent` glow, and it throws a few embers of its own. Drawn on one canvas that exists only while an ember is alive. Only a card that was open work on the board a moment ago: a filter that brings finished work into view has finished nothing. A run finished together feeds it one card after another, six at most. A card finished while a filter it no longer matches is on screen still lands in Done and feeds the fire (see the next row) |
+| Card leaving the filter in view | it goes where it went, as any move does, and stays there: a card that stops matching the filter while on screen — moved, finished, relabelled, by you or anyone — glides to its new column (kindling, in Done) and, 1.4s on, settles to 50% opacity over 400ms, titled "No longer matches the filter". It stays through every refresh, following a later move, until the filter, a view or a toggle changes; a new filter shows only what matches it. Under reduced motion it is simply at 50% |
 | Progress bar | both parts grow from the left in proportion, over 700ms, when drawn |
 | Toast | rises into the stack; the ones above make room; it fades on the way out |
 | Button | gives by 1px while pressed |

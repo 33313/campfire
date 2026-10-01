@@ -9,13 +9,12 @@
   import { crossfade, fade } from "svelte/transition";
 
   import { api } from "../lib/api.js";
-  import { app } from "../lib/state.svelte.js";
-  import { route } from "../lib/router.svelte.js";
+  import { latest } from "../lib/latest.js";
+  import { app, viewsOn } from "../lib/state.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
   import { failure } from "../lib/ui.svelte.js";
   import { createItem } from "../lib/create.js";
-  import { filterFromView } from "../lib/options.js";
-  import { NAV } from "../lib/icons.js";
+    import { NAV } from "../lib/icons.js";
   import { ms, easeOut, QUICK, GLIDE } from "../lib/motion.js";
   import { kindle } from "../lib/embers.js";
   import { lift } from "../lib/ghost.js";
@@ -52,21 +51,24 @@
   // Items done for more than three days are hidden unless this is on
   // (SPEC.md §7.2); a long Done column is history, not work.
   let doneKey = $derived(`done:${teamId}:board`);
+  const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
   let allDone = $state(untrack(() => localStorage.getItem(doneKey) === "1"));
 
-  // Applying a saved view means applying the filter it stores. It is the same
-  // dimensions composed the same way, so the board takes it as an ordinary
-  // filter rather than gaining a second way to be filtered (SPEC.md §9.4).
-  let viewId = $derived(+route.search.get("view") || 0);
-  let filter = $state({});
-  let viewApplied = null;
+  // What the board shows: the filter bar's query and the header's search, as
+  // last accepted, and-ed with the views switched on in the sidebar, which go
+  // by id so the server applies what each one stores (SPEC.md §9.4). A query
+  // being tried is not applied until the server accepts it, so a refused one
+  // never rides along with the next request (SPEC.md §9.2).
+  let applied = $state({ csql: "", text: "" });
+  const ask = latest();
+  let drawn = ""; // what the board on screen was asked with
+  const asking = (filter) => JSON.stringify([filter, viewsOn().map((v) => [v.id, v.query]), showBuckets, allDone]);
 
+  // Anything that changes what to ask redraws: a view switched or edited, a
+  // toggle. Once, however it changed.
   $effect(() => {
-    if (viewApplied === viewId) return;
-    viewApplied = viewId;
-    const view = app.views.find((v) => v.id === viewId);
-    filter = view ? filterFromView(view) : {};
-    load();
+    const now = asking(applied);
+    untrack(() => { if (now !== drawn) load(); });
   });
 
   // A card that changes column travels there, whoever moved it: a drop, a bulk
@@ -89,11 +91,30 @@
       .flatMap((c) => (c.items || []).filter((i) => open.has(i.id)).map((i) => [i.id, c.state.id]));
   }
 
-  async function load() {
-    try {
+  /** Asks for the board with a filter, the applied one unless another is being
+      tried. Resolves to what became of it: { ok }, { error } for a query the
+      server refused, or { superseded } when a newer request took its place. */
+  async function load(filter = applied) {
+    const key = asking(filter);
+    const viewIds = viewsOn().map((v) => v.id);
+    const shown = board;
+    const res = await ask(async (signal) => {
       if (!team) [team, states] = await Promise.all([api.getTeam(teamId), api.listWorkStates(teamId)]);
+      const next = await api.getBoard(teamId, { ...filter, viewIds, tz: TZ }, showBuckets, allDone, 100, signal);
+      // The same filter asked again keeps what left it; a new one starts afresh.
+      return key === drawn && shown ? keep(shown, next) : next;
+    });
+    if (res.superseded) return res;
+    if (res.error) {
+      if (res.error.field === "query") return res; // the board stays as it was
+      error = res.error;
+      return { failed: true };
+    }
+    try {
       const before = board;
-      board = await api.getBoard(teamId, filter, showBuckets, allDone);
+      board = res.value;
+      applied = filter;
+      drawn = key;
       if (before) {
         const done = finished(before, board);
         if (done.length) {
@@ -109,9 +130,34 @@
     } catch (err) {
       error = err;
     }
+    return { ok: true };
   }
 
-  $effect(() => onNotify(load));
+  $effect(() => onNotify(refresh));
+
+  // A card that stops matching the filter while you look at it does not
+  // vanish: it goes where it went, as any move does — into Done, kindling —
+  // and stays there, faded, until the filter, a view or a toggle changes.
+  // The cards on screen that the new board left out are looked up; those
+  // still on this board are put in their column, by rank, marked kept.
+  // ponytail: ten looked up per refresh; past that, the rest vanish as they
+  // would have. A kept card is looked up again on each refresh, so it follows
+  // a later move too.
+  async function keep(shown, next) {
+    const there = new Set(next.columns.flatMap((c) => (c.items || []).map((i) => i.id)));
+    const gone = shown.columns.flatMap((c) => c.items || []).filter((i) => !there.has(i.id)).slice(0, 10);
+    if (!gone.length) return next;
+    const found = await Promise.all(gone.map((i) => api.getItem(i.id).catch(() => null)));
+    const columns = new Map(next.columns.map((c) => [c.state.id, c]));
+    for (const item of found) {
+      const col = item && item.teamId === teamId && columns.get(item.stateId);
+      if (!col) continue; // deleted, rejected, or back in the backlog: gone from the board itself
+      const items = (col.items ||= []);
+      const at = items.findIndex((i) => i.rank > item.rank);
+      items.splice(at < 0 ? items.length : at, 0, { ...item, kept: true });
+    }
+    return next;
+  }
 
   async function fetchFocus(id) {
     const [item, comments, history] = await Promise.all([
@@ -126,16 +172,25 @@
     try { focused = await fetchFocus(item.id); } catch (err) { failure(err); }
   }
 
-  function setFilter(next) { filter = next; load(); }
+  // A change of yours in flight is not cancelled by a refresh from the
+  // stream: the refresh waits for it and runs after. Your own next change
+  // does cancel it, since the newest of yours wins.
+  let trying = 0;
+  let again = false;
+  async function apply(filter) {
+    trying++;
+    try { return await load(filter); } finally {
+      if (!--trying && again) { again = false; load(); }
+    }
+  }
+  const refresh = () => (trying ? (again = true) : load());
   function setShowBuckets(on) {
     showBuckets = on;
     localStorage.setItem(key, on ? "1" : "0");
-    load();
   }
   function setAllDone(on) {
     allDone = on;
     localStorage.setItem(doneKey, on ? "1" : "0");
-    load();
   }
   // The previewed card is the anchor of a selection that starts from it: a
   // modifier-click on a second card takes it along. Without that, the card you
@@ -147,7 +202,7 @@
     if (i < 0) selected.push(id); else selected.splice(i, 1);
   }
 
-  const create = () => createItem({ team, states, reload: load });
+  const create = () => createItem({ team, states, reload: () => load() });
 
   // Right-clicking a card outside the selection makes that card the selection:
   // a menu that names one ticket and edits five others is a trap.
@@ -276,13 +331,13 @@
 </script>
 
 {#if error}
-  <ErrorPanel {error} retry={load} />
+  <ErrorPanel {error} retry={() => load()} />
 {:else if board}
   <ScreenHeader title="Board"
                 sub="{board.team.shortCode} · {board.columns.length} of {states.length} states">
     {#snippet right()}
-      <SearchBox value={filter.text || ""} {teamId}
-                 onsearch={(t) => setFilter({ ...filter, text: t })} />
+      <SearchBox value={applied.text} {teamId}
+                 onsearch={(t) => apply({ ...applied, text: t })} />
       <button class="btn primary" onclick={create}>
         <Icon body={NAV.plus} size={13} />
         <span>Create</span>
@@ -294,7 +349,7 @@
        its own, so starting a selection moves nothing on the screen. -->
   <div class="toolbar">
     <div inert={selected.length > 0}>
-      <FilterBar {teamId} {filter} {setFilter} {showBuckets} {setShowBuckets} {allDone} {setAllDone} />
+      <FilterBar {teamId} {applied} {apply} {showBuckets} {setShowBuckets} {allDone} {setAllDone} />
     </div>
     {#if selected.length}
       <SelectionBar ids={selected} {states}
@@ -321,7 +376,8 @@
                 {#each col.items || [] as item (item.id)}
                   <!-- A card that has just been carried somewhere does not also
                        travel there: the copy in the hand already did. -->
-                  <div class="card-slot" class:landing={landing.includes(item.id)}
+                  <div class="card-slot" class:landing={landing.includes(item.id)} class:kept={item.kept}
+                       title={item.kept ? "No longer matches the filter; it goes when the filter changes" : null}
                        in:receive={{ key: landing.includes(item.id) ? -item.id : item.id,
                                      instant: landing.includes(item.id) }}
                        out:send={{ key: item.id }}
@@ -345,7 +401,7 @@
       {#if focused}
         <ItemPreview item={focused.item} comments={focused.comments} history={focused.history}
                      rendering={team.iconRendering} onclose={() => (focused = null)}
-                     onchange={load} />
+                     onchange={() => load()} />
       {/if}
     </div>
   </div>

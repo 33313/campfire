@@ -4,7 +4,8 @@
 // needs through the ordinary API and is correct if the stream never connects
 // (SPEC.md §12.4); a notification only causes a refetch.
 
-import { refreshBacklogCount } from "./state.svelte.js";
+import { refreshBacklogCount, reloadViews } from "./state.svelte.js";
+import { notice, staleAll } from "./catalog.svelte.js";
 
 // `beat` counts the changes that have arrived, so the sidebar's fire can flare
 // on each one.
@@ -15,6 +16,7 @@ let cursor = 0;
 let attempt = 0;
 let pending = null;
 let listener = null;
+let views = false; // a saved view changed: the sidebar shows them, so they are refetched
 
 /** The screen on screen registers its refetch here; the last one wins. */
 export function onNotify(fn) {
@@ -34,11 +36,13 @@ export function openStream() {
     try { n = JSON.parse(e.data); } catch { return; }
     // A cursor past retention gets an explicit instruction, never a silent
     // partial replay (SPEC.md §12.2).
-    if (n.reset) { stream.status = "stale"; source.close(); return; }
+    if (n.reset) { stream.status = "stale"; source.close(); staleAll(); return; }
     if (n.seq) cursor = n.seq;
     // Unrecognised kinds are ignored, so adding one is not a breaking change
     // (SPEC.md §12.4). "hello" is the opening frame and needs no refetch.
     if (n.kind === "hello") return;
+    notice(n.kind);
+    if (n.kind?.startsWith("saved_view.")) views = true;
     stream.beat++;
     scheduleRefresh();
   };
@@ -61,5 +65,6 @@ function scheduleRefresh() {
     pending = null;
     listener?.();
     refreshBacklogCount();
+    if (views) { views = false; reloadViews().catch(() => {}); }
   }, 300 + Math.random() * 400);
 }

@@ -28,7 +28,7 @@ func validateUsername(name string) error {
 			return invalidField("username", "a username may not contain spaces, slashes or colons")
 		}
 	}
-	return nil
+	return notReserved("username", name)
 }
 
 // CreateUser is the instance administrator's direct route. The password is

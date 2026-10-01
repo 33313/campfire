@@ -7,16 +7,9 @@ import (
 )
 
 func (s *Server) listItems(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	// A saved view is applied by naming it in view, and-ed like the rest
+	// (SPEC.md §9.4).
 	f := filterFrom(r)
-	// A saved view is applied by naming it; it resolves to the same filter
-	// dimensions, because that is all a saved view is (SPEC.md §9.4).
-	if id := queryInt(r, "view"); id != 0 {
-		vf, err := s.svc.SavedViewFilter(r.Context(), a, id)
-		if err != nil {
-			return nil, err
-		}
-		f = vf
-	}
 	return s.svc.ListItems(r.Context(), a, f, r.URL.Query().Get("cursor"), int(queryInt(r, "limit")))
 }
 

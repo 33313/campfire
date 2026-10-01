@@ -2,15 +2,15 @@ package core
 
 import (
 	"context"
-	"strconv"
 	"strings"
+	"time"
 
+	"github.com/campfire/campfire/internal/csql"
 	"github.com/campfire/campfire/internal/store"
 )
 
-// A saved view is a name attached to a filter the application can already
-// express (SPEC.md §9.4). It introduces no query language, no new filter
-// dimension and no new permission concept.
+// A saved view is a name attached to a CSQL query (SPEC.md §9.4). It
+// introduces no new filter dimension and no new permission concept.
 //
 // Ownership is one team, set at creation. Creating, editing and deleting are
 // ordinary edit permission — any member or administrator of the owning team —
@@ -19,40 +19,25 @@ import (
 // may read and apply any view: reading is instance-wide.
 
 type ViewInput struct {
-	TeamID     int64          `json:"teamId"`
-	Name       string         `json:"name"`
-	PinBoard   bool           `json:"pinBoard"`
-	PinBacklog bool           `json:"pinBacklog"`
-	Clauses    []store.Clause `json:"clauses"`
+	TeamID     int64  `json:"teamId"`
+	Name       string `json:"name"`
+	PinBoard   bool   `json:"pinBoard"`
+	PinBacklog bool   `json:"pinBacklog"`
+	Query      string `json:"query"`
 }
 
-func validateClauses(clauses []store.Clause) error {
-	for _, c := range clauses {
-		if !store.ValidDimension(c.Dimension) {
-			return invalidField("clauses", "%q is not a filter dimension", c.Dimension)
-		}
-		switch c.Dimension {
-		case store.DimText:
-			if strings.TrimSpace(c.Text) == "" {
-				return invalidField("clauses", "a text clause needs some text")
-			}
-		case store.DimPriority:
-			if c.RefID < 1 || c.RefID > 4 {
-				return invalidField("clauses", "priority is P1 to P4")
-			}
-		case store.DimAssignee:
-			// Zero is a real value of this dimension — unassigned — and is the
-			// one the filter bar's "Unassigned" chip saves.
-			if c.RefID < 0 {
-				return invalidField("clauses", "an assignee clause needs something to point at")
-			}
-		default:
-			if c.RefID == 0 {
-				return invalidField("clauses", "a %s clause needs something to point at", c.Dimension)
-			}
-		}
+// viewQuery is a view's query as stored: canonical, its referents by #id, and
+// those referents; and as the log records it, written as it was typed.
+func (s *Service) viewQuery(ctx context.Context, a Actor, q string) (canonical, typed string, refs []store.Ref, err error) {
+	n, err := s.parseQuery(ctx, a, q, time.UTC) // days stay relative when stored
+	if err != nil {
+		return "", "", nil, err
 	}
-	return nil
+	for _, r := range csql.Refs(n) {
+		refs = append(refs, store.Ref{Field: r.Field, ID: r.ID})
+	}
+	typed = csql.Format(n, nil)
+	return csql.Canonical(n), typed, refs, nil
 }
 
 func (s *Service) CreateSavedView(ctx context.Context, a Actor, in ViewInput) (*store.SavedView, error) {
@@ -60,27 +45,29 @@ func (s *Service) CreateSavedView(ctx context.Context, a Actor, in ViewInput) (*
 	if name == "" {
 		return nil, invalidField("name", "a saved view needs a name")
 	}
-	if err := validateClauses(in.Clauses); err != nil {
+	query, _, refs, err := s.viewQuery(ctx, a, in.Query)
+	if err != nil {
 		return nil, err
 	}
 	var out *store.SavedView
-	err := s.write(ctx, a, func(t *wtx) error {
+	err = s.write(ctx, a, func(t *wtx) error {
 		if err := s.requireTeamMember(ctx, t.Tx, a, in.TeamID); err != nil {
 			return err
 		}
 		id, err := store.CreateSavedView(ctx, t.Tx, store.SavedView{
 			TeamID: in.TeamID, Name: name, PinBoard: in.PinBoard, PinBacklog: in.PinBacklog,
-			CreatedAt: t.now, UpdatedAt: t.now})
+			Query: query, CreatedAt: t.now, UpdatedAt: t.now})
 		if err != nil {
 			return err
 		}
-		if err := store.ReplaceClauses(ctx, t.Tx, id, in.Clauses); err != nil {
+		if err := store.ReplaceRefs(ctx, t.Tx, id, refs); err != nil {
 			return err
 		}
 		v, err := store.SavedViewByID(ctx, t.Tx, id)
 		if err != nil {
 			return err
 		}
+		humanize(&v)
 		out = &v
 		return t.log(ctx, store.Event{Kind: store.EvViewCreated, Entity: "saved_view",
 			EntityID: id, TeamID: in.TeamID, NewValue: name})
@@ -89,17 +76,18 @@ func (s *Service) CreateSavedView(ctx context.Context, a Actor, in ViewInput) (*
 }
 
 // UpdateSavedView rewrites a view. Every mutation writes an event: creation,
-// rename, clause change, pinning and deletion (SPEC.md §9.4).
+// rename, query change, pinning and deletion (SPEC.md §9.4).
 func (s *Service) UpdateSavedView(ctx context.Context, a Actor, id int64, in ViewInput) (*store.SavedView, error) {
 	name := strings.TrimSpace(in.Name)
 	if name == "" {
 		return nil, invalidField("name", "a saved view needs a name")
 	}
-	if err := validateClauses(in.Clauses); err != nil {
+	query, typed, refs, err := s.viewQuery(ctx, a, in.Query)
+	if err != nil {
 		return nil, err
 	}
 	var out *store.SavedView
-	err := s.write(ctx, a, func(t *wtx) error {
+	err = s.write(ctx, a, func(t *wtx) error {
 		v, err := store.SavedViewByID(ctx, t.Tx, id)
 		if err != nil {
 			return err
@@ -108,11 +96,11 @@ func (s *Service) UpdateSavedView(ctx context.Context, a Actor, id int64, in Vie
 			return err
 		}
 		before := v
-		v.Name, v.PinBoard, v.PinBacklog, v.UpdatedAt = name, in.PinBoard, in.PinBacklog, t.now
+		v.Name, v.PinBoard, v.PinBacklog, v.Query, v.UpdatedAt = name, in.PinBoard, in.PinBacklog, query, t.now
 		if err := store.UpdateSavedView(ctx, t.Tx, v); err != nil {
 			return err
 		}
-		if err := store.ReplaceClauses(ctx, t.Tx, id, in.Clauses); err != nil {
+		if err := store.ReplaceRefs(ctx, t.Tx, id, refs); err != nil {
 			return err
 		}
 		if before.Name != name {
@@ -129,15 +117,20 @@ func (s *Service) UpdateSavedView(ctx context.Context, a Actor, id int64, in Vie
 				return err
 			}
 		}
-		if err := t.log(ctx, store.Event{Kind: store.EvViewUpdated, Entity: "saved_view",
-			EntityID: id, TeamID: v.TeamID, Field: "clauses",
-			NewValue: strconv.Itoa(len(in.Clauses))}); err != nil {
-			return err
+		if before.Query != query {
+			old := before
+			humanize(&old)
+			if err := t.log(ctx, store.Event{Kind: store.EvViewUpdated, Entity: "saved_view",
+				EntityID: id, TeamID: v.TeamID, Field: "query",
+				OldValue: old.Query, NewValue: typed}); err != nil {
+				return err
+			}
 		}
 		updated, err := store.SavedViewByID(ctx, t.Tx, id)
 		if err != nil {
 			return err
 		}
+		humanize(&updated)
 		out = &updated
 		return nil
 	})
@@ -178,10 +171,14 @@ func (s *Service) ListSavedViews(ctx context.Context, a Actor, teamID int64) ([]
 		return nil, err
 	}
 	v, err := store.ListSavedViews(ctx, s.DB.R, teamID)
+	for i := range v {
+		humanize(&v[i])
+	}
 	return list(v, mapErr(err))
 }
 
-// SavedViewFilter turns a stored view into the filter the list endpoints take.
+// SavedViewFilter is the filter a stored view applies: its query, which
+// reads `me` as whoever applies it.
 //
 // A view owned by SOL may filter on TERRA's tickets: the owning team governs
 // where the view is listed, not what it may match (SPEC.md §9.4).
@@ -189,14 +186,8 @@ func (s *Service) SavedViewFilter(ctx context.Context, a Actor, id int64) (Filte
 	if err := requireUser(a); err != nil {
 		return Filter{}, err
 	}
-	v, err := store.SavedViewByID(ctx, s.DB.R, id)
-	if err != nil {
+	if _, err := store.SavedViewByID(ctx, s.DB.R, id); err != nil {
 		return Filter{}, mapErr(err)
 	}
-	sf := v.AsFilter()
-	return Filter{
-		StateIDs: sf.StateIDs, LabelIDs: sf.LabelIDs, AssigneeIDs: sf.AssigneeIDs,
-		ReporterIDs: sf.ReporterIDs, BucketIDs: sf.BucketIDs, Priorities: sf.Priorities,
-		TeamIDs: sf.TeamIDs, Text: sf.Text,
-	}, nil
+	return Filter{ViewIDs: []int64{id}}, nil
 }

@@ -5,8 +5,12 @@
   /** The frame every dialog wears. `close` dismisses it with a value. */
   let { title, close, destructive = false, wide = false, body, footer = null } = $props();
 
+  let panel;
+
+  // Only the dialog on top answers Escape: a picker opened from a dialog
+  // closes alone, leaving the one beneath it up.
   function onKey(e) {
-    if (e.key === "Escape") close(undefined);
+    if (e.key === "Escape" && panel === [...document.querySelectorAll(".dialog")].at(-1)) close(undefined);
   }
 
   // The first control in a dialog takes the focus, so it can be typed into or
@@ -19,7 +23,7 @@
 <svelte:window on:keydown={onKey} />
 
 <div class="scrim" role="presentation" onclick={(e) => e.target === e.currentTarget && close(undefined)}>
-  <div class="dialog" class:destructive class:wide use:focusFirst role="dialog" aria-modal="true">
+  <div class="dialog" bind:this={panel} class:destructive class:wide use:focusFirst role="dialog" aria-modal="true">
     <div class="dialog-title">
       {title}
       <button class="btn quiet small" style="margin-left:auto" aria-label="Close"

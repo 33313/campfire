@@ -4,13 +4,13 @@
   import { untrack } from "svelte";
 
   import { api } from "../lib/api.js";
-  import { app } from "../lib/state.svelte.js";
-  import { route, navigate } from "../lib/router.svelte.js";
+  import { latest } from "../lib/latest.js";
+  import { app, viewsOn } from "../lib/state.svelte.js";
+  import { navigate } from "../lib/router.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
   import { failure } from "../lib/ui.svelte.js";
   import { createItem } from "../lib/create.js";
-  import { filterFromView } from "../lib/options.js";
-  import { whenDay } from "../lib/format.js";
+    import { whenDay } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
 
   import Icon from "../components/Icon.svelte";
@@ -41,32 +41,49 @@
   let key = $derived(`buckets:${teamId}:backlog`);
   let showBuckets = $state(untrack(() => localStorage.getItem(key) === "1"));
 
-  let viewId = $derived(+route.search.get("view") || 0);
-  let filter = $state({});
-  let viewApplied = null;
+  // What the backlog shows: the filter bar's query and the header's search, as
+  // last accepted, and-ed with the views switched on in the sidebar (SPEC.md
+  // §9.4). A query being tried is not applied until the server accepts it, so
+  // a refused one never rides along with the next request (SPEC.md §9.2).
+  let applied = $state({ csql: "", text: "" });
+  const ask = latest();
+  const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  let drawn = "";
+  const asking = (filter) => JSON.stringify([filter, viewsOn().map((v) => [v.id, v.query]), showBuckets]);
+  // The filter as the API takes it, for the column and for "load older".
+  const asked = (filter) => ({ ...filter, viewIds: viewsOn().map((v) => v.id), tz: TZ });
 
   $effect(() => {
-    if (viewApplied === viewId) return;
-    viewApplied = viewId;
-    const view = app.views.find((v) => v.id === viewId);
-    filter = view ? filterFromView(view) : {};
-    load();
+    const now = asking(applied);
+    untrack(() => { if (now !== drawn) load(); });
   });
 
-  async function load() {
-    try {
+  /** Asks with a filter, the applied one unless another is being tried.
+      Resolves to what became of it: { ok }, { error } for a query the server
+      refused, or { superseded } when a newer request took its place. */
+  async function load(filter = applied) {
+    const key = asking(filter);
+    const res = await ask(async (signal) => {
       if (!team) [team, states] = await Promise.all([api.getTeam(teamId), api.listWorkStates(teamId)]);
-      column = await api.getBacklog(teamId, filter, showBuckets);
-      if (focused) focused = await fetchFocus(focused.item.id).catch(() => null);
-      paged = false;
-      stale = false;
-      error = null;
-    } catch (err) {
-      error = err;
+      return api.getBacklog(teamId, asked(filter), showBuckets, 100, signal);
+    });
+    if (res.superseded) return res;
+    if (res.error) {
+      if (res.error.field === "query") return res; // the backlog stays as it was
+      error = res.error;
+      return { failed: true };
     }
+    column = res.value;
+    applied = filter;
+    drawn = key;
+    paged = false;
+    stale = false;
+    error = null;
+    if (focused) focused = await fetchFocus(focused.item.id).catch(() => null);
+    return { ok: true };
   }
 
-  $effect(() => onNotify(() => (paged ? (stale = true) : load())));
+  $effect(() => onNotify(() => (paged ? (stale = true) : refresh())));
 
   async function fetchFocus(id) {
     const [item, comments, history] = await Promise.all([
@@ -80,11 +97,21 @@
     try { focused = await fetchFocus(item.id); } catch (err) { failure(err); }
   }
 
-  function setFilter(next) { filter = next; load(); }
+  // A change of yours in flight is not cancelled by a refresh from the
+  // stream: the refresh waits for it and runs after. Your own next change
+  // does cancel it, since the newest of yours wins.
+  let trying = 0;
+  let again = false;
+  async function apply(filter) {
+    trying++;
+    try { return await load(filter); } finally {
+      if (!--trying && again) { again = false; load(); }
+    }
+  }
+  const refresh = () => (trying ? (again = true) : load());
   function setShowBuckets(on) {
     showBuckets = on;
     localStorage.setItem(key, on ? "1" : "0");
-    load();
   }
   function toggle(id) {
     const i = selected.indexOf(id);
@@ -103,7 +130,7 @@
   // The backlog's "load older" is the ordinary filtered list continued from
   // the column's cursor (SPEC.md §13.2 rule 9).
   async function loadOlder() {
-    const f = { ...filter, teamIds: [teamId], stateIds: [column.state.id] };
+    const f = { ...asked(applied), teamIds: [teamId], stateIds: [column.state.id] };
     if (!showBuckets) f.kinds = ["ticket"];
     try {
       const page = await api.listItems(f, column.cursor);
@@ -113,16 +140,16 @@
     } catch (err) { failure(err); }
   }
 
-  const create = () => createItem({ team, states, reload: load });
+  const create = () => createItem({ team, states, reload: () => load() });
 </script>
 
 {#if error}
-  <ErrorPanel {error} retry={load} />
+  <ErrorPanel {error} retry={() => load()} />
 {:else if column}
   <ScreenHeader title="Backlog" sub="{team.shortCode} · {column.count} items">
     {#snippet right()}
-      <SearchBox value={filter.text || ""} {teamId}
-                 onsearch={(t) => setFilter({ ...filter, text: t })} />
+      <SearchBox value={applied.text} {teamId}
+                 onsearch={(t) => apply({ ...applied, text: t })} />
       <button class="btn primary" onclick={create}>
         <Icon body={NAV.plus} size={13} />
         <span>Create</span>
@@ -134,7 +161,7 @@
        its own, so starting a selection moves nothing on the screen. -->
   <div class="toolbar">
     <div inert={selected.length > 0}>
-      <FilterBar {teamId} {filter} {setFilter} {showBuckets} {setShowBuckets} />
+      <FilterBar {teamId} {applied} {apply} {showBuckets} {setShowBuckets} />
     </div>
     {#if selected.length}
       <SelectionBar ids={selected} {states}
@@ -147,7 +174,7 @@
     <div class="backlog-layout">
       <div class="grow">
         {#if stale}
-          <LoadOlder label="New activity — refresh" onclick={load} />
+          <LoadOlder label="New activity — refresh" onclick={() => load()} />
         {/if}
         <table class="table">
           <thead>
@@ -215,7 +242,7 @@
       {#if focused}
         <ItemPreview item={focused.item} comments={focused.comments} history={focused.history}
                      rendering={team.iconRendering} onclose={() => (focused = null)}
-                     onchange={load} />
+                     onchange={() => load()} />
       {/if}
     </div>
   </div>

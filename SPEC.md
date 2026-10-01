@@ -55,7 +55,8 @@ Two principles govern every decision in this document:
 | **Relation** | A directed link between two items, e.g. *blocks*. |
 | **Event** | One entry in the audit log, recording a single change and who made it. |
 | **Rank** | An item's manual position within a board column. |
-| **Saved view** | A named, stored filter over the structured filter dimensions, owned by one team. |
+| **CSQL** | The Campfire Simple Query Language: the one way a filter is written ([§9.2](#92-filtering)). |
+| **Saved view** | A named, stored CSQL query, owned by one team. |
 | **Local instance** | The application running against storage on the same machine. |
 | **Remote instance** | An instance reached over a network. |
 | **Agent** | A program acting on one user's behalf, holding exactly that user's permissions. |
@@ -69,7 +70,7 @@ Two principles govern every decision in this document:
 
 Accounts and authentication; teams and permissions; tickets and buckets; per-team work states;
 labels; relations; comments; cloning and splitting a ticket; bulk moves and bulk edits; manual
-ordering; structured filtering; saved views; an audit log; live board updates; an agent interface
+ordering; filtering in CSQL; saved views; an audit log; live board updates; an agent interface
 over the Model Context Protocol; backup and restore.
 
 ### 3.2 Out of scope, permanently
@@ -81,7 +82,6 @@ These WILL NOT be built. Each is listed with what the application does instead.
 | Move a ticket between teams | Keep every ticket in the team that created it. Identifiers are permanent and a moved ticket would break its own permalink. |
 | Nest a bucket inside another bucket | Support one level of grouping. Cross-team milestones are handled by [§6.4](#64-bucket-membership). |
 | Classify a ticket by type | Let the bucket, the title and the description say what the work is ([Appendix B](#appendix-b--rejected-alternatives)). A bucket carries an icon; a ticket carries nothing of the kind. |
-| Provide a query language | Provide structured filters ([§9.2](#92-filtering)). |
 | Offer per-ticket or per-team privacy | Let every authenticated user read every item and comment in the instance. Permissions govern writing, not reading. |
 | Support offline editing and later synchronisation | Run against a local instance or a remote instance ([§13.1](#131-delivery)). An export, if offered, is a one-way copy and never a merge. |
 | Ship a native, desktop, or mobile client | Serve a web client from the server ([§13.1](#131-delivery)). The API contract ([§11](#11-api-contract)) is published so that others can build one. |
@@ -113,7 +113,7 @@ Eight.
 | **WorkState** | A board column with an optional lifecycle role. |
 | **Label** | A free-text tag. |
 | **Relation** | A directed link between two items. |
-| **SavedView** | A named, stored filter belonging to one team. |
+| **SavedView** | A named, stored CSQL query belonging to one team. |
 | **Event** | One audit log entry. |
 
 A `Board` entity WILL NOT exist. A team has one board, and everything configurable about it is its
@@ -124,9 +124,9 @@ A `Bucket` entity WILL NOT exist. A bucket is an `Item` with `kind = 'bucket'`
 
 A `SavedView` entity does exist, because a saved view has its own name, owner and lifecycle and
 nothing to be an attribute of: a team would have to carry a list of filters, and
-[§13.2](#132-implementation-rules) rule 7 keeps relational structures relational. Its clauses are
-rows belonging to a saved view, in the same way comments are rows belonging to an item, and are no
-more an entity than comments are ([§9.4](#94-saved-views)).
+[§13.2](#132-implementation-rules) rule 7 keeps relational structures relational. What its query
+names by id is rows belonging to the saved view, in the same way comments are rows belonging to an
+item, and is no more an entity than comments are ([§9.4](#94-saved-views)).
 
 ---
 
@@ -422,8 +422,69 @@ show a team the buckets it created and hide the release it is working toward.
 
 ### 9.2 Filtering
 
-Structured filters only, composable across: work state, label, assignee, reporter, bucket, priority,
-team, and free text over title and description.
+Every filter is a **CSQL** query: the Campfire Simple Query Language. CSQL is the one way a filter
+is expressed, by the filter bar, by a saved view ([§9.4](#94-saved-views)) and by an agent
+([§14](#14-agent-interface-mcp)). The client offers two editors over it, and neither is a second
+filter model: **chips**, which build the common query without typing, and **raw** mode, which
+edits the text. Layout belongs to the design document.
+
+```
+assignee in (marta, me) and (bucket = SOL-6 or label = roses) and not priority = 4
+```
+
+**Fields.**
+
+| Field | Values | Operators |
+|---|---|---|
+| `assignee`, `reporter` | A username; `me`, whoever is reading; `none` (assignee only). | `=` `!=` `in` `not in` |
+| `label` | A label's name; `none`, carrying no label. | `=` `!=` `in` `not in` |
+| `bucket` | An identifier such as `SOL-6`, or a bucket's title in quotes while one bucket has it; `none`. | `=` `!=` `in` `not in` |
+| `priority` | `1` to `4`, or `P1` to `P4`. | `=` `!=` `in` `not in` `<` `<=` `>` `>=` |
+| `state` | A work state's name, matched in every team. | `=` `!=` `in` `not in` |
+| `team` | A short code or a team's name. | `=` `!=` `in` `not in` |
+| `created`, `started`, `completed` | A day: `2026-09-01`, `today`, or relative to today, `-7d`, `+2w`; `none` (started, completed). | `=` `!=` `<` `<=` `>` `>=` |
+| `due` | A day, as above; `none`. | `=` `!=` `<` `<=` `>` `>=` |
+| `text` | A phrase, searched in title and description. | `~` (contains) `!~` |
+
+**Composition.** Conditions are joined by `and`, `or` and `not`, with parentheses; `and` binds
+tighter than `or`. `in (a, b)` is any of them. `!=` is exactly `not =`: `assignee != marta`
+includes the unassigned. Several `label = …` conditions and-ed mean every one of those labels.
+Keywords and field names are case-insensitive. Any value may be quoted, and `#12` names a label,
+user, bucket, team or state by its id.
+
+**Days.** A date field compares whole days in the reader's time zone, which every request
+carries; an agent that sends none reads in UTC. `created >= -7d` is the last seven days and today;
+`completed = today` is today. A relative day stays relative when saved.
+
+| Decision | Rule | Why |
+|---|---|---|
+| One language | Chips, raw text, saved views and agents all speak CSQL. | Small surface: a chip is a way to write a query, not a second way to filter. |
+| Who parses | The client parses for suggestions and syntax errors; the server parses again and is the authority. | Typing costs no requests and errors show at once; the server still refuses anything it cannot run. |
+| Names | Resolved by the server when a query is applied. A name that names nothing is refused, with the span it was at. | A typo that matched nothing in silence would read as an empty board. |
+| What it compiles to | Conditions on the item's own columns and its labels. | No new filter dimension: CSQL writes the dimensions down; it is not a second data model. |
+| Not in CSQL | Ordering, functions, and conditions across relations. | Board order is manual ([§9.3](#93-ordering)); the rest waits for a need. |
+
+Requirements:
+
+- **CSQL's own words are no one's name.** `and`, `or`, `not`, `in`, `none`, `me` and `today`, in any
+  case, MUST NOT be accepted as a username, a label, a team's short code or name, or a work state's
+  name: `assignee = none` must never be able to mean a user called none.
+- **The client and server parsers MUST agree.** One corpus of queries, with the output or the
+  error each must give, is run by both test suites; a syntax error's message and span MUST be
+  identical in both.
+- **A query is applied whole or not at all.** A query the server refuses MUST leave the screen on
+  the last query it accepted, and MUST NOT be resent with later requests: switching a view on
+  while a refused draft is in the box changes the board.
+- **Typing MUST cost no requests**, and each applied change — a chip closed, a raw query entered, a
+  view switched — exactly one. A request superseded by a newer one MUST be cancelled, and a late
+  response MUST NOT replace a newer one.
+- The values offered as suggestions — users, labels, buckets, work states, teams — are cached in
+  the client and marked stale by the event kinds that can change them ([§12](#12-live-updates)).
+  A stale list is refetched when it is next needed, not when the event arrives. A "too far
+  behind" reset ([§12.2](#122-resume)) marks every list stale, and so does a query the server
+  refuses for naming something the client offered. The cache MUST only ever shape suggestions and
+  labels: the server resolves every name, so a stale cache can omit a suggestion but cannot change
+  a result.
 
 A filter may be named and saved ([§9.4](#94-saved-views)).
 
@@ -442,10 +503,12 @@ Requirements:
 
 ### 9.4 Saved views
 
-A **saved view** is a name attached to a filter the application can already express: the same
-dimensions as [§9.2](#92-filtering), composed the same way. It introduces no query language, no new
-filter dimension, and no new permission concept. A team switches to *Assigned to marta* or *Label:
-api* during a meeting in one click.
+A **saved view** is a name attached to a CSQL query ([§9.2](#92-filtering)). It introduces no new
+filter dimension and no new permission concept. In the client a view is a switch: several can be on
+at once, and the views that are on are and-ed with each other and with the filter bar's query. A
+team switches to *Assigned to marta* or *Label: api* during a meeting in one click. A view that is
+on is applied by the server from what it stores, so it means the same to everyone who switches it
+on, `me` aside.
 
 | Decision | Rule | Why |
 |---|---|---|
@@ -455,7 +518,7 @@ api* during a meeting in one click.
 | Visibility | Every authenticated user may read and apply any saved view. | Reading is instance-wide ([§3.2](#32-out-of-scope-permanently)); a private view would be the first object in the application some authenticated users cannot see. |
 | Pinning | To the board, the backlog, both, or neither. | The board and the backlog are the same items split by state ([§7.2](#72-board-and-backlog)), and a triage filter is wanted on both. |
 | Ordering in the UI | Alphabetical by name, case-folded. | Manual rank exists for board columns ([§9.3](#93-ordering)), and a second ordering mechanism is not worth a drag target on a list of names. |
-| A deleted label, assignee, state, bucket or team | The clause is kept and matches nothing until someone edits it. The view names the missing reference wherever it is offered. | Dropping the clause would silently widen the view, and a wider result read as the same filter is worse than an empty one. |
+| A deleted label, assignee, state, bucket or team | The condition is kept, names it by `#id`, and matches nothing until someone edits it. The view names the missing reference wherever it is offered. | Dropping the condition would silently widen the view, and a wider result read as the same filter is worse than an empty one. |
 
 A view's owning team governs where it is listed, not what it may match: a view owned by SOL may
 filter on TERRA's tickets, because team is one of [§9.2](#92-filtering)'s dimensions like any other.
@@ -465,13 +528,13 @@ in the log.
 
 Requirements:
 
-- A saved view MUST be stored as the filter's own structured representation — one row per clause,
-  referencing the label, user, work state, bucket or team by identity — and MUST NOT be stored as a
-  serialised query string ([Appendix B](#appendix-b--rejected-alternatives)).
+- A saved view MUST store its query canonical: every label, user, bucket and team by `#id`, never
+  by name, so a rename changes nothing ([Appendix B](#appendix-b--rejected-alternatives)). Beside
+  it, one row per referent the query names by id.
 - Every mutation of a saved view MUST write an event ([§10](#10-audit-log)): creation, rename,
-  clause change, pinning and deletion.
-- A clause MUST NOT be removed by cascade when its referent is deleted, and a label referenced by a
-  clause MUST NOT be reaped by lazy cleanup ([§13.2](#132-implementation-rules) rule 6). A view that
+  query change, pinning and deletion.
+- A referent row MUST NOT be removed by cascade when its referent is deleted, and a label a view
+  names MUST NOT be reaped by lazy cleanup ([§13.2](#132-implementation-rules) rule 6). A view that
   quietly repairs itself is a view nobody can trust to still mean what it says.
 - Names are unique within a team, in an explicit normalised column
   ([§13.2](#132-implementation-rules) rule 4).
@@ -875,7 +938,10 @@ reopened without new information.
 | Live updates | Server-sent events | UDP | Browsers cannot use it, most networks pass little but TCP/443, and it guarantees neither ordering nor delivery. |
 | Sync | A single instance of record | Offline editing with later merge | Identifiers are minted atomically so that `SOL-42` is never issued twice; two disconnected clients would both mint it. Merging would also require the audit log to gain entries in its own past. |
 | Workflow | Free movement between states | A transition graph with guard rules | Enforcement is the most common source of friction in trackers of this kind, and the audit log already records who moved what. |
-| Saved views | A stored structured filter | A serialised query string | A string is a query language admitted by the back door ([§3.2](#32-out-of-scope-permanently)), cannot be validated against the filter dimensions, and hides whether the view still references anything that exists. |
+| Filtering | One language, CSQL, with chips and raw text as two editors over it | Chips alone, or raw text alone | Chips alone cannot say or, not, or "all of these labels"; raw text alone asks everyone to learn a syntax for the common case. Two editors over one query give both without a second filter model. |
+| Filtering | CSQL over the existing API | A GraphQL endpoint | GraphQL is a second API beside the one [§11](#11-api-contract) defines and every MCP tool maps to, and it brings no filter model of its own: its `where` input is the same tree CSQL already parses to. |
+| Suggestion values | A client cache, marked stale by events and refetched on next use | A server cache such as Redis, or a search engine | Redis and search engines are second processes beside the one binary ([§1](#1-purpose-and-audience)), and the lists are small enough to match in memory. Free text stays a scan of titles and descriptions until one is measured slow; SQLite's trigram FTS5 is the step after, as it keeps matching inside words. |
+| Saved views | A canonical query naming referents by `#id`, with a row per referent | A query stored as typed, by name | A name-based query breaks on a rename and hides whether it still references anything that exists; the id form and its rows keep both answerable. |
 | Saved views | One list per team, readable by everyone | Per-user private views | Reading is instance-wide, so a private view would be the first object some authenticated users cannot see, and a view nobody else can apply does not survive the meeting it was made for. |
 | Agent interface | The Model Context Protocol | A bespoke agent API | A bespoke API is the HTTP API under another name plus a client library that does not exist. Agents already speak MCP. |
 | Agent interface | MCP served by the one binary | A separate MCP process or binary | A second process needs a second copy of authorisation and configuration, a second thing to keep in step with the server version, and a second deployment story. It would also be a second writer against a single-writer database. |

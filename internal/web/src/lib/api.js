@@ -10,13 +10,15 @@ class ApiError extends Error {
     this.status = status;
     this.code = err.code || "internal";
     this.field = err.field;
+    this.span = err.span; // where in a query it went wrong
   }
 }
 export { ApiError };
 
-async function request(method, path, body) {
+async function request(method, path, body, signal) {
   const res = await fetch(path, {
     method,
+    signal, // a superseded request is cancelled, not left to land late
     headers: body === undefined ? {} : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
     credentials: "same-origin",
@@ -31,24 +33,26 @@ async function request(method, path, body) {
   return parsed;
 }
 
-const get = (p) => request("GET", p);
+const get = (p, signal) => request("GET", p, undefined, signal);
 const post = (p, b) => request("POST", p, b === undefined ? {} : b);
 const patch = (p, b) => request("PATCH", p, b);
 const put = (p, b) => request("PUT", p, b);
 const del = (p) => request("DELETE", p);
 
-/** Turns a filter object into the repeatable query parameters of §9.2. */
+/** Turns a filter object into the query parameters of §9.2: a CSQL query in
+    csql, the views switched on, and the structured dimensions. */
 export function filterQuery(filter = {}) {
   const q = new URLSearchParams();
   const many = { state: "stateIds", label: "labelIds", assignee: "assigneeIds",
     reporter: "reporterIds", bucket: "bucketIds", priority: "priorities",
-    team: "teamIds", kind: "kinds" };
+    team: "teamIds", kind: "kinds", view: "viewIds" };
   for (const [param, key] of Object.entries(many)) {
     for (const value of filter[key] || []) q.append(param, value);
   }
   if (filter.unassigned) q.set("unassigned", "1");
   if (filter.text) q.set("q", filter.text);
-  if (filter.viewId) q.set("view", filter.viewId);
+  if (filter.csql?.trim()) q.set("csql", filter.csql);
+  if (filter.tz) q.set("tz", filter.tz); // days in a query are the reader's (SPEC.md §9.2)
   return q;
 }
 
@@ -94,13 +98,13 @@ export const api = {
   deleteWorkState: (id) => del(`/api/states/${id}`),
 
   // Views over items
-  getBoard: (teamId, filter, buckets, allDone, limit = 100) => {
+  getBoard: (teamId, filter, buckets, allDone, limit = 100, signal) => {
     const q = withFlags(filter, buckets, limit);
     if (allDone) q.set("allDone", "1");
-    return get(`/api/teams/${teamId}/board?${q}`);
+    return get(`/api/teams/${teamId}/board?${q}`, signal);
   },
-  getBacklog: (teamId, filter, buckets, limit = 100) =>
-    get(`/api/teams/${teamId}/backlog?${withFlags(filter, buckets, limit)}`),
+  getBacklog: (teamId, filter, buckets, limit = 100, signal) =>
+    get(`/api/teams/${teamId}/backlog?${withFlags(filter, buckets, limit)}`, signal),
   listSavedViews: (teamId) => get(`/api/teams/${teamId}/views`),
   createSavedView: (body) => post("/api/views", body),
   updateSavedView: (id, body) => patch(`/api/views/${id}`, body),

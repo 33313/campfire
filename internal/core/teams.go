@@ -23,7 +23,7 @@ func validateShortCode(code string) error {
 	if last := code[len(code)-1]; last >= '0' && last <= '9' {
 		return invalidField("shortCode", "a short code may not end with a digit")
 	}
-	return nil
+	return notReserved("shortCode", code)
 }
 
 // CreateTeam gives the team the six work states of SPEC.md §7.1 and makes its
@@ -35,6 +35,9 @@ func (s *Service) CreateTeam(ctx context.Context, a Actor, name, shortCode strin
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, invalidField("name", "a team needs a name")
+	}
+	if err := notReserved("name", name); err != nil {
+		return nil, err
 	}
 	if err := validateShortCode(shortCode); err != nil {
 		return nil, err
@@ -101,6 +104,9 @@ func (s *Service) RenameTeam(ctx context.Context, a Actor, teamID int64, name st
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return invalidField("name", "a team needs a name")
+	}
+	if err := notReserved("name", name); err != nil {
+		return err
 	}
 	return s.write(ctx, a, func(t *wtx) error {
 		if err := s.requireTeamAdmin(ctx, t.Tx, a, teamID); err != nil {
@@ -240,6 +246,9 @@ func (s *Service) CreateWorkState(ctx context.Context, a Actor, teamID int64, na
 	if name == "" {
 		return nil, invalidField("name", "a work state needs a name")
 	}
+	if err := notReserved("name", name); err != nil {
+		return nil, err
+	}
 	if role != "" && !validRole(role) {
 		return nil, invalidField("role", "a role is default, accepted, rejected or final")
 	}
@@ -280,6 +289,11 @@ func (s *Service) CreateWorkState(ctx context.Context, a Actor, teamID int64, na
 func (s *Service) UpdateWorkState(ctx context.Context, a Actor, stateID int64, name, role string, position int64) error {
 	if role != "" && !validRole(role) {
 		return invalidField("role", "a role is default, accepted, rejected or final")
+	}
+	if strings.TrimSpace(name) != "" {
+		if err := notReserved("name", name); err != nil {
+			return err
+		}
 	}
 	return s.write(ctx, a, func(t *wtx) error {
 		st, err := store.WorkStateByID(ctx, t.Tx, stateID)

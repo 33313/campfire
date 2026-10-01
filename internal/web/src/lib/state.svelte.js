@@ -9,6 +9,7 @@ export const app = $state({
   allTeams: [],
   team: null,         // the team in context
   views: [],
+  viewsOn: [],        // ids of the views switched on, for this team
   labels: [],
   users: [],
   backlogCount: 0,
@@ -26,6 +27,7 @@ export async function reloadContext(teamId) {
     api.listSavedViews(app.team.id), api.listLabels(), api.listUsers(), refreshBacklogCount(),
   ]);
   app.views = views || [];
+  app.viewsOn = stored(app.team.id);
   app.labels = labels || [];
   app.users = users || [];
 }
@@ -39,6 +41,27 @@ export async function refreshBacklogCount() {
   const backlog = await api.getBacklog(id, {}, false, 1).catch(() => null);
   // A team switch while this was in flight has already counted the new team.
   if (app.team?.id === id) app.backlogCount = backlog ? backlog.count : 0;
+}
+
+export async function reloadViews() {
+  app.views = (await api.listSavedViews(app.team.id)) || [];
+}
+
+// Which views are on is a preference of this browser, per team, like the
+// board's toggles: it decides what is drawn, never what is true.
+function stored(teamId) {
+  try { return JSON.parse(localStorage.getItem(`views:${teamId}`)) || []; } catch { return []; }
+}
+
+/** The views switched on, in the sidebar's order. A deleted one drops out. */
+export function viewsOn() {
+  return app.views.filter((v) => app.viewsOn.includes(v.id));
+}
+
+/** Switches a view on or off; with no `on`, flips it. */
+export function toggleView(id, on = !app.viewsOn.includes(id)) {
+  app.viewsOn = on ? [...new Set([...app.viewsOn, id])] : app.viewsOn.filter((x) => x !== id);
+  try { localStorage.setItem(`views:${app.team.id}`, JSON.stringify(app.viewsOn)); } catch { /* private window */ }
 }
 
 export function userName(id) {
