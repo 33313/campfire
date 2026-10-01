@@ -293,9 +293,11 @@ sidebar, never in the bar.
 
 The filter bar edits one CSQL query (`SPEC.md` §9.2) two ways, and opens on the first.
 
-- **Chips.** `Filter` eyebrow, then Assignee, State, Label, Bucket and Priority, then `+ More`
-  (Reporter, Team, Created, Started, Completed, Due), `Clear` once anything is set, and the `</>`
-  mode switch. A chip opens a dropdown in place, the card menu's panel, with a search box once it
+The `</>` mode switch leads the bar, right after the `Filter` eyebrow, in both modes: it never moves,
+so switching back is where switching there was.
+
+- **Chips.** Assignee, State, Label, Bucket and Priority, then `+ More` (Reporter, Team, Created,
+  Started, Completed, Due) and `Clear` once anything is set. A chip opens a dropdown in place, the card menu's panel, with a search box once it
   lists more than seven values. Each value row leads with a mono box that a click cycles: `[ ]`
   not in the filter, `[+]` is (accent), `[−]` isn't (alert, the name struck through). A mono hint
   at the foot says so: `Click: [+] is · [−] isn't · Esc undoes`. The dropdown applies when it
@@ -304,8 +306,8 @@ The filter bar edits one CSQL query (`SPEC.md` §9.2) two ways, and opens on the
   Last 30 days; Due: Before today, Today, Next 7 days, No due date; Started and Completed: Not yet)
   and a From–To range; a preset applies at once. A field from `+ More` stays on the bar while it
   holds something; `Clear` takes the bar back to the five.
-- **Raw.** `</>` (accent while on) turns the chips into the query they make, in a mono box filling
-  the bar, with a `?` beside it for a cheat sheet: three short sections (Fields, Operators,
+- **Raw.** `</>` (accent while on) turns the chips into the query they make, in a mono box at most
+  420px wide, with a `?` beside it for a cheat sheet: three short sections (Fields, Operators,
   Examples) under mono-caps eyebrows, at most 520px wide, kept inside the window and scrolling
   within itself when the window is short. As you type, a list under the box
   offers what can come next at the caret — a field, its operators, its values, then `and` or `or`.
@@ -313,9 +315,12 @@ The filter bar edits one CSQL query (`SPEC.md` §9.2) two ways, and opens on the
   team's name, a priority's word, what `-7d` means. Tab takes the first offer, or the one moved to with the arrows; Enter runs
   the query unless an offer was moved to. Nothing runs while typing. A mistake is underlined wavy
   in `alert` where it is, and its sentence heads the list, unless the caret is in it, which is a
-  word still being typed. A query the server refuses keeps the board as it was. `</>` again goes
-  back to the chips when they can show the query; when they cannot, an `alert` line says "This
-  query uses CSQL the chips can't show." and the box stays.
+  word still being typed. A query the server refuses keeps the board as it was. Nothing in the box
+  ever blocks: whenever it holds something not in use, `Discard` beside it puts the query in use
+  back. `</>` goes back to the chips at once when they can show the query, applying the box on the
+  way; a box that cannot be applied says "Not applied. Discard it to go back to the chips.", and
+  Discard then goes back; a query in use that the chips cannot show says so and offers `Clear
+  filter`.
 
 The views that are on are and-ed with the bar. Save as view (shown once the bar holds a filter) and
 the sidebar's + open a dialog with the name, the same two-way editor (chips wrapping, nothing run

@@ -330,12 +330,20 @@ test("raw CSQL offers what comes next, says what is wrong, and never applies a r
   const query = bar.getByLabel("Query");
   await expect(query).toHaveValue("priority = 3");
 
-  // or, which the chips cannot say: applied on Enter, and the chips decline it.
+  // The box is short, and the mode switch leads the bar in both modes, so it
+  // is never across the screen from where you were.
+  expect((await query.boundingBox()).width).toBeLessThanOrEqual(420);
+  const toggle = bar.getByRole("button", { name: "</>" });
+  const leading = (await toggle.boundingBox()).x;
+
+  // or, which the chips cannot say: applied on Enter, and the chips decline it,
+  // offering to clear it rather than leaving you stuck.
   await query.fill("priority = 1 or label = plumbing");
   await query.press("Enter");
   await expect(cards).toHaveCount(1);
-  await bar.getByRole("button", { name: "</>" }).click();
-  await expect(bar.getByRole("alert")).toHaveText("This query uses CSQL the chips can't show.");
+  await toggle.click();
+  await expect(bar.getByRole("alert")).toHaveText("The chips can't show this query.");
+  await expect(bar.getByRole("button", { name: "Clear filter" })).toBeVisible();
   await expect(query).toBeVisible();
 
   // A syntax error is the browser's to say, at once and where it is.
@@ -348,6 +356,11 @@ test("raw CSQL offers what comes next, says what is wrong, and never applies a r
   await query.press("Enter");
   await expect(offers.locator(".query-error")).toHaveText(/no user is called "nobody-yet"/);
   await expect(cards).toHaveCount(1);
+  // Nothing has to be fixed: Discard puts back the query in use.
+  await bar.getByRole("button", { name: "Discard" }).click();
+  await expect(query).toHaveValue("priority = 1 or label = plumbing");
+  await expect(query).toHaveAttribute("aria-invalid", "false");
+  await expect(bar.getByRole("button", { name: "Discard" })).toHaveCount(0);
 
   // What can come next is offered: a field, its operators, its values.
   await query.fill("");
@@ -381,9 +394,10 @@ test("raw CSQL offers what comes next, says what is wrong, and never applies a r
   }
   await page.setViewportSize({ width: 1280, height: 720 });
 
-  // Back to the chips, which can show it.
-  await bar.getByRole("button", { name: "</>" }).click();
+  // Back to the chips, which can show it; the switch has not moved.
+  await toggle.click();
   await expect(bar.getByRole("button", { name: "Priority: P3", exact: true })).toBeVisible();
+  expect((await toggle.boundingBox()).x).toBe(leading);
   await bar.getByRole("button", { name: "Clear", exact: true }).click();
 });
 
@@ -420,7 +434,7 @@ test("filtering costs one request per change and none per keystroke", async ({ p
   await bar.getByRole("button", { name: "</>" }).click();
   const query = bar.getByLabel("Query");
   asked = [];
-  await query.pressSequentially("label in (plumbing, heating) and not priority = 4", { delay: 20 });
+  await query.pressSequentially("label in (plumbing, heating) and priority != 4", { delay: 20 });
   await page.waitForTimeout(600);
   expect(asked).toEqual([]);
 
@@ -443,11 +457,15 @@ test("filtering costs one request per change and none per keystroke", async ({ p
   expect(asked).toHaveLength(1);
   expect(asked[0]).not.toContain("nobody-yet");
 
-  // A chip: opening it and picking twice is one request, on close.
-  await bar.getByRole("button", { name: "</>" }).click(); // the refused draft is not the chips'
-  await query.fill("");
-  await query.press("Enter");
+  // Leaving the refused draft for the chips is never blocked: it is offered
+  // to Discard, which goes back to the chips with the filter in use.
   await bar.getByRole("button", { name: "</>" }).click();
+  await expect(bar.getByRole("alert")).toHaveText("Not applied. Discard it to go back to the chips.");
+  await bar.getByRole("button", { name: "Discard" }).click();
+  await expect(bar.getByRole("button", { name: /^Label: plumbing, heating/ })).toBeVisible();
+  await bar.getByRole("button", { name: "Clear", exact: true }).click();
+
+  // A chip: opening it and picking twice is one request, on close.
   await settle();
   asked = [];
   await bar.getByRole("button", { name: "Priority" }).click();

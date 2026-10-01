@@ -155,7 +155,7 @@
         {/if}
         <!-- A new view starts from no filter; its dialog picks one. -->
         <button class="btn quiet small" title="New view" aria-label="New view"
-                style="height:18px;padding:0 4px" onclick={() => saveNewView(teamId, {})}>
+                style="height:18px;padding:0 4px" onclick={() => saveNewView(teamId, "")}>
           <Icon body={NAV.plus} size={11} />
         </button>
       </div>

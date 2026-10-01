@@ -12,10 +12,14 @@
   // common query without typing, and raw text, for anything else. Both write
   // the one query; neither is a second filter.
   //
-  // `value` is the query as applied. `onapply(query)` applies another and
-  // resolves to what became of it: { ok }, { error } when the server refused
-  // it, or { superseded } when something newer was asked first. `draft` is
-  // what the editor holds now, for a dialog that saves it.
+  // Two queries are kept apart. `value` is the one in use: it changes only
+  // when the server accepts another. `draft` is the one in the box: it is
+  // yours, and nothing you type in it blocks anything. When the two differ,
+  // Discard puts the one in use back in the box.
+  //
+  // `onapply(query)` applies a query and resolves to what became of it:
+  // { ok }, { error } when the server refused it, or { superseded } when
+  // something newer was asked first. A dialog binds `draft` to save it.
   let { value = "", onapply, draft = $bindable(""), error: given = null } = $props();
 
   const SHOWN = ["assignee", "state", "label", "bucket", "priority"];
@@ -29,7 +33,8 @@
   let basic = $derived(chipsOf(value));
   let mode = $state(untrack(() => (chipsOf(value) ? "chips" : "raw")));
   let refused = $state(null); // the server's word on the last query tried, and that query
-  let notice = $state("");    // why the chips cannot show a query
+  let notice = $state("");    // why the box has not gone back to the chips
+  let pending = false;        // back to the chips once the draft is discarded
   let added = $state([]);     // fields brought in from + More
   // A refusal stands while its query does: edit the text and it is gone.
   let error = $derived(refused && (mode === "chips" || refused.query === draft) ? refused : given);
@@ -44,6 +49,8 @@
       if (mode === "chips" && !chipsOf(v)) mode = "raw";
     });
   });
+
+  let unapplied = $derived(mode === "raw" && draft.trim() !== value.trim());
 
   let fields = $derived([...SHOWN, ...MORE.filter((f) => basic?.[f] || added.includes(f))]);
   let more = $derived(MORE.filter((f) => !fields.includes(f)));
@@ -69,13 +76,35 @@
     apply(fromBasic(next));
   }
 
+  // Back to the chips, never blocked. A draft is applied on the way when it
+  // can be; a draft that cannot is offered to Discard, and a query in use
+  // that the chips cannot show is offered to Clear.
   async function toChips() {
-    let tree;
-    try { tree = parse(draft); } catch (err) { notice = `Fix the query first: ${err.message}.`; return; }
-    if (!toBasic(tree)) { notice = "This query uses CSQL the chips can't show."; return; }
-    if (draft !== value && !(await apply(draft)).ok) return;
+    if (unapplied) {
+      const showable = chipsOf(draft);
+      const outcome = showable ? await apply(draft) : null;
+      if (!outcome?.ok) {
+        notice = "Not applied. Discard it to go back to the chips.";
+        pending = true;
+        return;
+      }
+    } else if (!chipsOf(value)) {
+      notice = "The chips can't show this query.";
+      return;
+    }
     notice = "";
     mode = "chips";
+  }
+
+  function discard() {
+    const back = pending;
+    draft = value;
+    refused = null;
+    if (back) toChips();
+  }
+
+  async function clearToChips() {
+    if ((await apply("")).ok) { notice = ""; mode = "chips"; }
   }
 
   // + More: the fields not on the bar yet.
@@ -88,6 +117,12 @@
     return dismiss(() => [morePanel, moreButton], () => (moreOpen = false));
   });
 </script>
+
+<button class="btn quiet small mode" aria-pressed={mode === "raw"}
+        title={mode === "raw" ? "Back to the filter chips" : "Write the filter in CSQL"}
+        onclick={() => (mode === "raw" ? toChips() : ((draft = value), (mode = "raw")))}>
+  &lt;/&gt;
+</button>
 
 {#if mode === "chips"}
   {#each fields as f (f)}
@@ -107,15 +142,19 @@
   {/if}
   {#if error}<span class="filter-error" role="alert">{error.message}</span>{/if}
 {:else}
-  <QueryBox bind:value={draft} {error} onenter={apply} />
+  <!-- Typing again means fixing the draft rather than leaving it. -->
+  <QueryBox bind:value={draft} {error} onenter={apply} ontype={() => { notice = ""; pending = false; }} />
   <CsqlHelp />
+  {#if unapplied}
+    <button class="btn quiet small" title="Put back the filter in use" onclick={discard}>Discard</button>
+  {/if}
+  {#if notice}
+    <span class="filter-error" role="alert">{notice}</span>
+    {#if !unapplied && value}
+      <button class="btn quiet small" onclick={clearToChips}>Clear filter</button>
+    {/if}
+  {/if}
 {/if}
-{#if notice && mode === "raw"}<span class="filter-error" role="alert">{notice}</span>{/if}
-<button class="btn quiet small mode" aria-pressed={mode === "raw"}
-        title={mode === "raw" ? "Back to the filter chips" : "Write the filter in CSQL"}
-        onclick={() => (mode === "raw" ? toChips() : ((draft = value), (notice = ""), (mode = "raw")))}>
-  &lt;/&gt;
-</button>
 
 {#if moreOpen}
   <div class="pop filter-pop" role="menu" bind:this={morePanel} style="left:{moreAt.left}px;top:{moreAt.top}px">

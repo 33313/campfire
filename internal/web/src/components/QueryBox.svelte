@@ -8,7 +8,7 @@
   // or — and where the query is wrong, at no request. Nothing runs until
   // Enter: `onenter` is the caller's to apply, and an error the server gives
   // back (`error`, its span in bytes) is underlined where it points.
-  let { value = $bindable(""), error = null, onenter = null, label = "Query",
+  let { value = $bindable(""), error = null, onenter = null, ontype = null, label = "Query",
         placeholder = "assignee = me and not state = Done" } = $props();
 
   // An offer carries a note only when it says what the offer does not: what
@@ -86,6 +86,7 @@
   }
 
   function typed() {
+    ontype?.();
     closed = false;
     entered = false;
     active = 0;
@@ -95,6 +96,7 @@
   }
 
   function take(o) {
+    ontype?.();
     // The word being typed, an opening quote and all, is what the offer replaces.
     const end = caret;
     value = value.slice(0, at.from) + o.insert + value.slice(end).replace(/^ /, "");
@@ -147,7 +149,12 @@
          aria-autocomplete="list"
          oninput={typed} onkeydown={key} onclick={sync} onkeyup={sync} onscroll={sync}
          onfocus={() => { focused = true; measure(); sync(); }}
-         onblur={() => setTimeout(() => (focused = false), 120)} />
+         onblur={() => setTimeout(() => {
+           focused = false;
+           // A box that loses focus scrolls back to its start, with no scroll
+           // event: the underline follows it there.
+           if (mirror) mirror.scrollLeft = input.scrollLeft;
+         }, 120)} />
 </div>
 
 {#if open}

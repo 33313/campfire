@@ -938,7 +938,9 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 /* The query box: CSQL typed, in the filter bar and the view dialog. A mono
    face, because a query is read token by token. */
 .query-box { position: relative; min-width: 220px; display: flex; }
-.filter-bar .query-box { flex: 1 1 320px; }
+/* Long enough for a real query, short enough that what sits beside it is
+   still under the hand. */
+.filter-bar .query-box { flex: 0 1 420px; }
 .query-box > .input { flex: 1; width: 100%; height: 28px; font-family: var(--mono); font-size: 12px; }
 .query-box.bad > .input { border-color: var(--alert); }
 /* The error's place, underlined over the text: a copy of the text drawn in
