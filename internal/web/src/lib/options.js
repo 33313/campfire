@@ -50,7 +50,7 @@ export function clausesFromFilter(filter) {
   const clauses = [];
   const from = {
     labelIds: "label", assigneeIds: "assignee", reporterIds: "reporter",
-    bucketIds: "bucket", priorities: "priority", stateIds: "state",
+    bucketIds: "bucket", priorities: "priority", stateIds: "state", teamIds: "team",
   };
   for (const [key, dimension] of Object.entries(from)) {
     for (const refId of filter[key] || []) clauses.push({ dimension, refId });
@@ -58,4 +58,22 @@ export function clausesFromFilter(filter) {
   if (filter.unassigned) clauses.push({ dimension: "assignee", refId: 0 });
   if (filter.text) clauses.push({ dimension: "text", text: filter.text });
   return clauses;
+}
+
+/**
+ * Filters stacked into one, the way views switched on together read: values
+ * of one dimension add up (marta's and sally's), different dimensions narrow
+ * (theirs, in Gardening). The first filter's text wins.
+ */
+// ponytail: one text per filter, since the server takes one; stack texts if
+// views that search ever need to combine.
+export function stackFilters(filters) {
+  const out = {};
+  for (const f of filters) {
+    for (const [k, v] of Object.entries(f)) {
+      if (Array.isArray(v)) { if (v.length) out[k] = [...new Set([...(out[k] || []), ...v])]; }
+      else if (v && !out[k]) out[k] = v;
+    }
+  }
+  return out;
 }

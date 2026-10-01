@@ -283,8 +283,22 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | *(none)* | Profile | A person at `/users/<name>`, and where the identity block at the foot of the sidebar goes. Fits the viewport: the picture, name, email, last seen, bio and teams are fixed at the top, and only the activity panel below them scrolls. Memberships sit side by side in a 230px-minimum grid, not stacked. Your own carries Edit profile and Settings; in edit mode the picture *is* the file control (a mono-caps `Change` strip across its foot) and the email and bio are inputs in place, with Save and Cancel in the screen header. Never drawn. |
 | `Dialogs.dc.html` | Dialogs and states | Create item · Reject · New bucket · Split · Bulk move · Bulk edit · delete confirms · second factor · stream banners. |
 
-The sidebar also lists the saved views of `SPEC.md` §9.3 under a `Views` section heading, between
-the main navigation and team settings.
+The sidebar also lists the saved views of `SPEC.md` §9.4 under a `Views` section heading, between
+the main navigation and team settings. A view is a switch, not a place: a click turns it on or
+off, several can be on, and Board or Backlog stays the marked place. A view that is on is
+accent-coloured on `accent-tint-weak`, without the place's left bar, with a mono-caps `ON` at its
+right; `All off` appears in the section heading once two are on. Which are on is remembered per
+team in the browser, and an old `?view=` link switches its view on. Views that are on stack: values
+of one dimension add up (marta's and sally's) and different dimensions narrow (theirs, in
+Gardening); the filter bar is your own unsaved filter and stacks the same way. A view appears only
+in the sidebar, never as chips in the bar. Every filter chip, in the bar and in the view dialog,
+picks several values (labels: every one picked; the rest: any of them), and names its first two and
+counts the rest. Its filters are named as the server names them, so a bucket reads `DEV-6 Campfire -
+v1.0.0` and never `bucket 6`; a clause whose referent is gone is an `alert` chip. Making, changing
+and deleting a view are kept apart from using one: Save as view (shown once the bar holds a filter)
+and the sidebar's + open a dialog with the name, the filter as chips, and the pins; right-clicking a
+view opens a menu (the card menu's panel) with Edit… and Delete…. Saving the bar's filter clears the
+bar and switches the new view on.
 
 `canvas.json` in the design directory holds the layout and the annotations; the annotations are
 design intent in prose and are worth reading once.

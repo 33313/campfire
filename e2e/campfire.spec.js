@@ -273,13 +273,21 @@ test("the filter bar narrows the board and clears again", async ({ page }) => {
   await page.goto("/t/1/board");
   await expect(page.locator(".card")).toHaveCount(1);
 
-  await page.locator(".filter-bar").getByRole("button", { name: "Priority" }).click();
+  // Every chip takes several values: P1 alone hides the P3 card, P1 or P3 shows it.
+  const bar = page.locator(".filter-bar");
+  await bar.getByRole("button", { name: "Priority" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "P1 · Highest" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
   await expect(page.locator(".card")).toHaveCount(0);
 
-  await page.locator(".filter-bar").getByRole("button", { name: "P1", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Any" }).click();
+  await bar.getByRole("button", { name: "P1", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "P3 · Medium" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
+  await expect(bar.getByRole("button", { name: "P1, P3", exact: true })).toBeVisible();
   await expect(page.locator(".card")).toHaveCount(1);
+
+  await bar.getByRole("button", { name: "Clear P1, P3" }).click();
+  await expect(bar.getByRole("button", { name: "Priority" })).toBeVisible();
 });
 
 test("search suggests as you type, without a request per keystroke", async ({ page }) => {
@@ -305,22 +313,87 @@ test("search suggests as you type, without a request per keystroke", async ({ pa
   await expect(page).toHaveURL(/\/SOL-1$/);
 });
 
-test("a saved view is stored as clauses and appears in the sidebar", async ({ page }) => {
+test("saved views are switches in the sidebar, and several stack", async ({ page }) => {
   await signIn(page);
   await page.goto("/t/1/board");
+  const bar = page.locator(".filter-bar");
+  const sidebar = page.locator(".sidebar");
+  const pick = async (chip, ...values) => {
+    await chip.click();
+    for (const v of values) await page.getByRole("dialog").last().getByRole("button", { name: v }).click();
+    await page.getByRole("dialog").last().getByRole("button", { name: "Done" }).click();
+  };
 
-  await page.locator(".filter-bar").getByRole("button", { name: "Priority" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "P3 · Medium" }).click();
+  // Saving the bar's filter moves it into a view that is on: the bar clears,
+  // the sidebar lights the view, and Board stays the place you are.
+  await pick(bar.getByRole("button", { name: "Priority" }), "P1 · Highest");
+  await expect(page.locator(".card")).toHaveCount(0);
+  await bar.getByRole("button", { name: "Save as view" }).click();
+  await page.getByRole("dialog").getByLabel("Name").fill("Urgent");
+  await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
+  const urgent = sidebar.getByRole("button", { name: "Urgent", exact: true });
+  await expect(urgent).toHaveAttribute("aria-pressed", "true");
+  await expect(bar.getByRole("button", { name: "Priority" })).toBeVisible();
+  await expect(sidebar.getByRole("link", { name: "Board" })).toHaveClass(/\bon\b/);
+  await expect(page.locator(".card")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Save as view" }).click();
-  const view = page.getByRole("dialog");
-  await view.getByLabel("Name").fill("Medium work");
-  await view.getByRole("button", { name: "Save" }).click();
-
-  await expect(page.locator(".sidebar").getByRole("link", { name: "Medium work" })).toBeVisible();
-  await page.locator(".sidebar").getByRole("link", { name: "Medium work" }).click();
-  await expect(page).toHaveURL(/view=\d+$/);
+  // A click switches it off, and on again.
+  await urgent.click();
+  await expect(urgent).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator(".card")).toHaveCount(1);
+  await urgent.click();
+  await expect(page.locator(".card")).toHaveCount(0);
+
+  // A second view on the same dimension adds its values to the first's.
+  await sidebar.getByRole("button", { name: "New view" }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Name").fill("Medium");
+  await pick(dialog.getByRole("button", { name: "Priority" }), "P3 · Medium");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  const medium = sidebar.getByRole("button", { name: "Medium", exact: true });
+  await expect(medium).toHaveAttribute("aria-pressed", "true");
+  await expect(urgent).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".card")).toHaveCount(1);
+
+  // Which views are on outlasts a reload.
+  await page.reload();
+  await expect(urgent).toHaveAttribute("aria-pressed", "true");
+  await sidebar.getByRole("button", { name: "All off" }).click();
+  await expect(urgent).toHaveAttribute("aria-pressed", "false");
+  await expect(medium).toHaveAttribute("aria-pressed", "false");
+
+  // A link from before views were switches still switches its view on.
+  const id = await page.evaluate(async () =>
+    (await (await fetch("/api/teams/1/views")).json()).find((v) => v.name === "Urgent").id);
+  await page.goto(`/t/1/board?view=${id}`);
+  await expect(page).toHaveURL(/board$/);
+  await expect(urgent).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".card")).toHaveCount(0);
+  await urgent.click();
+
+  // Changing a view is a right-click on it, apart from using it. Its chips
+  // take several values; a picker opened over it closes alone on Escape.
+  await urgent.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Edit…" }).click();
+  await dialog.getByRole("button", { name: "Assignee" }).click();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(1);
+  await pick(dialog.getByRole("button", { name: "P1", exact: true }), "P3 · Medium");
+  await expect(dialog.getByRole("button", { name: "P1, P3", exact: true })).toBeVisible();
+  await dialog.getByLabel("Name").fill("Urgent or medium");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  const both = sidebar.getByRole("button", { name: "Urgent or medium" });
+  await both.click();
+  await expect(page.locator(".card")).toHaveCount(1);
+
+  // Deleting one that is on switches it off with it.
+  await medium.click();
+  await expect(page.locator(".card")).toHaveCount(1);
+  await both.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Delete…" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
+  await expect(both).toHaveCount(0);
+  await expect(medium).toHaveAttribute("aria-pressed", "true");
 });
 
 test("work states can be added and the team renamed", async ({ page }) => {

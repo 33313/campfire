@@ -181,6 +181,12 @@ func TestFilteringAcrossDimensions(t *testing.T) {
 			t.Fatal("the unassigned filter returned an assigned item")
 		}
 	}
+	// Beside a person it is one more value, not a second condition.
+	both, _ := w.ListItems(w.ctx, w.marta, Filter{TeamIDs: []int64{w.sol.ID}, Unassigned: true,
+		AssigneeIDs: []int64{w.marta.UserID}}, "", 50)
+	if len(both.Items) <= len(page.Items) {
+		t.Fatalf("unassigned or marta returned %d items, unassigned alone %d", len(both.Items), len(page.Items))
+	}
 }
 
 // SPEC.md §9.1: the bucket index defaults to participation — buckets my team

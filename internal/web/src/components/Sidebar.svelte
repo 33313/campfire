@@ -3,12 +3,13 @@
   import Avatar from "./Avatar.svelte";
   import Mark from "./Mark.svelte";
   import { NAV } from "../lib/icons.js";
-  import { app } from "../lib/state.svelte.js";
+  import { app, toggleView } from "../lib/state.svelte.js";
   import { stream } from "../lib/stream.svelte.js";
   import { route, navigate } from "../lib/router.svelte.js";
-  import { openModal, failure, toast } from "../lib/ui.svelte.js";
+  import { failure } from "../lib/ui.svelte.js";
   import { api } from "../lib/api.js";
-  import SaveViewDialog from "../dialogs/SaveViewDialog.svelte";
+  import { useView, saveNewView, canEditView } from "../lib/views.js";
+  import ViewMenu from "./ViewMenu.svelte";
   import { newTeam } from "../lib/teams.js";
 
   let team = $derived(app.team || app.teams[0]);
@@ -22,8 +23,24 @@
     { icon: "log", label: "Log", href: "/log" },
   ] : []);
 
-  function viewHref(view) {
-    return `/t/${teamId}/${view.pinBacklog && !view.pinBoard ? "backlog" : "board"}?view=${view.id}`;
+  // A link made before views were switches names one as ?view=: it switches
+  // that view on, and the address goes back to the plain screen.
+  $effect(() => {
+    const id = +route.search.get("view");
+    if (!id || !app.views.some((v) => v.id === id)) return;
+    toggleView(id, true);
+    navigate(route.path, true);
+  });
+
+  // The view whose menu is open, and where. A click switches a view on or
+  // off; changing or deleting it is behind a right-click (or the keyboard's
+  // menu key, which fires the same event at no pointer position).
+  let viewMenu = $state(null);
+  function openViewMenu(e, view) {
+    if (!canEditView(view)) return;
+    e.preventDefault();
+    const r = e.currentTarget.getBoundingClientRect();
+    viewMenu = { view, x: e.clientX || r.left + 16, y: e.clientY || r.bottom };
   }
 
   // Switching team is a drop-down under the name it changes, not a modal: a
@@ -56,17 +73,6 @@
     await newTeam().catch(failure);
   }
 
-  // Saving from the sidebar saves the filter as it stands on the board — which,
-  // from here, is the unfiltered one.
-  async function saveView() {
-    const res = await openModal(SaveViewDialog);
-    if (!res) return;
-    try {
-      await api.createSavedView({ teamId, ...res, clauses: [] });
-      toast("Saved. It is in the sidebar under Views.");
-      app.views = await api.listSavedViews(teamId);
-    } catch (err) { failure(err); }
-  }
 </script>
 
 <!-- The team's picture stands for it in the picker, or a blank square where
@@ -142,18 +148,37 @@
     <div class="nav">
       <div class="nav-section">
         <span class="field-label">Views</span>
-        <button class="btn quiet small" title="Save the current filter as a view"
-                style="margin-left:auto;height:18px;padding:0 4px" onclick={saveView}>
+        <span style="margin-left:auto"></span>
+        {#if app.viewsOn.length > 1}
+          <button class="btn quiet small" style="height:18px;padding:0 4px;font-size:11px"
+                  onclick={() => app.viewsOn.forEach((id) => toggleView(id, false))}>All off</button>
+        {/if}
+        <!-- A new view starts from no filter; its dialog picks one. -->
+        <button class="btn quiet small" title="New view" aria-label="New view"
+                style="height:18px;padding:0 4px" onclick={() => saveNewView(teamId, {})}>
           <Icon body={NAV.plus} size={11} />
         </button>
       </div>
       {#each app.views as v}
-        <a class="nav-item" href={viewHref(v)}>
+        {@const gone = (v.clauses || []).filter((c) => c.missing).map((c) => c.display)}
+        {@const lit = app.viewsOn.includes(v.id)}
+        <!-- A switch, not a place: Board stays where you are, and the views
+             that are on stack onto it. -->
+        <button class="nav-item view-switch" class:lit aria-pressed={lit} onclick={() => useView(v)}
+                oncontextmenu={(e) => openViewMenu(e, v)}
+                title={canEditView(v) ? "Right-click to edit or delete" : null}>
           <Icon body={NAV.view} size={13} />
           <span class="label">{v.name}</span>
-        </a>
+          {#if gone.length}
+            <span class="count" style="color:var(--alert)" title="Names what was deleted: {gone.join(', ')}">!</span>
+          {/if}
+          {#if lit}<span class="count" aria-hidden="true">on</span>{/if}
+        </button>
       {/each}
     </div>
+    {#if viewMenu}
+      <ViewMenu view={viewMenu.view} x={viewMenu.x} y={viewMenu.y} onclose={() => (viewMenu = null)} />
+    {/if}
   {/if}
 
   <div class="sidebar-foot">

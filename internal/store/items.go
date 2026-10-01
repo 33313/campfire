@@ -423,9 +423,18 @@ func (f ItemFilter) where() (string, []any) {
 			args = append(args, r)
 		}
 	}
-	add("i.assignee_id", f.AssigneeIDs)
-	if f.Unassigned {
+	// Unassigned is one more value of the assignee dimension: picked beside
+	// people, it widens the choice like any other value.
+	switch {
+	case f.Unassigned && len(f.AssigneeIDs) > 0:
+		w = append(w, "(i.assignee_id IS NULL OR i.assignee_id IN ("+placeholders(len(f.AssigneeIDs))+"))")
+		for _, v := range f.AssigneeIDs {
+			args = append(args, v)
+		}
+	case f.Unassigned:
 		w = append(w, "i.assignee_id IS NULL")
+	default:
+		add("i.assignee_id", f.AssigneeIDs)
 	}
 	add("i.reporter_id", f.ReporterIDs)
 	add("i.bucket_id", f.BucketIDs)

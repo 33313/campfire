@@ -1,0 +1,3 @@
+kind: Fixed
+body: Filtering by Unassigned together with people finds both instead of nothing. A link to a saved view, another team's included, switches that view on, and sidebar links no longer underline on hover.
+time: 2026-10-01T12:00:00.000000000+02:00

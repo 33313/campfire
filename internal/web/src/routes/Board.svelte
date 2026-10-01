@@ -9,12 +9,11 @@
   import { crossfade, fade } from "svelte/transition";
 
   import { api } from "../lib/api.js";
-  import { app } from "../lib/state.svelte.js";
-  import { route } from "../lib/router.svelte.js";
+  import { app, viewsOn } from "../lib/state.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
   import { failure } from "../lib/ui.svelte.js";
   import { createItem } from "../lib/create.js";
-  import { filterFromView } from "../lib/options.js";
+  import { filterFromView, stackFilters } from "../lib/options.js";
   import { NAV } from "../lib/icons.js";
   import { ms, easeOut, QUICK, GLIDE } from "../lib/motion.js";
   import { kindle } from "../lib/embers.js";
@@ -54,19 +53,17 @@
   let doneKey = $derived(`done:${teamId}:board`);
   let allDone = $state(untrack(() => localStorage.getItem(doneKey) === "1"));
 
-  // Applying a saved view means applying the filter it stores. It is the same
-  // dimensions composed the same way, so the board takes it as an ordinary
-  // filter rather than gaining a second way to be filtered (SPEC.md §9.4).
-  let viewId = $derived(+route.search.get("view") || 0);
+  // The views switched on in the sidebar and the bar's own filter, stacked
+  // into the one filter the screen asks for: the same dimensions composed the
+  // same way, so a view is never a second way to be filtered (SPEC.md §9.4).
+  // Any change to either redraws, a saved edit to a view that is on included.
   let filter = $state({});
-  let viewApplied = null;
+  let shown = $derived(stackFilters([filter, ...viewsOn().map(filterFromView)]));
+  let asked = $derived(JSON.stringify(shown));
 
   $effect(() => {
-    if (viewApplied === viewId) return;
-    viewApplied = viewId;
-    const view = app.views.find((v) => v.id === viewId);
-    filter = view ? filterFromView(view) : {};
-    load();
+    asked;
+    untrack(load);
   });
 
   // A card that changes column travels there, whoever moved it: a drop, a bulk
@@ -93,7 +90,7 @@
     try {
       if (!team) [team, states] = await Promise.all([api.getTeam(teamId), api.listWorkStates(teamId)]);
       const before = board;
-      board = await api.getBoard(teamId, filter, showBuckets, allDone);
+      board = await api.getBoard(teamId, shown, showBuckets, allDone);
       if (before) {
         const done = finished(before, board);
         if (done.length) {
@@ -126,7 +123,7 @@
     try { focused = await fetchFocus(item.id); } catch (err) { failure(err); }
   }
 
-  function setFilter(next) { filter = next; load(); }
+  function setFilter(next) { filter = next; }
   function setShowBuckets(on) {
     showBuckets = on;
     localStorage.setItem(key, on ? "1" : "0");

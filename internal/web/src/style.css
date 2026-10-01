@@ -160,8 +160,12 @@ a, .btn, .chip, .nav-item, .card, .bucket-card, .input, .bare, .label-input, .to
   background: none; border-top: 0; border-right: 0; border-bottom: 0; width: 100%;
   text-align: left; font-size: 13px;
 }
-.nav-item:hover { color: var(--text); }
+.nav-item:hover { color: var(--text); text-decoration: none; }
 .nav-item.on { color: var(--accent); background: var(--accent-tint); border-left-color: var(--accent); }
+/* A view switched on: lit like the place you are, but without the place's
+   bar, so Board keeps that. */
+.nav-item.view-switch.lit { color: var(--accent); background: var(--accent-tint-weak); }
+.nav-item.view-switch.lit .count:last-child { color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; font-size: 9.5px; }
 .nav-item .count { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--faint); }
 .nav-item span.label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-section { display: flex; align-items: center; gap: 8px; padding: 10px 9px 6px; }
@@ -190,6 +194,8 @@ a, .btn, .chip, .nav-item, .card, .bucket-card, .input, .bare, .label-input, .to
   overflow-x: auto;
 }
 .filter-bar .right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+/* A full bar scrolls rather than squeezing its chips onto two lines. */
+.filter-bar > *, .filter-bar .right > * { flex-shrink: 0; white-space: nowrap; }
 .rule-v { width: 1px; height: 18px; background: var(--border); margin: 0 4px; flex: 0 0 1px; }
 
 .body { flex: 1; min-height: 0; overflow: auto; }
@@ -295,6 +301,8 @@ select.input {
 }
 .chip:hover { color: var(--text); border-color: var(--border-strong); }
 .chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-tint); }
+/* A clause naming something deleted: it matches nothing, and says so. */
+.chip.missing { border-color: var(--alert); color: var(--alert); background: var(--alert-tint); }
 
 /* A filter chip and its clear: two buttons drawn as one, sharing a border. */
 .chip-group { display: inline-flex; align-items: center; }
