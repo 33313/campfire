@@ -5,6 +5,20 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `go tool changie merge`.
 
+## v0.5.0 - 2026-10-01
+
+### Added
+
+- Filters are CSQL, the Campfire Simple Query Language, edited two ways. Filter chips cover the common case without typing; each value cycles between not set, is and isn't, and Created, Started, Completed and Due take day presets or a range. Raw mode takes any query, with and, or, not and parentheses, offers what can come next as you type, and points at a mistake before anything is sent; nothing typed there ever blocks, as Discard puts back the filter in use; `none` is the value of an empty field and days are read in your time zone. Agents pass the same language as `query`, with `tz`. A card that stops matching the filter while on screen goes where it went — into Done, feeding the fire — and stays there, faded, until the filter changes. Suggestions match any part of a value: rev finds In Review. The words a query uses — and, or, not, in, none, me and today — can no longer be a username, label, team or work state name.
+
+### Changed
+
+- Saved views are switches in the sidebar. A click turns one on or off, several can be on at once, and right-clicking a view edits its name, query and pins, or deletes it. In the HTTP API and the MCP tools a saved view takes and returns a `query` in place of `clauses`, and existing views are rewritten as the query they meant; the item list's `view` parameter is and-ed with any other filter instead of replacing it.
+
+### Fixed
+
+- A filter change costs one request and typing costs none; a newer request cancels an older one, whose late reply no longer overwrites the board. A link to a saved view, another team's included, switches that view on, sidebar links no longer underline on hover, and the views list follows changes made elsewhere.
+
 ## v0.4.0 - 2026-09-30
 
 ### Added

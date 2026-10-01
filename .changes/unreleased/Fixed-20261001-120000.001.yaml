@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'A filter change costs one request and typing costs none; a newer request cancels an older one, whose late reply no longer overwrites the board. A link to a saved view, another team''s included, switches that view on, sidebar links no longer underline on hover, and the views list follows changes made elsewhere.'
-time: 2026-10-01T12:00:00.000000000+02:00
