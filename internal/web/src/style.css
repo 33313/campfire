@@ -928,6 +928,7 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 /* Less motion, when asked for: everything still changes, nothing travels. */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after { animation: none !important; transition: none !important; }
+  .card-slot.kept > * { opacity: 0.5; }
 }
 
 /* A card is an anchor to its item, so the link colour and underline that
@@ -1018,3 +1019,9 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 .csql-fields dt, .csql-fields dd { margin: 0; overflow-wrap: anywhere; }
 .csql-examples { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .csql-examples li { overflow-wrap: anywhere; }
+
+/* A card that stopped matching the filter while on screen stays where it
+   went, faded once it has landed (and kindled, in Done), until the filter
+   changes (Board.svelte, keep). */
+.card-slot.kept > * { animation: kept 400ms ease-out 1.4s both; }
+@keyframes kept { from { opacity: 1; } to { opacity: 0.5; } }

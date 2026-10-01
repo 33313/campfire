@@ -97,9 +97,12 @@
   async function load(filter = applied) {
     const key = asking(filter);
     const viewIds = viewsOn().map((v) => v.id);
+    const shown = board;
     const res = await ask(async (signal) => {
       if (!team) [team, states] = await Promise.all([api.getTeam(teamId), api.listWorkStates(teamId)]);
-      return api.getBoard(teamId, { ...filter, viewIds, tz: TZ }, showBuckets, allDone, 100, signal);
+      const next = await api.getBoard(teamId, { ...filter, viewIds, tz: TZ }, showBuckets, allDone, 100, signal);
+      // The same filter asked again keeps what left it; a new one starts afresh.
+      return key === drawn && shown ? keep(shown, next) : next;
     });
     if (res.superseded) return res;
     if (res.error) {
@@ -131,6 +134,30 @@
   }
 
   $effect(() => onNotify(refresh));
+
+  // A card that stops matching the filter while you look at it does not
+  // vanish: it goes where it went, as any move does — into Done, kindling —
+  // and stays there, faded, until the filter, a view or a toggle changes.
+  // The cards on screen that the new board left out are looked up; those
+  // still on this board are put in their column, by rank, marked kept.
+  // ponytail: ten looked up per refresh; past that, the rest vanish as they
+  // would have. A kept card is looked up again on each refresh, so it follows
+  // a later move too.
+  async function keep(shown, next) {
+    const there = new Set(next.columns.flatMap((c) => (c.items || []).map((i) => i.id)));
+    const gone = shown.columns.flatMap((c) => c.items || []).filter((i) => !there.has(i.id)).slice(0, 10);
+    if (!gone.length) return next;
+    const found = await Promise.all(gone.map((i) => api.getItem(i.id).catch(() => null)));
+    const columns = new Map(next.columns.map((c) => [c.state.id, c]));
+    for (const item of found) {
+      const col = item && item.teamId === teamId && columns.get(item.stateId);
+      if (!col) continue; // deleted, rejected, or back in the backlog: gone from the board itself
+      const items = (col.items ||= []);
+      const at = items.findIndex((i) => i.rank > item.rank);
+      items.splice(at < 0 ? items.length : at, 0, { ...item, kept: true });
+    }
+    return next;
+  }
 
   async function fetchFocus(id) {
     const [item, comments, history] = await Promise.all([
@@ -349,7 +376,8 @@
                 {#each col.items || [] as item (item.id)}
                   <!-- A card that has just been carried somewhere does not also
                        travel there: the copy in the hand already did. -->
-                  <div class="card-slot" class:landing={landing.includes(item.id)}
+                  <div class="card-slot" class:landing={landing.includes(item.id)} class:kept={item.kept}
+                       title={item.kept ? "No longer matches the filter; it goes when the filter changes" : null}
                        in:receive={{ key: landing.includes(item.id) ? -item.id : item.id,
                                      instant: landing.includes(item.id) }}
                        out:send={{ key: item.id }}

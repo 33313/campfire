@@ -39,11 +39,16 @@
   // A refusal stands while its query does: edit the text and it is gone.
   let error = $derived(refused && (mode === "chips" || refused.query === draft) ? refused : given);
 
-  // The applied query is what the editor holds, whatever changed it: a chip,
-  // Enter, or the caller (a saved view taking it over clears it).
+  // The box follows the query in use when that changes — a chip, Enter, or
+  // the caller (a saved view taking it over clears it) — unless it holds
+  // edits of its own: what you typed while a reply was on its way is yours.
+  let previous = untrack(() => value);
   $effect(() => {
     const v = value;
     untrack(() => {
+      const edited = mode === "raw" && draft.trim() !== previous.trim() && draft.trim() !== v.trim();
+      previous = v;
+      if (edited) return;
       draft = v;
       refused = null;
       if (mode === "chips" && !chipsOf(v)) mode = "raw";

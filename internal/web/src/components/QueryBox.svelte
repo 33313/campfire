@@ -67,9 +67,17 @@
       all = [{ label: "and", insert: "and " }, { label: "or", insert: "or " }];
       if (depth > 0) all.push({ label: ")", insert: ") " });
     }
-    const p = prefix.toLowerCase().replace(/^"/, "");
-    return all.filter((o) => o.label.toLowerCase().replace(/^"/, "").startsWith(p)
-      || (p.length > 1 && (o.note || "").toLowerCase().includes(p))).slice(0, 8);
+    // A value is found by any part of it — rev finds "In Review" — and what
+    // begins with what was typed comes first. Fields and keywords are found
+    // by their start, as they are typed from it.
+    const p = prefix.toLowerCase().replace(/^["']/, "");
+    const name = (o) => o.label.toLowerCase().replace(/^"/, "");
+    const anywhere = want === "value";
+    const hit = (o) => name(o).startsWith(p) ? 0
+      : anywhere && (name(o).includes(p) || (p.length > 1 && (o.note || "").toLowerCase().includes(p))) ? 1
+      : 2;
+    return all.map((o) => [hit(o), o]).filter(([h]) => h < 2)
+      .sort((a, b) => a[0] - b[0]).map(([, o]) => o).slice(0, 8);
   });
   let open = $derived(focused && !closed && (offers.length > 0 || !!problem));
 
@@ -150,7 +158,9 @@
          oninput={typed} onkeydown={key} onclick={sync} onkeyup={sync} onscroll={sync}
          onfocus={() => { focused = true; measure(); sync(); }}
          onblur={() => setTimeout(() => {
-           focused = false;
+           // Gone, unless it came back in the meantime: a blur and a focus in
+           // quick succession leave the box focused, offers and all.
+           focused = document.activeElement === input;
            // A box that loses focus scrolls back to its start, with no scroll
            // event: the underline follows it there.
            if (mirror) mirror.scrollLeft = input.scrollLeft;

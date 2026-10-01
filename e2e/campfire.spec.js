@@ -379,6 +379,14 @@ test("raw CSQL offers what comes next, says what is wrong, and never applies a r
   await query.press("Enter");
   await expect(cards).toHaveCount(1);
 
+  // A value is found by any part of it, not only its start.
+  await query.fill("");
+  await query.pressSequentially("state = prog");
+  await expect(offers.getByRole("option", { name: /^"In Progress"/ })).toBeVisible();
+  await query.press("Tab");
+  await expect(query).toHaveValue('state = "In Progress" ');
+  await query.fill("priority = 3");
+
   // The cheat sheet keeps to the window, however small, and scrolls inside.
   for (const size of [{ width: 1280, height: 800 }, { width: 640, height: 420 }]) {
     await page.setViewportSize(size);
@@ -1323,6 +1331,43 @@ test.describe(() => {
     await expect(page.locator(".sidebar .mark.roar")).toBeAttached();
     // And the canvas goes once the last ember is out.
     await expect(page.locator("canvas.embers")).toHaveCount(0, { timeout: 5000 });
+  });
+
+  test("a card that leaves the filter in view kindles in Done and stays, faded, until the filter changes", async ({ page }) => {
+    await signIn(page);
+    const states = await (await page.request.get("/api/teams/1/states")).json();
+    const done = states.find((s) => s.role === "final");
+    const todo = states.find((s) => s.role === "accepted");
+    const item = await (await page.request.post("/api/items", { data: {
+      kind: "ticket", teamId: 1, title: "Sweep the hearth", accepted: true,
+    } })).json();
+    await page.goto("/t/1/board");
+    const bar = page.locator(".filter-bar");
+    const query = bar.getByLabel("Query");
+    await bar.getByRole("button", { name: "</>" }).click();
+    await query.fill(`state = "${todo.name}"`);
+    await query.press("Enter");
+    const doneColumn = page.locator(".column", { has: page.getByRole("heading", { name: "Done" }) });
+    await expect(page.locator(".card", { hasText: "Sweep the hearth" })).toBeVisible();
+    await expect(doneColumn.locator(".card")).toHaveCount(0);
+
+    // Finished elsewhere: it no longer matches, and goes to Done anyway,
+    // kindling there, and stays, kept.
+    await page.request.post(`/api/items/${item.id}/move`, { data: { stateId: done.id } });
+    await expect(doneColumn.locator(".card.kindled", { hasText: "Sweep the hearth" })).toBeAttached();
+    const kept = doneColumn.locator(".card-slot.kept", { hasText: "Sweep the hearth" });
+    await expect(kept).toBeVisible();
+
+    // A later refresh keeps it: another write lands on the stream.
+    await page.request.post("/api/items", { data: { kind: "ticket", teamId: 1, title: "Stack the logs", accepted: true } });
+    await expect(page.locator(".card", { hasText: "Stack the logs" })).toBeVisible();
+    await expect(kept).toBeVisible();
+
+    // A new filter starts from what matches it.
+    await query.fill(`state = "${todo.name}" and priority != 4`);
+    await query.press("Enter");
+    await expect(page.locator(".card", { hasText: "Stack the logs" })).toBeVisible();
+    await expect(page.locator(".card", { hasText: "Sweep the hearth" })).toHaveCount(0);
   });
 
   test("on a large panel a card glides from where it was, not a quarter further", async ({ page }) => {
