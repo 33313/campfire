@@ -90,7 +90,7 @@ func RemoveItemLabel(ctx context.Context, q Q, itemID, labelID int64) error {
 	_, err := q.ExecContext(ctx, `
 		DELETE FROM labels WHERE id = ?
 		  AND NOT EXISTS (SELECT 1 FROM item_labels WHERE label_id = ?)
-		  AND NOT EXISTS (SELECT 1 FROM saved_view_clauses
+		  AND NOT EXISTS (SELECT 1 FROM saved_view_refs
 		                  WHERE dimension = 'label' AND ref_id = ?)`,
 		labelID, labelID, labelID)
 	return err

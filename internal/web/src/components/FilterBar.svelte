@@ -1,26 +1,27 @@
 <script>
   import Icon from "./Icon.svelte";
   import LiveIndicator from "./LiveIndicator.svelte";
-  import FilterChips from "./FilterChips.svelte";
+  import FilterEditor from "./FilterEditor.svelte";
   import { NAV } from "../lib/icons.js";
-  import { clausesFromFilter } from "../lib/options.js";
   import { saveNewView } from "../lib/views.js";
 
   // setAllDone is the board's alone: the backlog has no final state.
-  let { teamId, filter, setFilter, showBuckets, setShowBuckets, allDone, setAllDone } = $props();
+  let { teamId, applied, apply, showBuckets, setShowBuckets, allDone, setAllDone } = $props();
 
-  // The bar is your own filter, unsaved. Views switched on in the sidebar
-  // stack with it and are not repeated here: a view is in one place.
+  // The bar is your own filter, unsaved. Views switched on in the sidebar are
+  // and-ed with it and are not repeated here: a view is in one place.
 </script>
 
 <div class="filter-bar">
   <span class="eyebrow">Filter</span>
 
-  <FilterChips {filter} {setFilter} />
+  <FilterEditor value={applied.csql} onapply={(csql) => apply({ ...applied, csql })} />
 
-  {#if clausesFromFilter(filter).length}
+  {#if applied.csql}
     <!-- Saved, the filter moves from the bar into the view it became, which is on. -->
-    <button class="btn quiet small" onclick={async () => { if (await saveNewView(teamId, filter)) setFilter({}); }}>
+    <button class="btn quiet small" onclick={async () => {
+      if (await saveNewView(teamId, applied.csql)) apply({ ...applied, csql: "" });
+    }}>
       <Icon body={NAV.view} size={13} />
       <span>Save as view</span>
     </button>

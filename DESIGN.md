@@ -288,17 +288,39 @@ the main navigation and team settings. A view is a switch, not a place: a click 
 off, several can be on, and Board or Backlog stays the marked place. A view that is on is
 accent-coloured on `accent-tint-weak`, without the place's left bar, with a mono-caps `ON` at its
 right; `All off` appears in the section heading once two are on. Which are on is remembered per
-team in the browser, and an old `?view=` link switches its view on. Views that are on stack: values
-of one dimension add up (marta's and sally's) and different dimensions narrow (theirs, in
-Gardening); the filter bar is your own unsaved filter and stacks the same way. A view appears only
-in the sidebar, never as chips in the bar. Every filter chip, in the bar and in the view dialog,
-picks several values (labels: every one picked; the rest: any of them), and names its first two and
-counts the rest. Its filters are named as the server names them, so a bucket reads `DEV-6 Campfire -
-v1.0.0` and never `bucket 6`; a clause whose referent is gone is an `alert` chip. Making, changing
-and deleting a view are kept apart from using one: Save as view (shown once the bar holds a filter)
-and the sidebar's + open a dialog with the name, the filter as chips, and the pins; right-clicking a
-view opens a menu (the card menu's panel) with Edit… and Delete…. Saving the bar's filter clears the
-bar and switches the new view on.
+team in the browser, and an old `?view=` link switches its view on. A view appears only in the
+sidebar, never in the bar.
+
+The filter bar edits one CSQL query (`SPEC.md` §9.2) two ways, and opens on the first.
+
+- **Chips.** `Filter` eyebrow, then Assignee, State, Label, Bucket and Priority, then `+ More`
+  (Reporter, Team, Created, Started, Completed, Due), `Clear` once anything is set, and the `</>`
+  mode switch. A chip opens a dropdown in place, the card menu's panel, with a search box once it
+  lists more than seven values. Each value row leads with a mono box that a click cycles: `[ ]`
+  not in the filter, `[+]` is (accent), `[−]` isn't (alert, the name struck through). A mono hint
+  at the foot says so: `Click: [+] is · [−] isn't · Esc undoes`. The dropdown applies when it
+  closes; Escape leaves the filter as it was. A set chip reads `Label: api, −roses` (two values,
+  then `+N`) in the accent, with its own clear. A date chip offers presets (Today, Last 7 days,
+  Last 30 days; Due: Before today, Today, Next 7 days, No due date; Started and Completed: Not yet)
+  and a From–To range; a preset applies at once. A field from `+ More` stays on the bar while it
+  holds something; `Clear` takes the bar back to the five.
+- **Raw.** `</>` (accent while on) turns the chips into the query they make, in a mono box filling
+  the bar, with a `?` beside it for a cheat sheet: three short sections (Fields, Operators,
+  Examples) under mono-caps eyebrows, at most 520px wide, kept inside the window and scrolling
+  within itself when the window is short. As you type, a list under the box
+  offers what can come next at the caret — a field, its operators, its values, then `and` or `or`.
+  A muted note follows an offer only where the offer alone does not say it: a bucket's title, a
+  team's name, a priority's word, what `-7d` means. Tab takes the first offer, or the one moved to with the arrows; Enter runs
+  the query unless an offer was moved to. Nothing runs while typing. A mistake is underlined wavy
+  in `alert` where it is, and its sentence heads the list, unless the caret is in it, which is a
+  word still being typed. A query the server refuses keeps the board as it was. `</>` again goes
+  back to the chips when they can show the query; when they cannot, an `alert` line says "This
+  query uses CSQL the chips can't show." and the box stays.
+
+The views that are on are and-ed with the bar. Save as view (shown once the bar holds a filter) and
+the sidebar's + open a dialog with the name, the same two-way editor (chips wrapping, nothing run
+until Save) and the pins; right-clicking a view opens a menu (the card menu's panel) with Edit… and
+Delete…. Saving the bar's filter clears the bar and switches the new view on.
 
 `canvas.json` in the design directory holds the layout and the annotations; the annotations are
 design intent in prose and are worth reading once.

@@ -4,64 +4,44 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strconv"
 )
 
-// A saved view is a name attached to a filter the application can already
-// express (SPEC.md §9.4). It is stored as its own structured representation —
-// one row per clause, referencing its target by identity — never as a
-// serialised query string.
+// A saved view is a name attached to a CSQL query (SPEC.md §9.4). The query is
+// stored canonical, naming its referents by #id; beside it, one row per thing
+// it names, so a label a view uses is never reaped and a deleted referent can
+// be named wherever the view is offered.
 
-// The filter dimensions of SPEC.md §9.2, and no others.
-const (
-	DimState    = "state"
-	DimLabel    = "label"
-	DimAssignee = "assignee"
-	DimReporter = "reporter"
-	DimBucket   = "bucket"
-	DimPriority = "priority"
-	DimTeam     = "team"
-	DimText     = "text"
-)
-
-func ValidDimension(d string) bool {
-	switch d {
-	case DimState, DimLabel, DimAssignee, DimReporter, DimBucket, DimPriority, DimTeam, DimText:
-		return true
-	}
-	return false
-}
-
-type Clause struct {
-	ID        int64  `json:"id"`
-	Dimension string `json:"dimension"`
-	RefID     int64  `json:"refId,omitempty"`
-	Text      string `json:"text,omitempty"`
-	// Missing is set when the clause names something that has been deleted.
-	// The clause is kept and matches nothing; the view names the missing
-	// reference wherever it is offered, because a view that quietly repairs
-	// itself is a view nobody can trust (SPEC.md §9.4).
-	Missing bool   `json:"missing,omitempty"`
-	Display string `json:"display"`
+// Ref is one thing a view's query names by id, and what it is called now.
+type Ref struct {
+	Field string
+	ID    int64
+	// Name is how a query writes it today: a username, a label's name, a
+	// bucket's identifier, a team's short code, a state's name. Empty when
+	// the referent has been deleted.
+	Name string
 }
 
 type SavedView struct {
-	ID         int64    `json:"id"`
-	TeamID     int64    `json:"teamId"`
-	Name       string   `json:"name"`
-	PinBoard   bool     `json:"pinBoard"`
-	PinBacklog bool     `json:"pinBacklog"`
-	CreatedAt  int64    `json:"createdAt"`
-	UpdatedAt  int64    `json:"updatedAt"`
-	Clauses    []Clause `json:"clauses"`
+	ID         int64  `json:"id"`
+	TeamID     int64  `json:"teamId"`
+	Name       string `json:"name"`
+	PinBoard   bool   `json:"pinBoard"`
+	PinBacklog bool   `json:"pinBacklog"`
+	CreatedAt  int64  `json:"createdAt"`
+	UpdatedAt  int64  `json:"updatedAt"`
+	// Query is canonical as stored; the service hands it out written with
+	// names, and lists in Missing what it names that has been deleted.
+	Query   string   `json:"query"`
+	Missing []string `json:"missing,omitempty"`
+	Refs    []Ref    `json:"-"`
 }
 
 func CreateSavedView(ctx context.Context, q Q, v SavedView) (int64, error) {
 	res, err := q.ExecContext(ctx, `
-		INSERT INTO saved_views (team_id, name, name_folded, pin_board, pin_backlog,
+		INSERT INTO saved_views (team_id, name, name_folded, pin_board, pin_backlog, query,
 		                         created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		v.TeamID, v.Name, Fold(v.Name), v.PinBoard, v.PinBacklog, v.CreatedAt, v.UpdatedAt)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		v.TeamID, v.Name, Fold(v.Name), v.PinBoard, v.PinBacklog, v.Query, v.CreatedAt, v.UpdatedAt)
 	if err != nil {
 		return 0, err
 	}
@@ -71,8 +51,8 @@ func CreateSavedView(ctx context.Context, q Q, v SavedView) (int64, error) {
 func UpdateSavedView(ctx context.Context, q Q, v SavedView) error {
 	_, err := q.ExecContext(ctx, `
 		UPDATE saved_views SET name = ?, name_folded = ?, pin_board = ?, pin_backlog = ?,
-		                       updated_at = ? WHERE id = ?`,
-		v.Name, Fold(v.Name), v.PinBoard, v.PinBacklog, v.UpdatedAt, v.ID)
+		                       query = ?, updated_at = ? WHERE id = ?`,
+		v.Name, Fold(v.Name), v.PinBoard, v.PinBacklog, v.Query, v.UpdatedAt, v.ID)
 	return err
 }
 
@@ -83,33 +63,38 @@ func DeleteSavedView(ctx context.Context, q Q, id int64) error {
 	return err
 }
 
-func ReplaceClauses(ctx context.Context, q Q, viewID int64, clauses []Clause) error {
-	if _, err := q.ExecContext(ctx, `DELETE FROM saved_view_clauses WHERE view_id = ?`, viewID); err != nil {
+// ReplaceRefs records what a view's query names by id.
+func ReplaceRefs(ctx context.Context, q Q, viewID int64, refs []Ref) error {
+	if _, err := q.ExecContext(ctx, `DELETE FROM saved_view_refs WHERE view_id = ?`, viewID); err != nil {
 		return err
 	}
-	for _, c := range clauses {
+	for _, r := range refs {
 		if _, err := q.ExecContext(ctx,
-			`INSERT INTO saved_view_clauses (view_id, dimension, ref_id, text_value) VALUES (?, ?, ?, ?)`,
-			viewID, c.Dimension, null(c.RefID), null(c.Text)); err != nil {
+			`INSERT INTO saved_view_refs (view_id, dimension, ref_id) VALUES (?, ?, ?)`,
+			viewID, r.Field, r.ID); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func SavedViewByID(ctx context.Context, q Q, id int64) (SavedView, error) {
+const viewColumns = `id, team_id, name, pin_board, pin_backlog, query, created_at, updated_at`
+
+func scanView(s interface{ Scan(...any) error }) (SavedView, error) {
 	var v SavedView
-	err := q.QueryRowContext(ctx, `
-		SELECT id, team_id, name, pin_board, pin_backlog, created_at, updated_at
-		FROM saved_views WHERE id = ?`, id).
-		Scan(&v.ID, &v.TeamID, &v.Name, &v.PinBoard, &v.PinBacklog, &v.CreatedAt, &v.UpdatedAt)
+	err := s.Scan(&v.ID, &v.TeamID, &v.Name, &v.PinBoard, &v.PinBacklog, &v.Query, &v.CreatedAt, &v.UpdatedAt)
+	return v, err
+}
+
+func SavedViewByID(ctx context.Context, q Q, id int64) (SavedView, error) {
+	v, err := scanView(q.QueryRowContext(ctx, `SELECT `+viewColumns+` FROM saved_views WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return SavedView{}, ErrNotFound
 	}
 	if err != nil {
 		return SavedView{}, err
 	}
-	v.Clauses, err = ViewClauses(ctx, q, v.ID)
+	v.Refs, err = ViewRefs(ctx, q, v.ID)
 	return v, err
 }
 
@@ -117,18 +102,16 @@ func SavedViewByID(ctx context.Context, q Q, id int64) (SavedView, error) {
 // (SPEC.md §9.4). Manual rank exists for board columns and is not worth a drag
 // target on a list of names.
 func ListSavedViews(ctx context.Context, q Q, teamID int64) ([]SavedView, error) {
-	rows, err := q.QueryContext(ctx, `
-		SELECT id, team_id, name, pin_board, pin_backlog, created_at, updated_at
-		FROM saved_views WHERE team_id = ? ORDER BY name_folded`, teamID)
+	rows, err := q.QueryContext(ctx,
+		`SELECT `+viewColumns+` FROM saved_views WHERE team_id = ? ORDER BY name_folded`, teamID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var out []SavedView
 	for rows.Next() {
-		var v SavedView
-		if err := rows.Scan(&v.ID, &v.TeamID, &v.Name, &v.PinBoard, &v.PinBacklog,
-			&v.CreatedAt, &v.UpdatedAt); err != nil {
+		v, err := scanView(rows)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, v)
@@ -137,102 +120,38 @@ func ListSavedViews(ctx context.Context, q Q, teamID int64) ([]SavedView, error)
 		return nil, err
 	}
 	for i := range out {
-		if out[i].Clauses, err = ViewClauses(ctx, q, out[i].ID); err != nil {
+		if out[i].Refs, err = ViewRefs(ctx, q, out[i].ID); err != nil {
 			return nil, err
 		}
 	}
 	return out, nil
 }
 
-// ViewClauses resolves each clause's referent for display. A clause whose
-// referent has been deleted comes back with Missing set and a Display naming
-// what has gone.
-func ViewClauses(ctx context.Context, q Q, viewID int64) ([]Clause, error) {
+// ViewRefs names each referent of a view as a query writes it today. A
+// deleted one comes back with no name.
+func ViewRefs(ctx context.Context, q Q, viewID int64) ([]Ref, error) {
 	rows, err := q.QueryContext(ctx, `
-		SELECT c.id, c.dimension, c.ref_id, c.text_value,
-		       s.name, l.name, u.username, ot.short_code, b.number, b.title, t.name
-		FROM saved_view_clauses c
-		LEFT JOIN work_states s ON c.dimension = 'state' AND s.id = c.ref_id
-		LEFT JOIN labels l ON c.dimension = 'label' AND l.id = c.ref_id
-		LEFT JOIN users u ON c.dimension IN ('assignee','reporter') AND u.id = c.ref_id
-		LEFT JOIN items b ON c.dimension = 'bucket' AND b.id = c.ref_id
-		LEFT JOIN teams ot ON ot.id = b.origin_team_id
-		LEFT JOIN teams t ON c.dimension = 'team' AND t.id = c.ref_id
-		WHERE c.view_id = ? ORDER BY c.id`, viewID)
+		SELECT r.dimension, r.ref_id, COALESCE(s.name, l.name, u.username, t.short_code,
+		       CASE WHEN b.id IS NOT NULL THEN bt.short_code || '-' || b.number END, '')
+		FROM saved_view_refs r
+		LEFT JOIN work_states s ON r.dimension = 'state' AND s.id = r.ref_id
+		LEFT JOIN labels l ON r.dimension = 'label' AND l.id = r.ref_id
+		LEFT JOIN users u ON r.dimension IN ('assignee','reporter') AND u.id = r.ref_id
+		LEFT JOIN items b ON r.dimension = 'bucket' AND b.id = r.ref_id
+		LEFT JOIN teams bt ON bt.id = b.origin_team_id
+		LEFT JOIN teams t ON r.dimension = 'team' AND t.id = r.ref_id
+		WHERE r.view_id = ? ORDER BY r.id`, viewID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []Clause
+	var out []Ref
 	for rows.Next() {
-		var c Clause
-		var refID, bucketNumber sql.NullInt64
-		var textValue, stateName, labelName, username, bucketCode, bucketTitle, teamName sql.NullString
-		if err := rows.Scan(&c.ID, &c.Dimension, &refID, &textValue,
-			&stateName, &labelName, &username, &bucketCode, &bucketNumber, &bucketTitle, &teamName); err != nil {
+		var r Ref
+		if err := rows.Scan(&r.Field, &r.ID, &r.Name); err != nil {
 			return nil, err
 		}
-		c.RefID, c.Text = num(refID), text(textValue)
-		switch c.Dimension {
-		case DimText:
-			c.Display = c.Text
-		case DimPriority:
-			c.Display = "P" + strconv.FormatInt(c.RefID, 10)
-		case DimState:
-			c.Display, c.Missing = text(stateName), !stateName.Valid
-		case DimLabel:
-			c.Display, c.Missing = text(labelName), !labelName.Valid
-		case DimAssignee, DimReporter:
-			if c.Dimension == DimAssignee && c.RefID == 0 {
-				c.Display = "Unassigned"
-				break
-			}
-			c.Display, c.Missing = text(username), !username.Valid
-		case DimBucket:
-			c.Missing = !bucketTitle.Valid
-			if !c.Missing {
-				c.Display = Identifier(text(bucketCode), num(bucketNumber)) + " " + text(bucketTitle)
-			}
-		case DimTeam:
-			c.Display, c.Missing = text(teamName), !teamName.Valid
-		}
-		if c.Missing {
-			c.Display = "deleted " + c.Dimension + " #" + strconv.FormatInt(c.RefID, 10)
-		}
-		out = append(out, c)
+		out = append(out, r)
 	}
 	return out, rows.Err()
-}
-
-// AsFilter turns a view's clauses into the filter the list endpoints take. A
-// clause naming something deleted contributes an identifier nothing matches,
-// which is exactly the behaviour §9.4 asks for: an empty result, never a
-// silently wider one.
-func (v SavedView) AsFilter() ItemFilter {
-	var f ItemFilter
-	for _, c := range v.Clauses {
-		switch c.Dimension {
-		case DimState:
-			f.StateIDs = append(f.StateIDs, c.RefID)
-		case DimLabel:
-			f.LabelIDs = append(f.LabelIDs, c.RefID)
-		case DimAssignee:
-			if c.RefID == 0 {
-				f.Unassigned = true
-				break
-			}
-			f.AssigneeIDs = append(f.AssigneeIDs, c.RefID)
-		case DimReporter:
-			f.ReporterIDs = append(f.ReporterIDs, c.RefID)
-		case DimBucket:
-			f.BucketIDs = append(f.BucketIDs, c.RefID)
-		case DimPriority:
-			f.Priorities = append(f.Priorities, c.RefID)
-		case DimTeam:
-			f.TeamIDs = append(f.TeamIDs, c.RefID)
-		case DimText:
-			f.Text = c.Text
-		}
-	}
-	return f
 }

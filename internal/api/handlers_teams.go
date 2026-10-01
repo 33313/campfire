@@ -165,11 +165,14 @@ func (s *Server) deleteState(w http.ResponseWriter, r *http.Request, a core.Acto
 	return nil, s.svc.DeleteWorkState(r.Context(), a, id)
 }
 
-// filterFrom reads the structured filter of SPEC.md §9.2 out of the query
-// string. There is no query language: these are the dimensions, each its own
-// repeatable parameter.
+// filterFrom reads a filter out of the query string: a CSQL query in csql
+// (SPEC.md §9.2), and the structured dimensions, each its own repeatable
+// parameter. All of it is and-ed.
 func filterFrom(r *http.Request) core.Filter {
 	return core.Filter{
+		Query:       r.URL.Query().Get("csql"),
+		ViewIDs:     queryInts(r, "view"),
+		TZ:          r.URL.Query().Get("tz"),
 		StateIDs:    queryInts(r, "state"),
 		LabelIDs:    queryInts(r, "label"),
 		AssigneeIDs: queryInts(r, "assignee"),

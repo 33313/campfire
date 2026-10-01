@@ -1,12 +1,12 @@
-// A saved view is a switch in the sidebar: on, it stacks its filter onto the
-// board or backlog, and several can be on at once (SPEC.md §9.4). Making,
-// changing and deleting a view happen here, in dialogs, apart from using one.
+// A saved view is a named CSQL query, and a switch in the sidebar: on, it
+// narrows the board or backlog, and the views that are on are and-ed with
+// each other and with the bar's query (SPEC.md §9.4). Making, changing and
+// deleting a view happen here, in dialogs, apart from using one.
 
 import { api } from "./api.js";
 import { app, reloadViews, toggleView } from "./state.svelte.js";
 import { route, navigate } from "./router.svelte.js";
 import { openModal, failure, toast } from "./ui.svelte.js";
-import { clausesFromFilter } from "./options.js";
 import SaveViewDialog from "../dialogs/SaveViewDialog.svelte";
 import ConfirmDialog from "../dialogs/ConfirmDialog.svelte";
 
@@ -28,28 +28,26 @@ export function useView(view) {
   navigate(viewPath(view));
 }
 
-/** Names a filter, starting from the one given, and switches on the view it becomes. */
-export async function saveNewView(teamId, filter) {
-  const res = await openModal(SaveViewDialog, { filter });
-  if (!res) return false;
-  try {
-    const view = await api.createSavedView({ teamId, ...stored(res) });
-    await reloadViews();
-    useView(view); // new, so never already on
-    toast("Saved.");
-    return true;
-  } catch (err) { failure(err); return false; }
+/** Names a query, starting from the one given, and switches on the view it becomes. */
+export async function saveNewView(teamId, query) {
+  const view = await openModal(SaveViewDialog, {
+    query, save: (v) => api.createSavedView({ teamId, ...v }),
+  });
+  if (!view) return false;
+  await reloadViews();
+  useView(view); // new, so never already on
+  toast("Saved.");
+  return true;
 }
 
-/** Changes a view's name, filter or pins. A screen it is on redraws. */
+/** Changes a view's name, query or pins. A screen it is on redraws. */
 export async function editView(view) {
-  const res = await openModal(SaveViewDialog, { view });
-  if (!res) return;
-  try {
-    await api.updateSavedView(view.id, { teamId: view.teamId, ...stored(res) });
-    await reloadViews();
-    toast("Saved.");
-  } catch (err) { failure(err); }
+  const saved = await openModal(SaveViewDialog, {
+    view, save: (v) => api.updateSavedView(view.id, { teamId: view.teamId, ...v }),
+  });
+  if (!saved) return;
+  await reloadViews();
+  toast("Saved.");
 }
 
 /** Deletes a view, after asking. */
@@ -66,10 +64,6 @@ export async function deleteView(view) {
     toast("Deleted.");
   } catch (err) { failure(err); }
 }
-
-// The dialog's answer as the API stores it.
-const stored = ({ name, pinBoard, pinBacklog, filter }) =>
-  ({ name, pinBoard, pinBacklog, clauses: clausesFromFilter(filter) });
 
 /** Whether you may change the view: any member of its team, or an administrator. */
 export function canEditView(view) {

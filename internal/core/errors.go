@@ -8,7 +8,12 @@
 // fewer people look at.
 package core
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/campfire/campfire/internal/csql"
+)
 
 // Code classifies an error so that each interface can render it in its own
 // terms — an HTTP status, an MCP tool error — without either one deciding
@@ -30,6 +35,9 @@ type Error struct {
 	Message string `json:"message"`
 	// Field names the input that was rejected, when one input was.
 	Field string `json:"field,omitempty"`
+	// Span is the [start, end) byte range of a query the error is about, so
+	// the place it went wrong can be underlined.
+	Span []int `json:"span,omitempty"`
 }
 
 func (e *Error) Error() string { return string(e.Code) + ": " + e.Message }
@@ -46,3 +54,13 @@ var (
 	errForbidden = &Error{Code: CodeForbidden, Message: "you may not do that"}
 	errNotFound  = &Error{Code: CodeNotFound, Message: "not found"}
 )
+
+// notReserved refuses a name CSQL keeps for itself (csql.Reserved): a user
+// called me, or a label called none, would make every filter on them
+// ambiguous (SPEC.md §9.2).
+func notReserved(field, name string) error {
+	if csql.IsReserved(name) {
+		return invalidField(field, "%q means something in a filter; choose another name", strings.ToLower(strings.TrimSpace(name)))
+	}
+	return nil
+}

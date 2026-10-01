@@ -301,8 +301,6 @@ select.input {
 }
 .chip:hover { color: var(--text); border-color: var(--border-strong); }
 .chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-tint); }
-/* A clause naming something deleted: it matches nothing, and says so. */
-.chip.missing { border-color: var(--alert); color: var(--alert); background: var(--alert-tint); }
 
 /* A filter chip and its clear: two buttons drawn as one, sharing a border. */
 .chip-group { display: inline-flex; align-items: center; }
@@ -936,3 +934,85 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
  * every other anchor carries are turned off on it. */
 .card, .bucket-card { color: var(--text); text-decoration: none; }
 .card:hover, .bucket-card:hover { text-decoration: none; }
+
+/* The query box: CSQL typed, in the filter bar and the view dialog. A mono
+   face, because a query is read token by token. */
+.query-box { position: relative; min-width: 220px; display: flex; }
+.filter-bar .query-box { flex: 1 1 320px; }
+.query-box > .input { flex: 1; width: 100%; height: 28px; font-family: var(--mono); font-size: 12px; }
+.query-box.bad > .input { border-color: var(--alert); }
+/* The error's place, underlined over the text: a copy of the text drawn in
+   no colour on top of the input, its span marked. */
+.query-mirror {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden;
+  padding: 0 11px; border: 1px solid transparent; display: flex; align-items: center;
+  font-family: var(--mono); font-size: 12px; white-space: pre; color: transparent;
+}
+.query-mirror mark {
+  background: none; color: transparent;
+  text-decoration: underline wavy var(--alert); text-underline-offset: 4px;
+}
+.query-offers {
+  position: fixed; z-index: 60; display: flex; flex-direction: column; padding: 3px;
+  background: var(--surface); border: 1px solid var(--border-strong);
+  animation: drop var(--quick) var(--ease-out);
+}
+.query-offers .ident { font-family: var(--mono); font-size: 12px; color: var(--text); }
+.query-error { padding: 6px; font-size: 12px; color: var(--alert); }
+
+/* A filter chip's dropdown, and the other small panels of the filter bar:
+   the card menu's panel, hung under what opened it, above dialogs. */
+.pop {
+  /* Hung from inside the filter bar, whose children do not wrap; a panel does. */
+  position: fixed; z-index: 60; display: flex; flex-direction: column; padding: 3px; white-space: normal;
+  background: var(--surface); border: 1px solid var(--border-strong);
+  animation: drop var(--quick) var(--ease-out);
+}
+.filter-pop { width: 260px; }
+.pop-search { height: 28px; margin: 2px 2px 4px; }
+.pop-rows { display: flex; flex-direction: column; max-height: 300px; overflow-y: auto; }
+.pop-empty { padding: 6px; font-size: 12px; color: var(--faint); }
+.pop-hint {
+  padding: 6px 6px 3px; border-top: 1px solid var(--border); margin-top: 3px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.04em; color: var(--faint);
+}
+/* One value: [ ] not in the filter, [+] is, [−] isn't. */
+.tri {
+  display: flex; align-items: baseline; gap: 8px; padding: 6px; width: 100%;
+  background: none; border: 0; text-align: left; cursor: pointer; color: var(--muted); font-size: 12.5px;
+}
+.tri:hover, .tri.focus, .tri:focus-visible { background: var(--sunk); color: var(--text); outline: none; }
+.tri-box { font-family: var(--mono); font-size: 12px; color: var(--faint); white-space: pre; }
+.tri.plus, .tri.plus .tri-box { color: var(--accent); }
+.tri.minus, .tri.minus .tri-box { color: var(--alert); }
+.tri.minus .tri-label { text-decoration: line-through; }
+.tri-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tri-note {
+  margin-left: auto; min-width: 0; font-size: 11.5px; color: var(--faint);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.day-pop { width: 240px; }
+.day-range { display: flex; flex-direction: column; gap: 6px; padding: 6px; }
+.day-range label { display: flex; align-items: center; gap: 8px; }
+.day-range .field-label { width: 34px; }
+.day-range .input { flex: 1; height: 28px; }
+.filter-error { font-size: 12px; color: var(--alert); white-space: nowrap; }
+.filter-bar .mode, .filter-row .mode { font-family: var(--mono); font-size: 11.5px; }
+.mode[aria-pressed="true"] { color: var(--accent); }
+/* The chips in the view dialog wrap rather than scroll. */
+.filter-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.filter-row .query-box { flex: 1 1 100%; }
+/* The cheat sheet: three short sections, kept to the window (CsqlHelp). */
+.csql-help {
+  padding: 14px 16px; gap: 14px; overflow-y: auto; box-sizing: border-box;
+  font-size: 12.5px; line-height: 1.55; color: var(--muted);
+}
+.csql-help p { margin: 0; }
+.csql-help p + p { margin-top: 4px; }
+.csql-help h3 { margin: 0 0 6px; }
+.csql-help code { font-family: var(--mono); font-size: 11.5px; color: var(--text); }
+.csql-lead { color: var(--text); }
+.csql-fields { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 5px 16px; margin: 0; }
+.csql-fields dt, .csql-fields dd { margin: 0; overflow-wrap: anywhere; }
+.csql-examples { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.csql-examples li { overflow-wrap: anywhere; }

@@ -160,7 +160,7 @@
         </button>
       </div>
       {#each app.views as v}
-        {@const gone = (v.clauses || []).filter((c) => c.missing).map((c) => c.display)}
+        {@const gone = v.missing || []}
         {@const lit = app.viewsOn.includes(v.id)}
         <!-- A switch, not a place: Board stays where you are, and the views
              that are on stack onto it. -->
@@ -170,7 +170,7 @@
           <Icon body={NAV.view} size={13} />
           <span class="label">{v.name}</span>
           {#if gone.length}
-            <span class="count" style="color:var(--alert)" title="Names what was deleted: {gone.join(', ')}">!</span>
+            <span class="count" style="color:var(--alert)" title="Names what has been deleted: {gone.join(', ')}">!</span>
           {/if}
           {#if lit}<span class="count" aria-hidden="true">on</span>{/if}
         </button>

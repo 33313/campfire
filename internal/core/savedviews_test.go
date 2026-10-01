@@ -1,47 +1,39 @@
 package core
 
 import (
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/campfire/campfire/internal/store"
 )
 
-// SPEC.md §9.4: a saved view is stored as its filter's own structured
-// representation — one row per clause, referencing by identity — never as a
-// serialised query string.
-func TestSavedViewStoresClausesByIdentity(t *testing.T) {
+// SPEC.md §9.4: a saved view stores its query canonical, naming what it
+// references by #id, and hands it out written with today's names.
+func TestSavedViewStoresItsQueryByIdentity(t *testing.T) {
 	w := newWorld(t)
-	it, _ := w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindTicket, TeamID: w.sol.ID,
+	w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindTicket, TeamID: w.sol.ID,
 		Title: "labelled", Labels: []string{"api"}})
-	labels, _ := w.ListLabels(w.ctx, w.marta)
 
 	v, err := w.CreateSavedView(w.ctx, w.marta, ViewInput{
 		TeamID: w.sol.ID, Name: "API work", PinBoard: true,
-		Clauses: []store.Clause{
-			{Dimension: store.DimLabel, RefID: labels[0].ID},
-			{Dimension: store.DimAssignee, RefID: w.marta.UserID},
-		}})
+		Query: "LABEL = API and (assignee = marta or reporter = me)"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(v.Clauses) != 2 {
-		t.Fatalf("%d clauses", len(v.Clauses))
+	if want := "label = api and (assignee = marta or reporter = me)"; v.Query != want {
+		t.Fatalf("query = %q, want %q", v.Query, want)
 	}
-	for _, c := range v.Clauses {
-		if c.RefID == 0 {
-			t.Fatalf("clause %+v does not reference anything by identity", c)
-		}
-		if c.Missing {
-			t.Fatalf("clause %+v is missing its referent already", c)
-		}
+	stored, _ := store.SavedViewByID(w.ctx, w.DB.R, v.ID)
+	if strings.Contains(stored.Query, "api") || strings.Contains(stored.Query, "marta") ||
+		!strings.Contains(stored.Query, "reporter = me") {
+		t.Fatalf("stored %q names by name, or pinned me to its author", stored.Query)
 	}
-	_ = it
 }
 
-// A clause MUST NOT be removed by cascade when its referent is deleted, and a
-// label referenced by a clause MUST NOT be reaped by lazy cleanup. The view
-// names the missing reference and matches nothing (SPEC.md §9.4).
-func TestSavedViewKeepsAClauseWhoseReferentIsGone(t *testing.T) {
+// A referent MUST NOT go when a view names it: a label is not reaped, and a
+// deleted bucket is named as missing and matches nothing (SPEC.md §9.4).
+func TestSavedViewKeepsAReferentThatIsGone(t *testing.T) {
 	w := newWorld(t)
 	it, _ := w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindTicket, TeamID: w.sol.ID,
 		Title: "labelled", Labels: []string{"api"}})
@@ -49,11 +41,10 @@ func TestSavedViewKeepsAClauseWhoseReferentIsGone(t *testing.T) {
 	labelID := labels[0].ID
 
 	v, err := w.CreateSavedView(w.ctx, w.marta, ViewInput{TeamID: w.sol.ID, Name: "API work",
-		Clauses: []store.Clause{{Dimension: store.DimLabel, RefID: labelID}}})
+		Query: "label = api"})
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	// Taking the last use of the label off the item would normally reap it.
 	if _, err := w.RemoveLabel(w.ctx, w.marta, it.ID, "api"); err != nil {
 		t.Fatal(err)
@@ -62,43 +53,33 @@ func TestSavedViewKeepsAClauseWhoseReferentIsGone(t *testing.T) {
 		t.Fatal("the label was reaped despite being named by a saved view")
 	}
 
-	// Now delete a different referent — a bucket — and check the clause stays
-	// and reports itself missing.
 	bucket := w.bucket(w.sol, w.marta, "Release 1.0")
 	v2, err := w.UpdateSavedView(w.ctx, w.marta, v.ID, ViewInput{
-		TeamID: w.sol.ID, Name: "API work",
-		Clauses: []store.Clause{{Dimension: store.DimBucket, RefID: bucket.ID}}})
+		TeamID: w.sol.ID, Name: "API work", Query: `bucket = "release 1.0" or not label = api`})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v2.Clauses[0].Missing {
-		t.Fatal("the clause is missing before anything was deleted")
+	if len(v2.Missing) != 0 || !strings.HasPrefix(v2.Query, "bucket = "+bucket.Identifier) {
+		t.Fatalf("before anything was deleted: %+v", v2)
 	}
 	if err := w.DeleteItem(w.ctx, w.admin, bucket.ID); err != nil {
 		t.Fatal(err)
 	}
-	views, err := w.ListSavedViews(w.ctx, w.marta, w.sol.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(views) != 1 || len(views[0].Clauses) != 1 {
-		t.Fatalf("the clause was dropped: %+v", views)
-	}
-	if !views[0].Clauses[0].Missing {
-		t.Fatal("the clause does not report its referent as missing")
+	views, _ := w.ListSavedViews(w.ctx, w.marta, w.sol.ID)
+	if len(views) != 1 || len(views[0].Missing) != 1 || !strings.Contains(views[0].Query, "#") {
+		t.Fatalf("the deleted bucket is not named as missing: %+v", views)
 	}
 
-	// And the view now matches nothing rather than silently widening.
-	f, err := w.SavedViewFilter(w.ctx, w.marta, v.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// The bucket half now matches nothing; the not-api half still matches.
+	f, _ := w.SavedViewFilter(w.ctx, w.marta, v.ID)
 	page, err := w.ListItems(w.ctx, w.marta, f, "", 50)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(page.Items) != 0 {
-		t.Fatalf("a view naming a deleted bucket matched %d items", len(page.Items))
+	for _, it := range page.Items {
+		if it.Kind == store.KindBucket && it.ID == bucket.ID {
+			t.Fatal("a deleted bucket was matched")
+		}
 	}
 }
 
@@ -145,7 +126,7 @@ func TestAViewMayFilterOnAnotherTeam(t *testing.T) {
 	w := newWorld(t)
 	theirs := w.ticket(w.ter, w.sam, "theirs")
 	v, err := w.CreateSavedView(w.ctx, w.marta, ViewInput{TeamID: w.sol.ID, Name: "Watching TERRA",
-		Clauses: []store.Clause{{Dimension: store.DimTeam, RefID: w.ter.ID}}})
+		Query: "team = TER"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +145,7 @@ func TestSavedViewMutationsAreLogged(t *testing.T) {
 	w := newWorld(t)
 	v, _ := w.CreateSavedView(w.ctx, w.marta, ViewInput{TeamID: w.sol.ID, Name: "Triage"})
 	if _, err := w.UpdateSavedView(w.ctx, w.marta, v.ID, ViewInput{TeamID: w.sol.ID,
-		Name: "Triage renamed", PinBoard: true}); err != nil {
+		Name: "Triage renamed", PinBoard: true, Query: "priority = 1"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := w.DeleteSavedView(w.ctx, w.marta, v.ID); err != nil {
@@ -177,7 +158,7 @@ func TestSavedViewMutationsAreLogged(t *testing.T) {
 	}
 	for _, want := range []string{
 		store.EvViewCreated + "/", store.EvViewUpdated + "/name",
-		store.EvViewUpdated + "/pinning", store.EvViewUpdated + "/clauses",
+		store.EvViewUpdated + "/pinning", store.EvViewUpdated + "/query",
 		store.EvViewDeleted + "/"} {
 		if !kinds[want] {
 			t.Fatalf("no event for %q; got %v", want, kinds)
@@ -185,9 +166,14 @@ func TestSavedViewMutationsAreLogged(t *testing.T) {
 	}
 }
 
-func TestSavedViewRejectsUnknownDimensions(t *testing.T) {
+// A query that does not read, or names nothing, is refused where it is wrong.
+func TestSavedViewRejectsABadQueryAtThePlace(t *testing.T) {
 	w := newWorld(t)
 	_, err := w.CreateSavedView(w.ctx, w.marta, ViewInput{TeamID: w.sol.ID, Name: "Bad",
-		Clauses: []store.Clause{{Dimension: "type", RefID: 1}}})
+		Query: "assignee = marty"})
 	requireCode(t, err, CodeInvalid)
+	var e *Error
+	if !errors.As(err, &e) || e.Field != "query" || len(e.Span) != 2 || e.Span[0] != 11 || e.Span[1] != 16 {
+		t.Fatalf("got %+v", err)
+	}
 }

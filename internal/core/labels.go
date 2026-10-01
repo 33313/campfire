@@ -22,7 +22,7 @@ func validateLabel(name string) (string, error) {
 	if len([]rune(name)) > maxLabel {
 		return "", invalidField("label", "a label is at most %d characters", maxLabel)
 	}
-	return name, nil
+	return name, notReserved("label", name)
 }
 
 func (s *Service) attachLabel(ctx context.Context, t *wtx, it store.Item, name string) error {

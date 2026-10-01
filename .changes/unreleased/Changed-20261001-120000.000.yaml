@@ -1,3 +1,3 @@
 kind: Changed
-body: Saved views are switches in the sidebar. A click turns one on or off, several can be on at once, and they stack with each other and with the filter bar; values of one filter add up and different filters narrow. Every filter chip now picks several values. A view's filters are named in full, a bucket by its identifier and title rather than its number. Right-clicking a view edits its name, filter and pins, or deletes it.
+body: Saved views are switches in the sidebar. A click turns one on or off, several can be on at once, and right-clicking a view edits its name, query and pins, or deletes it. In the HTTP API and the MCP tools a saved view takes and returns a `query` in place of `clauses`, and existing views are rewritten as the query they meant; the item list's `view` parameter is and-ed with any other filter instead of replacing it.
 time: 2026-10-01T12:00:00.000000000+02:00
