@@ -151,9 +151,11 @@ test("coming back to the board draws it before the server answers", async ({ pag
 
   let release;
   const held = new Promise((r) => { release = r; });
-  await page.route("**/board?*", async (route) => { await held; await route.continue(); });
+  // A newer request may cancel the held one (latest.js), which leaves no
+  // route to continue.
+  await page.route("**/board?*", async (route) => { await held; await route.continue().catch(() => {}); });
   await sidebar.getByRole("link", { name: "Board" }).click();
   await expect(page.locator(".card", { hasText: "After the flood" })).toBeVisible({ timeout: 500 });
   release();
-  await page.unroute("**/board?*");
+  await page.unrouteAll({ behavior: "wait" });
 });
