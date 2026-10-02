@@ -32,7 +32,7 @@ paths:
   /api/instance:
     get:
       operationId: getInstance
-      summary: Whether the instance needs its first account, and the fixed icon and colour sets
+      summary: Whether the instance needs its first account, the fixed icon and colour sets, and how long a hidden tab keeps its stream
       x-agent: false
       security: []
       responses:

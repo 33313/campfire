@@ -199,6 +199,7 @@ func serve(cfg config.Config) error {
 
 	mux := http.NewServeMux()
 	apiServer := api.New(svc, bus)
+	apiServer.HiddenTabGrace, _ = cfg.HiddenTabGrace() // validated on load
 	mux.Handle("/api/", apiServer)
 	mountBackup(mux, cfg, db, svc)
 	if cfg.MCP.Enabled {

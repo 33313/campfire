@@ -3,11 +3,11 @@
 
   import { untrack } from "svelte";
 
-  import { api } from "../lib/api.js";
+  import { api, peek } from "../lib/api.js";
   import { latest } from "../lib/latest.js";
   import { app, viewsOn } from "../lib/state.svelte.js";
   import { navigate } from "../lib/router.svelte.js";
-  import { onNotify } from "../lib/stream.svelte.js";
+  import { onNotify, touches } from "../lib/stream.svelte.js";
   import { failure } from "../lib/ui.svelte.js";
   import { createItem } from "../lib/create.js";
     import { whenDay } from "../lib/format.js";
@@ -53,6 +53,22 @@
   // The filter as the API takes it, for the column and for "load older".
   const asked = (filter) => ({ ...filter, viewIds: viewsOn().map((v) => v.id), tz: TZ });
 
+  const fetchColumn = (filter, signal) => api.getBacklog(teamId, asked(filter), showBuckets, 100, signal);
+
+  // Coming back to the backlog draws it at once, as it was last shown, and
+  // asks again behind it: a 304 when nothing changed (SPEC.md §12.4). The
+  // team and its states are still asked for once a visit.
+  let known = false;
+  {
+    const was = [peek(() => api.getTeam(teamId)), peek(() => api.listWorkStates(teamId)),
+      peek(() => fetchColumn(applied))];
+    if (was.every(Boolean)) {
+      team = was[0];
+      states = was[1];
+      column = was[2];
+    }
+  }
+
   $effect(() => {
     const now = asking(applied);
     untrack(() => { if (now !== drawn) load(); });
@@ -64,8 +80,9 @@
   async function load(filter = applied) {
     const key = asking(filter);
     const res = await ask(async (signal) => {
-      if (!team) [team, states] = await Promise.all([api.getTeam(teamId), api.listWorkStates(teamId)]);
-      return api.getBacklog(teamId, asked(filter), showBuckets, 100, signal);
+      if (!known) [team, states] = await Promise.all([api.getTeam(teamId), api.listWorkStates(teamId)]);
+      known = true;
+      return fetchColumn(filter, signal);
     });
     if (res.superseded) return res;
     if (res.error) {
@@ -83,7 +100,12 @@
     return { ok: true };
   }
 
-  $effect(() => onNotify(() => (paged ? (stale = true) : refresh())));
+  // Its own team's changes, and another team's to what is on it; with
+  // buckets shown, every item event, since a bucket's progress counts tickets
+  // of any team.
+  let onScreen = $derived(new Set((column?.items || []).flatMap((i) => [i.identifier, i.bucketIdentifier])));
+  $effect(() => onNotify(() => (paged ? (stale = true) : refresh()),
+    (n) => n.teamId === teamId || touches(n, onScreen, teamId) || (showBuckets && n.kind.startsWith("item."))));
 
   async function fetchFocus(id) {
     const [item, comments, history] = await Promise.all([

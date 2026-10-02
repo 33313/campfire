@@ -805,7 +805,6 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
   display: flex; align-items: center; gap: 10px; padding: 10px 20px;
   border-bottom: 1px solid var(--border); background: var(--surface); font-size: 12.5px;
 }
-.banner.alert { border-color: var(--alert); color: var(--alert); }
 .banner .grow { flex: 1; }
 
 .toast-stack { position: fixed; right: 20px; bottom: 20px; display: flex;

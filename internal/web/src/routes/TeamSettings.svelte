@@ -60,7 +60,8 @@
   }
 
   load();
-  $effect(() => onNotify(load));
+  // Its own team's changes, and the users its members are.
+  $effect(() => onNotify(load, (n) => !n.teamId || n.teamId === teamId));
 
   const guard = async (fn) => {
     try { await fn(); await load(); } catch (err) { failure(err); }

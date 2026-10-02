@@ -627,6 +627,9 @@ This does three things at once: it prevents the stream disclosing data the recip
 it keeps the stream stable while entity shapes change, and it makes the refetch path the only path
 that renders data.
 
+The cost this leaves, a refetch per interested client per write, is bounded by
+[§12.4](#124-the-stream-is-not-a-source-of-truth), not by carrying data in the notification.
+
 Authorization MUST be evaluated per event at fan-out, against current permissions. It MUST NOT be
 cached at subscribe time: a revoked permission must take effect on the next event, and a granted one
 must not be missed.
@@ -644,6 +647,24 @@ Two consequences:
 - Clients MUST ignore event kinds they do not recognise, so that adding a kind is not a breaking
   change.
 
+A refetch is what a notification costs, so a client pays it only where it buys something:
+
+- **A screen refetches only for notifications that can change what it shows.** The owning team a
+  notification carries is the first test. A screen that shows another team's items — a bucket's
+  contents, a relation, the bucket a card belongs to — also listens for those items by identifier.
+- **A hidden client refetches nothing.** What it would have refetched waits until it is shown, and
+  then happens once. Left hidden past a grace the instance sets (a minute by default), it closes its
+  stream and resumes from its cursor when shown ([§12.2](#122-resume)), so an idle tab holds no
+  connection and loses nothing.
+- **A refetch that finds nothing new costs no body.** Responses carry an ETag and are compressed; the
+  client asks conditionally and keeps what it had on a 304. The ETag is a fingerprint of the content
+  alone, so it discloses nothing the body would not.
+- **A "too far behind" response is recovered from, not reported.** The client discards what it holds
+  and refetches every screen and list. It MUST NOT require a reload.
+- A screen returned to MAY be drawn at once from what the client last fetched for it, provided it is
+  asked for again at once. The client keeps that in memory only, and drops it when the account
+  changes.
+
 ### 12.5 Operational requirements
 
 To be documented for anyone deploying the application:
@@ -651,7 +672,8 @@ To be documented for anyone deploying the application:
 - Response buffering must be disabled on any intervening proxy.
 - Idle read timeouts must exceed the heartbeat interval. The server sends heartbeats well inside the
   common sixty-second default.
-- File-descriptor limits must allow one open connection per active client.
+- File-descriptor limits must allow one open connection per active client. A tab hidden past the
+  grace holds none.
 
 ---
 

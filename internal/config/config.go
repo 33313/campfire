@@ -33,6 +33,8 @@ type Config struct {
 	// (SPEC.md §14.6). While it is disabled the path is not served and an
 	// agent token authenticates nothing.
 	MCP MCP `json:"mcp"`
+
+	LiveUpdates LiveUpdates `json:"liveUpdates"`
 }
 
 type Snapshots struct {
@@ -51,6 +53,13 @@ type MCP struct {
 	Enabled bool `json:"enabled"`
 }
 
+type LiveUpdates struct {
+	// HiddenTabGrace is how long a tab nobody is looking at keeps its stream
+	// open. Past it the stream closes and resumes from its cursor when the tab
+	// is shown again (SPEC.md §12.4). "0s" closes it at once.
+	HiddenTabGrace string `json:"hiddenTabGrace"`
+}
+
 // Default is what an instance runs with when nothing is configured.
 func Default() Config {
 	dir := DataDir()
@@ -63,6 +72,7 @@ func Default() Config {
 			Interval: "6h",
 			Keep:     14,
 		},
+		LiveUpdates: LiveUpdates{HiddenTabGrace: "1m"},
 	}
 }
 
@@ -126,7 +136,24 @@ func (c Config) Validate() error {
 			return errors.New("snapshots.keep must be at least 1")
 		}
 	}
+	if _, err := c.HiddenTabGrace(); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (c Config) HiddenTabGrace() (time.Duration, error) {
+	if c.LiveUpdates.HiddenTabGrace == "" {
+		return time.Minute, nil
+	}
+	d, err := time.ParseDuration(c.LiveUpdates.HiddenTabGrace)
+	if err != nil {
+		return 0, fmt.Errorf("liveUpdates.hiddenTabGrace: %w", err)
+	}
+	if d < 0 {
+		return 0, errors.New("liveUpdates.hiddenTabGrace must not be negative")
+	}
+	return d, nil
 }
 
 func (c Config) SnapshotInterval() (time.Duration, error) {
