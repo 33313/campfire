@@ -23,7 +23,7 @@
     started: [["Not started", { none: true }]],
     completed: [["Not completed", { none: true }]],
   };
-  const presets = field === "due" ? PRESETS.due : [...PRESETS.common, ...(PRESETS[field] || [])];
+  const presets = $derived(field === "due" ? PRESETS.due : [...PRESETS.common, ...(PRESETS[field] || [])]);
   const same = (a, b) => JSON.stringify(a || {}) === JSON.stringify(b || {});
 
   let chip = $state(null);
