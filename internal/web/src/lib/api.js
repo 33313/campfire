@@ -15,25 +15,65 @@ class ApiError extends Error {
 }
 export { ApiError };
 
+// What each GET last returned, by address: its ETag, so that asking again
+// costs a 304 and no body when nothing changed, and its text, so that a screen
+// you come back to is drawn at once from what it showed, then asked again
+// (SPEC.md §12.4). In memory only: it goes with the tab, and with the account.
+const memo = new Map();
+const MEMO = 64;
+let peeking = false;
+
 async function request(method, path, body, signal) {
+  const kept = method === "GET" ? memo.get(path) : null;
+  const headers = body === undefined ? {} : { "Content-Type": "application/json" };
+  if (kept) headers["If-None-Match"] = kept.tag;
   const res = await fetch(path, {
     method,
     signal, // a superseded request is cancelled, not left to land late
-    headers: body === undefined ? {} : { "Content-Type": "application/json" },
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
     credentials: "same-origin",
   });
+  if (res.status === 304 && kept) {
+    remember(path, kept);
+    return JSON.parse(kept.text); // a fresh copy: screens change what they are given
+  }
   if (res.status === 204) return null;
   let parsed = null;
   const text = await res.text();
   if (text) {
     try { parsed = JSON.parse(text); } catch { parsed = null; }
   }
-  if (!res.ok) throw new ApiError(res.status, parsed);
+  if (!res.ok) {
+    memo.delete(path); // gone, or no longer yours to see: not drawn from memory either
+    throw new ApiError(res.status, parsed);
+  }
+  const tag = res.headers.get("ETag");
+  if (tag && method === "GET") remember(path, { tag, text });
   return parsed;
 }
 
-const get = (p, signal) => request("GET", p, undefined, signal);
+function remember(path, entry) {
+  memo.delete(path); // the newest goes to the back; the oldest is let go
+  memo.set(path, entry);
+  if (memo.size > MEMO) memo.delete(memo.keys().next().value);
+}
+
+/** What `call` would fetch, from memory and at once, or undefined if it was
+    never fetched. `call` is an api function, e.g. () => api.getTeam(1). */
+export function peek(call) {
+  peeking = true;
+  try { return call(); } finally { peeking = false; }
+}
+
+/** Lets go of everything remembered: another account must not see it. */
+export function forget() { memo.clear(); }
+
+const get = (p, signal) => {
+  if (!peeking) return request("GET", p, undefined, signal);
+  const kept = memo.get(p);
+  return kept ? JSON.parse(kept.text) : undefined;
+};
 const post = (p, b) => request("POST", p, b === undefined ? {} : b);
 const patch = (p, b) => request("PATCH", p, b);
 const put = (p, b) => request("PUT", p, b);

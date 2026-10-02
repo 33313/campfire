@@ -45,6 +45,7 @@ func TestWriteThenLoadRoundTrips(t *testing.T) {
 	want.Addr = "0.0.0.0:9000"
 	want.MCP.Enabled = true
 	want.Snapshots.Interval = "30m"
+	want.LiveUpdates.HiddenTabGrace = "5m"
 	if err := want.Write(path); err != nil {
 		t.Fatal(err)
 	}
@@ -58,6 +59,13 @@ func TestWriteThenLoadRoundTrips(t *testing.T) {
 	d, err := got.SnapshotInterval()
 	if err != nil || d.Minutes() != 30 {
 		t.Fatalf("interval %v %v", d, err)
+	}
+	if g, err := got.HiddenTabGrace(); err != nil || g.Minutes() != 5 {
+		t.Fatalf("hidden tab grace %v %v", g, err)
+	}
+	got.LiveUpdates.HiddenTabGrace = "-1s"
+	if got.Validate() == nil {
+		t.Fatal("a negative hidden tab grace was accepted")
 	}
 	info, err := os.Stat(path)
 	if err != nil {

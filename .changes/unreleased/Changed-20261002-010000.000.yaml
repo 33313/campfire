@@ -1,0 +1,3 @@
+kind: Changed
+body: 'Live updates cost far less. A change refetches only on screens that show something it touches, so another team''s work costs your board nothing. A hidden tab refetches nothing, closes its connection after `liveUpdates.hiddenTabGrace` (a minute by default) and catches up once when shown. Responses are compressed and fingerprinted, so a refetch that finds nothing new is a 304 with no body, and a reload costs a few kilobytes instead of almost 400. A screen you come back to is drawn at once and checked behind it. After a network drop the stream reconnects as soon as the network or the tab is back, and a tab too far behind to catch up recovers without asking for a reload.'
+time: 2026-10-02T01:00:00.000000000+02:00

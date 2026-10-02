@@ -92,7 +92,8 @@ One JSON file, in the operating system's data directory:
     "keep": 14,
     "shipTo": ""
   },
-  "mcp": { "enabled": false }
+  "mcp": { "enabled": false },
+  "liveUpdates": { "hiddenTabGrace": "1m" }
 }
 ```
 
@@ -104,6 +105,9 @@ Three defaults are worth knowing:
   it is written.
 - **`mcp.enabled` is false.** While it is off, `/mcp` is not served and an agent token
   authenticates nothing.
+
+`liveUpdates.hiddenTabGrace` is how long a browser tab nobody is looking at keeps its live-update
+connection. Past it the connection closes, and the tab catches up when it is shown again.
 
 **The database must be on local disk.** Network filesystems (NFS, SMB) and cloud-synchronised
 folders (Dropbox, iCloud Drive, OneDrive, Google Drive) are **unsupported**: SQLite's locking is not
@@ -166,7 +170,10 @@ proxy:
 2. **Idle read timeout above the heartbeat interval.** The server beats every 20 seconds, well
    inside the common 60-second default.
 3. **File-descriptor limits allowing one open connection per active client**, plus headroom. Fifty
-   people need nothing unusual; the default 1024 is thin at a few hundred.
+   people need nothing unusual; the default 1024 is thin at a few hundred. A tab left hidden past
+   `liveUpdates.hiddenTabGrace` closes its connection.
+
+The server compresses its own responses; the proxy need not.
 
 ```nginx
 location /api/stream {

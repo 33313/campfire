@@ -102,6 +102,7 @@ func (s *Server) getInstance(w http.ResponseWriter, r *http.Request, a core.Acto
 		"needsBootstrap": needs,
 		"bucketIcons":    store.BucketIcons,
 		"bucketColors":   store.BucketColours,
+		"hiddenTabGrace": s.HiddenTabGrace.Milliseconds(),
 	}, nil
 }
 

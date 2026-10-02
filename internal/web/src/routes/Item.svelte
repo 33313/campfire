@@ -9,10 +9,10 @@
   // beside the board's own is two asides on one screen and nobody can say what
   // either is for.
 
-  import { api } from "../lib/api.js";
+  import { api, peek } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
   import { navigate } from "../lib/router.svelte.js";
-  import { onNotify } from "../lib/stream.svelte.js";
+  import { onNotify, touches } from "../lib/stream.svelte.js";
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
   import { assigneeOptions, bucketOptions, priorityOptions } from "../lib/options.js";
   import { when, whenDay, plural } from "../lib/format.js";
@@ -48,28 +48,46 @@
   let newComment = $state("");
   let labelDraft = $state("");
 
+  const fetchItem = () => (bucketId ? api.getItem(bucketId) : api.lookupItem(identifier));
+  const fetchRest = (it) => [api.listComments(it.id), api.getLog({ item: it.id, limit: 100 }),
+    it.kind === "bucket" ? api.getBucketContents(it.id) : null];
+
   async function load() {
     try {
-      const fresh = item ? await api.getItem(item.id)
-        : bucketId ? await api.getItem(bucketId)
-        : await api.lookupItem(identifier);
+      const fresh = await fetchItem();
       // The old /bucket/<id> address: the detail lives at the item's identifier.
-      if (!item && bucketId) { navigate(`/${fresh.identifier}`, true); return; }
+      if (bucketId) { navigate(`/${fresh.identifier}`, true); return; }
       item = fresh;
-      [comments, history, contents] = await Promise.all([
-        api.listComments(item.id).then((c) => c || []),
-        api.getLog({ item: item.id, limit: 100 }),
-        item.kind === "bucket" ? api.getBucketContents(item.id) : null,
-      ]);
+      [comments, history, contents] = await Promise.all(fetchRest(item));
+      comments ||= [];
       error = null;
     } catch (err) {
       error = err;
     }
   }
 
+  // Coming back to an item draws it at once, as it was last shown, and asks
+  // again behind it: a 304 when nothing changed (SPEC.md §12.4).
+  {
+    const was = peek(fetchItem);
+    const rest = was && peek(() => fetchRest(was));
+    if (rest && !rest.includes(undefined)) {
+      item = was;
+      comments = rest[0] || [];
+      history = rest[1];
+      contents = rest[2];
+    }
+  }
+
   load();
   loadBuckets();
-  $effect(() => onNotify(load));
+  // What the page shows: the item, its bucket and the items it relates to,
+  // and a bucket's contents, which come from any team, so for a bucket every
+  // item event counts.
+  let onPage = $derived(new Set([identifier, item?.identifier, item?.bucketIdentifier,
+    ...(item?.relations || []).map((r) => r.identifier)]));
+  $effect(() => onNotify(load, (n) => touches(n, onPage, item?.teamId)
+    || (item?.kind === "bucket" && n.kind.startsWith("item."))));
 
   // A field patch leaves edit mode alone: the pickers patch while the title and
   // description drafts are still open, and collapsing the editor would discard

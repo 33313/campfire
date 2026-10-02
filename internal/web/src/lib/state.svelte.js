@@ -32,9 +32,9 @@ export async function reloadContext(teamId) {
   app.users = users || [];
 }
 
-// The sidebar's backlog count. It is not any one screen's, so the stream
-// refreshes it beside whichever screen is showing; read only on boot, it went
-// stale with the first ticket created or moved.
+// The sidebar's backlog count. It is not any one screen's: the sidebar
+// refreshes it on its team's notifications; read only on boot, it went stale
+// with the first ticket created or moved.
 export async function refreshBacklogCount() {
   const id = app.team?.id;
   if (!id) return;

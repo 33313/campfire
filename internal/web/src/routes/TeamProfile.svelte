@@ -44,7 +44,8 @@
 
   load();
   loadBuckets(); // the bucket ids the activity carries resolve against this
-  $effect(() => onNotify(load));
+  // Its own team's changes, and the users its members are.
+  $effect(() => onNotify(load, (n) => !n.teamId || n.teamId === teamId));
 
   let acting = $derived(app.user.isAdmin
     || app.teams.some((m) => m.teamId === teamId && m.role === "admin"));

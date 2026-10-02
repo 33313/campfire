@@ -8,10 +8,10 @@
   import { flip } from "svelte/animate";
   import { crossfade, fade } from "svelte/transition";
 
-  import { api } from "../lib/api.js";
+  import { api, peek } from "../lib/api.js";
   import { latest } from "../lib/latest.js";
   import { app, viewsOn } from "../lib/state.svelte.js";
-  import { onNotify } from "../lib/stream.svelte.js";
+  import { onNotify, touches } from "../lib/stream.svelte.js";
   import { failure } from "../lib/ui.svelte.js";
   import { createItem } from "../lib/create.js";
     import { NAV } from "../lib/icons.js";
@@ -91,16 +91,34 @@
       .flatMap((c) => (c.items || []).filter((i) => open.has(i.id)).map((i) => [i.id, c.state.id]));
   }
 
+  const fetchBoard = (filter, signal) => api.getBoard(teamId,
+    { ...filter, viewIds: viewsOn().map((v) => v.id), tz: TZ }, showBuckets, allDone, 100, signal);
+
+  // Coming back to the board draws it at once, as it was last shown, and asks
+  // again behind it: a 304 when nothing changed, and when something did, the
+  // cards travel to where they are now (SPEC.md §12.4). The team and its
+  // states are still asked for once a visit.
+  let known = false;
+  {
+    const was = [peek(() => api.getTeam(teamId)), peek(() => api.listWorkStates(teamId)),
+      peek(() => fetchBoard(applied))];
+    if (was.every(Boolean)) {
+      team = was[0];
+      states = was[1];
+      board = was[2];
+    }
+  }
+
   /** Asks for the board with a filter, the applied one unless another is being
       tried. Resolves to what became of it: { ok }, { error } for a query the
       server refused, or { superseded } when a newer request took its place. */
   async function load(filter = applied) {
     const key = asking(filter);
-    const viewIds = viewsOn().map((v) => v.id);
     const shown = board;
     const res = await ask(async (signal) => {
-      if (!team) [team, states] = await Promise.all([api.getTeam(teamId), api.listWorkStates(teamId)]);
-      const next = await api.getBoard(teamId, { ...filter, viewIds, tz: TZ }, showBuckets, allDone, 100, signal);
+      if (!known) [team, states] = await Promise.all([api.getTeam(teamId), api.listWorkStates(teamId)]);
+      known = true;
+      const next = await fetchBoard(filter, signal);
       // The same filter asked again keeps what left it; a new one starts afresh.
       return key === drawn && shown ? keep(shown, next) : next;
     });
@@ -133,7 +151,14 @@
     return { ok: true };
   }
 
-  $effect(() => onNotify(refresh));
+  // What is on the board, by identifier: its cards and the buckets they wear.
+  let onScreen = $derived(new Set((board?.columns || []).flatMap((c) => c.items || [])
+    .flatMap((i) => [i.identifier, i.bucketIdentifier])));
+  // Its own team's changes, and another team's to what is on it. A bucket's
+  // progress counts tickets of any team, so with buckets shown every item
+  // event counts.
+  $effect(() => onNotify(refresh, (n) => n.teamId === teamId || touches(n, onScreen, teamId)
+    || (showBuckets && n.kind.startsWith("item."))));
 
   // A card that stops matching the filter while you look at it does not
   // vanish: it goes where it went, as any move does — into Done, kindling —

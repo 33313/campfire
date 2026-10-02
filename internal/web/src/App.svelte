@@ -1,10 +1,10 @@
 <script>
   // The client: boot, routing and the shell.
 
-  import { api, ApiError } from "./lib/api.js";
+  import { api, ApiError, forget } from "./lib/api.js";
   import { app, reloadContext } from "./lib/state.svelte.js";
   import { route, navigate } from "./lib/router.svelte.js";
-  import { stream, openStream } from "./lib/stream.svelte.js";
+  import { stream, openStream, configure } from "./lib/stream.svelte.js";
 
   import Sidebar from "./components/Sidebar.svelte";
   import Mark from "./components/Mark.svelte";
@@ -33,6 +33,7 @@
     bootError = null;
     try {
       const instance = await api.getInstance();
+      configure(instance.hiddenTabGrace);
       if (instance.needsBootstrap) {
         needsBootstrap = true;
         booted = true;
@@ -58,6 +59,7 @@
 
   async function afterSignIn() {
     needsBootstrap = false;
+    forget(); // what an earlier account was shown is not this one's to see
     openStream();
     await reloadContext();
     navigate("/", true);
@@ -131,15 +133,7 @@
 {:else}
   <Sidebar />
   <div class="main">
-    {#if stream.status === "stale"}
-      <!-- A cursor past retention gets an explicit instruction, never a silent
-           partial replay (SPEC.md §12.2). -->
-      <div class="banner alert">
-        <span class="pip rejected"></span>
-        <span class="grow">This board is out of date. You were away longer than the log we keep.</span>
-        <button class="btn small" onclick={() => location.reload()}>Reload</button>
-      </div>
-    {:else if stream.status === "reconnecting"}
+    {#if stream.status === "reconnecting"}
       <div class="banner">
         <span class="pip waiting"></span>
         <span class="grow explain">

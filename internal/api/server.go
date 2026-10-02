@@ -6,12 +6,17 @@
 package api
 
 import (
+	"compress/gzip"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/campfire/campfire/internal/core"
 	"github.com/campfire/campfire/internal/stream"
@@ -31,6 +36,9 @@ type Server struct {
 	// Secure marks the session cookie secure. Off for a plain-HTTP loopback
 	// instance, which is the individual profile's whole deployment.
 	Secure bool
+	// HiddenTabGrace is how long a hidden tab keeps its stream, for the client
+	// to read from getInstance (SPEC.md §12.4).
+	HiddenTabGrace time.Duration
 }
 
 func New(svc *core.Service, bus *stream.Bus) *Server {
@@ -86,7 +94,7 @@ func (s *Server) handle(pattern string, h handler) {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		respond(w, http.StatusOK, body)
+		reply(w, r, body)
 	})
 }
 
@@ -118,6 +126,48 @@ func respond(w http.ResponseWriter, code int, body any) {
 		return // the client hung up; there is nowhere left to report it
 	}
 }
+
+// reply sends a successful body, gzipped when the client takes it.
+//
+// A GET also carries an ETag, a fingerprint of the body. A client that names
+// it again gets 304 and no body, so a refetch that finds nothing new costs a
+// few hundred bytes (SPEC.md §12.4). The fingerprint is of the content alone:
+// two callers who would be sent the same bytes may share it, and neither
+// learns anything the body would not have told them.
+func reply(w http.ResponseWriter, r *http.Request, body any) {
+	buf, err := json.Marshal(body)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	h := w.Header()
+	h.Set("Content-Type", "application/json; charset=utf-8")
+	h.Set("Cache-Control", "no-store")
+	h.Set("Vary", "Accept-Encoding")
+	if r.Method == http.MethodGet {
+		sum := sha256.Sum256(buf)
+		tag := `W/"` + base64.RawURLEncoding.EncodeToString(sum[:15]) + `"`
+		h.Set("ETag", tag)
+		if strings.Contains(r.Header.Get("If-None-Match"), tag) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+	}
+	if len(buf) < 1024 || !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		w.Write(buf)
+		return
+	}
+	h.Set("Content-Encoding", "gzip")
+	zw := gzips.Get().(*gzip.Writer)
+	defer gzips.Put(zw)
+	zw.Reset(w)
+	zw.Write(buf)
+	zw.Close()
+}
+
+// A gzip writer carries a few hundred kilobytes of tables; reusing them keeps
+// a busy board from allocating them on every refetch.
+var gzips = sync.Pool{New: func() any { return gzip.NewWriter(nil) }}
 
 // statusFor maps a core error code to an HTTP status. The mapping lives here
 // and nowhere else, so that core stays free of HTTP and MCP can map the same

@@ -7,10 +7,17 @@
 package web
 
 import (
+	"bytes"
+	"compress/gzip"
+	"crypto/sha256"
 	"embed"
+	"encoding/base64"
 	"io/fs"
+	"mime"
 	"net/http"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 // all: so the directory still matches while it holds nothing but the .gitkeep
@@ -27,14 +34,38 @@ func Handler() http.Handler {
 	if err != nil {
 		panic(err)
 	}
-	fileServer := http.FileServer(http.FS(sub))
-	_, unbuilt := fs.Stat(sub, "index.html")
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/")
-		if path == "" {
-			path = "index.html"
+	return handler(sub)
+}
+
+// asset is one file, read once at startup: its bytes, gzipped too when that
+// saves anything, and a fingerprint of each.
+type asset struct {
+	name       string
+	plain, gz  []byte
+	tag, gzTag string
+}
+
+func handler(sub fs.FS) http.Handler {
+	assets := map[string]*asset{}
+	fs.WalkDir(sub, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
 		}
-		if _, err := fs.Stat(sub, path); err != nil {
+		body, err := fs.ReadFile(sub, path)
+		if err != nil {
+			return err
+		}
+		a := &asset{name: path, plain: body, tag: fingerprint(body)}
+		if gz := compress(body); len(gz) < len(body)*9/10 {
+			a.gz, a.gzTag = gz, fingerprint(gz)
+		}
+		assets[path] = a
+		return nil
+	})
+	shell := assets["index.html"]
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		a := assets[strings.TrimPrefix(r.URL.Path, "/")]
+		if r.URL.Path == "/" || a == nil {
 			// Paths the server owns are never client routes. /mcp in
 			// particular must plainly not exist while the agent interface is
 			// disabled (SPEC.md §14.6), rather than answering with the shell.
@@ -44,16 +75,42 @@ func Handler() http.Handler {
 			}
 			// A client-side route such as /SOL-42: serve the shell and let the
 			// client render it.
-			r = r.Clone(r.Context())
-			r.URL.Path = "/"
+			a = shell
 		}
 		// The client is a build artefact, so a binary built without running the
 		// client build has nothing to serve. Say so rather than 404.
-		if unbuilt != nil {
+		if a == nil {
 			http.Error(w, "the web client has not been built: run ./build.sh",
 				http.StatusInternalServerError)
 			return
 		}
-		fileServer.ServeHTTP(w, r)
+		// The names are fixed, not hashed, so every load asks again; the
+		// fingerprint makes the answer a 304 until the binary changes.
+		h := w.Header()
+		h.Set("Cache-Control", "no-cache")
+		h.Set("Vary", "Accept-Encoding")
+		body, tag := a.plain, a.tag
+		if a.gz != nil && strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			body, tag = a.gz, a.gzTag
+			h.Set("Content-Encoding", "gzip")
+		}
+		h.Set("ETag", tag)
+		if t := mime.TypeByExtension(filepath.Ext(a.name)); t != "" {
+			h.Set("Content-Type", t)
+		}
+		http.ServeContent(w, r, a.name, time.Time{}, bytes.NewReader(body))
 	})
+}
+
+func fingerprint(b []byte) string {
+	sum := sha256.Sum256(b)
+	return `"` + base64.RawURLEncoding.EncodeToString(sum[:15]) + `"`
+}
+
+func compress(b []byte) []byte {
+	var buf bytes.Buffer
+	zw, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	zw.Write(b)
+	zw.Close()
+	return buf.Bytes()
 }

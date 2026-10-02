@@ -3,8 +3,8 @@
   import Avatar from "./Avatar.svelte";
   import Mark from "./Mark.svelte";
   import { NAV } from "../lib/icons.js";
-  import { app, toggleView } from "../lib/state.svelte.js";
-  import { stream } from "../lib/stream.svelte.js";
+  import { app, toggleView, refreshBacklogCount, reloadViews } from "../lib/state.svelte.js";
+  import { stream, onNotify } from "../lib/stream.svelte.js";
   import { route, navigate } from "../lib/router.svelte.js";
   import { failure } from "../lib/ui.svelte.js";
   import { api } from "../lib/api.js";
@@ -22,6 +22,13 @@
     { icon: "buckets", label: "Buckets", href: "/buckets" },
     { icon: "log", label: "Log", href: "/log" },
   ] : []);
+
+  // The backlog count and the views are the sidebar's own, beside whatever
+  // screen is showing, so it hears of its team's changes itself.
+  const mine = (n) => !!app.team && n.teamId === app.team.id;
+  $effect(() => onNotify(refreshBacklogCount, mine));
+  $effect(() => onNotify(() => reloadViews().catch(() => {}),
+    (n) => mine(n) && n.kind.startsWith("saved_view.")));
 
   // A link made before views were switches names one as ?view=: it switches
   // that view on, and the address goes back to the plain screen.
