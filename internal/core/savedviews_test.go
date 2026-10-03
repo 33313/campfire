@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // SPEC.md §9.4: a saved view stores its query canonical, naming what it

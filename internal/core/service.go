@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // Actor is who a call is on behalf of, resolved fresh on every call.

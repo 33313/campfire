@@ -1,4 +1,4 @@
-module github.com/campfire/campfire
+module github.com/33313/campfire
 
 go 1.27.0
 

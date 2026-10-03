@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 func TestBootstrapOnlyWorksOnAnEmptyInstance(t *testing.T) {

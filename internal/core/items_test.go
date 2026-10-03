@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // world sets up two teams with a member each, which is what most of the

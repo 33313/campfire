@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // Labels are free text, created by typing them, and never administered

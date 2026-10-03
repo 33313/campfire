@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/campfire/campfire/internal/backup"
-	"github.com/campfire/campfire/internal/core"
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/backup"
+	"github.com/33313/campfire/internal/core"
+	"github.com/33313/campfire/internal/store"
 )
 
 // The subcommand is read whether it leads or follows the flags. Reading it

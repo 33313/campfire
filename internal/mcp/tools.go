@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/campfire/campfire/internal/core"
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/core"
+	"github.com/33313/campfire/internal/store"
 )
 
 // The tool list is derived from the exposed subset of api/openapi.yaml: one

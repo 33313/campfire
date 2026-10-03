@@ -18,7 +18,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/campfire/campfire/internal/core"
+	"github.com/33313/campfire/internal/core"
 )
 
 // The protocol version this server implements.

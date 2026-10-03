@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // Any item may move to any state at any time. The application enforces no

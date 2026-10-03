@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/campfire/campfire/internal/csql"
+	"github.com/33313/campfire/internal/csql"
 )
 
 // Code classifies an error so that each interface can render it in its own

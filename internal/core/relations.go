@@ -3,7 +3,7 @@ package core
 import (
 	"context"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // A fixed set of relation types; users cannot define new ones (SPEC.md §8.2).

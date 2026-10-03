@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/campfire/campfire/internal/core"
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/core"
+	"github.com/33313/campfire/internal/store"
 )
 
 // Every route here corresponds to exactly one operation in api/openapi.yaml.

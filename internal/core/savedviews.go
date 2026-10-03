@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/campfire/campfire/internal/csql"
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/csql"
+	"github.com/33313/campfire/internal/store"
 )
 
 // A saved view is a name attached to a CSQL query (SPEC.md §9.4). It

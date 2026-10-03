@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/campfire/campfire/internal/core"
-	"github.com/campfire/campfire/internal/store"
-	"github.com/campfire/campfire/internal/stream"
+	"github.com/33313/campfire/internal/core"
+	"github.com/33313/campfire/internal/store"
+	"github.com/33313/campfire/internal/stream"
 )
 
 type client struct {

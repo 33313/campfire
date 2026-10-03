@@ -3,7 +3,7 @@ package core
 import (
 	"testing"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // SPEC.md §10: the log is ordered by sequence number, never by timestamp, and

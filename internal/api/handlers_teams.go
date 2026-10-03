@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/campfire/campfire/internal/core"
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/core"
+	"github.com/33313/campfire/internal/store"
 )
 
 func (s *Server) listTeams(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {

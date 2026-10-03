@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/campfire/campfire/internal/core"
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/core"
+	"github.com/33313/campfire/internal/store"
 )
 
 type harness struct {
