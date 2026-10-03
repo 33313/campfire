@@ -95,7 +95,8 @@ Not built in v1, not designed here, and not to be re-argued during v1:
 Attachments · notifications · email delivery · watchers and subscriptions · sprints and iterations ·
 time tracking · custom fields · WIP limits · bulk editing of title, description, planned end and
 labels · external authentication (SSO, LDAP, OIDC) · public or anonymous access · imports from other
-trackers · audit log retention and archival policy.
+trackers · audit log retention and archival policy · point-in-time recovery by continuous
+write-ahead log shipping.
 
 The data model MUST NOT preclude these. Scaffolding for them WILL NOT be built.
 
@@ -757,8 +758,9 @@ The audience has no operator, so recovery is a feature of the application rather
    configured interval, to a configured directory, retaining a configured count. It runs without
    locking, without downtime, and without an external tool. **On by default**, including for a solo
    user who has never considered backups.
-2. **Optional off-host log shipping.** Continuous write-ahead log shipping to a directory or object
-   store, giving point-in-time recovery. Off by default; one setting to enable.
+2. **Optional off-host copies.** Each snapshot is also copied to a second directory, such as a mount
+   of another machine. The recovery point is the last snapshot. Off by default; one setting to
+   enable.
 3. **Restore is a first-class command**, invoked the same way in both profiles.
 4. **The restore path MUST be exercised in continuous integration.** A backup that has never been
    restored is not a backup.

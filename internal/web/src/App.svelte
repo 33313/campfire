@@ -115,8 +115,8 @@
 </script>
 
 {#if !booted}
-  <!-- Kindling: the fire, burning, where a word used to say Loading. It shows
-       only once the boot has taken long enough to be noticed. -->
+  <!-- Kindling: the fire, burning, while the client boots. It shows only once
+       the boot has taken long enough to be noticed. -->
   <div class="signin"><div class="loader" role="status" aria-label="Loading">
     <Mark size={32} burning />
   </div></div>

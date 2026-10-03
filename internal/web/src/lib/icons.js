@@ -20,7 +20,7 @@ export const NAV = {
   team: '<circle cx="6" cy="5.6" r="2.3"/><path d="M1.9 13.4c.4-2.4 2-3.9 4.1-3.9s3.7 1.5 4.1 3.9"/><path d="M10.4 3.5a2.3 2.3 0 0 1 0 4.2M12 9.9c1.2.6 1.9 1.8 2.1 3.5"/>',
   admin: '<path d="M8 1.9 13.4 4.1v4.2c0 3-2.3 5.2-5.4 5.9-3.1-.7-5.4-2.9-5.4-5.9V4.1L8 1.9Z"/>',
   view: '<path d="M2.5 3.5h11l-4.3 5v4.3l-2.4-1.4V8.5Z"/>',
-  // Distinct from the `lens` bucket icon, which the two used to share.
+  // Distinct from the `lens` bucket icon, so search never reads as a bucket.
   search: '<circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4 14 14"/>',
   plus: '<path d="M8 3v10M3 8h10"/>',
   chevron: '<path d="M3.5 6 8 10.5 12.5 6"/>',
@@ -31,7 +31,7 @@ export const NAV = {
   split: '<path d="M2.5 8h4l3-4h4"/><path d="M9.5 12h4"/><path d="M6.5 8l3 4"/><path d="M11.5 2.5 13.5 4l-2 1.5"/><path d="M11.5 10.5 13.5 12l-2 1.5"/>',
   signout: '<path d="M7 2.5H2.5v11H7"/><path d="M6.5 8h6.5M10 5l3 3-3 3"/>',
   export: '<path d="M8 2v8M4.5 6.5 8 10l3.5-3.5"/><path d="M2.5 13h11"/>',
-  // Distinct from the `pen` bucket icon, which the two used to share.
+  // Distinct from the `pen` bucket icon, so editing never reads as a bucket.
   pen: '<path d="M10.6 2.9 13.1 5.4 5.5 13H3v-2.5Z"/>',
   // The floppy: what a save wears beside the field it writes.
   save: '<path d="M2.6 2.6h8.4l2.4 2.4v8.4H2.6Z"/><path d="M5.4 2.6v3.8h5.2V2.6"/><path d="M4.8 13.4V9h6.4v4.4"/>',

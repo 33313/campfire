@@ -139,13 +139,10 @@ func Prune(dir string, keep int) error {
 // Ship copies a snapshot to a second directory, which may be a mount of
 // somewhere else entirely.
 //
-// ponytail: this ships whole snapshots rather than a continuous write-ahead
-// log, so the recovery point is the last snapshot rather than the last commit
-// — SPEC.md §13.3 item 2 asks for the latter. Continuous shipping against
-// SQLite means tracking WAL frames and generations against a byte-level base
-// copy; that is a project of its own, and shortening the snapshot interval
-// buys most of the same protection today. Upgrade path: a byte-copy base plus
-// WAL segment shipping, replacing this function and Restore's base selection.
+// ponytail: whole snapshots, not a continuous write-ahead log, so the recovery
+// point is the last snapshot (SPEC.md §13.3; point-in-time recovery is
+// deferred, §3.3). Upgrade path: a byte-copy base plus WAL segment shipping,
+// replacing this function and Restore's base selection.
 func Ship(snapshot Snapshot, dir string) error {
 	if dir == "" {
 		return nil

@@ -133,10 +133,10 @@ These are the numbers for a ~1440px viewport, and they are not re-specified per 
 wants them larger is the desktop's job, or the browser's: OS scaling and browser zoom both report a
 smaller viewport in CSS pixels, and the geometry above then lands at the size it was drawn at.
 
-The interface never zooms itself. It used to, with `zoom` on `#app` for large panels at 1×. That
-put `#app` in a second coordinate space, and every drag, menu and animation that measures the screen
-then had to divide by the zoom by hand; each one that forgot was a bug. A client rect and a CSS
-length inside the app are the same pixels, and nothing may make them differ again.
+The interface never zooms itself: no `zoom` or scale on `#app`. A zoomed app is a second coordinate
+space, and every drag, menu and animation that measures the screen would have to divide by the zoom
+by hand; each one that forgot would be a bug. A client rect and a CSS length inside the app are the
+same pixels.
 
 ---
 

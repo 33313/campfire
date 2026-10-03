@@ -1,11 +1,8 @@
 <script>
   // Labels, added the same way wherever they are added: the chips and the box
   // you type in on one line, and the labels that already exist offered as you
-  // type so a second spelling of one is not the easiest thing to do.
-  //
-  // The ticket page and the create dialog used to carry a copy each — one
-  // behind a "+ Label" button that reappeared and vanished on its own — so
-  // they now carry this instead.
+  // type so a second spelling of one is not the easiest thing to do. The
+  // ticket page and the create dialog both use it.
 
   import { app } from "../lib/state.svelte.js";
   import { NAV } from "../lib/icons.js";
