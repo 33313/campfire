@@ -57,9 +57,10 @@ go install github.com/33313/campfire@latest
 
 A release tag carries the built client; any other commit needs `./build.sh` from a clone.
 
-**Upgrading** is replacing the binary, or pulling the image, and restarting. Versions follow
-[Semantic Versioning](https://semver.org); image tags are the version (`1.4.2`), its minor (`1.4`),
-its major (`1`), and `latest`. [`CHANGELOG.md`](CHANGELOG.md) lists what each release changes.
+**Upgrading** is replacing the binary, pulling the image, or running `go install` again, and
+restarting. Versions follow [Semantic Versioning](https://semver.org); image tags are the version
+(`1.4.2`), its minor (`1.4`), its major (`1`), and `latest`. [`CHANGELOG.md`](CHANGELOG.md) lists
+what each release changes.
 
 ## First run
 
