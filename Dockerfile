@@ -52,7 +52,7 @@ RUN printf '%s\n' \
     '    "dir": "/data/campfire/snapshots",' \
     '    "interval": "6h",' \
     '    "keep": 14,' \
-    '    "shipTo": ""' \
+    '    "replica": ""' \
     '  },' \
     '  "mcp": { "enabled": false }' \
     '}' > /home/campfire/campfire.json

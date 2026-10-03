@@ -159,7 +159,7 @@ func TestRestoreAtReadsAMoment(t *testing.T) {
 	if err := run([]string{"-config", cfg, "-at", "latest", "check"}); err == nil || !strings.Contains(err.Error(), "-at is for restore") {
 		t.Errorf("-at on check: %v", err)
 	}
-	if err := run([]string{"-config", cfg, "restore", "-at", "latest"}); err == nil || !strings.Contains(err.Error(), "shipTo") {
+	if err := run([]string{"-config", cfg, "restore", "-at", "latest"}); err == nil || !strings.Contains(err.Error(), "replica") {
 		t.Errorf("restore -at with no replica: %v", err)
 	}
 }

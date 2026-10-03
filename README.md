@@ -91,7 +91,7 @@ One JSON file, in the operating system's data directory:
     "dir": "/home/you/.local/share/campfire/snapshots",
     "interval": "6h",
     "keep": 14,
-    "shipTo": ""
+    "replica": ""
   },
   "mcp": { "enabled": false },
   "liveUpdates": { "hiddenTabGrace": "1m" }
@@ -113,7 +113,7 @@ connection. Past it the connection closes, and the tab catches up when it is sho
 **The database must be on local disk.** Network filesystems (NFS, SMB) and cloud-synchronised
 folders (Dropbox, iCloud Drive, OneDrive, Google Drive) are **unsupported**: SQLite's locking is not
 honoured across them and the file corrupts, often silently and only under load. To keep the data
-elsewhere, point `snapshots.shipTo` there and leave the live file local.
+elsewhere, point `snapshots.replica` there and leave the live file local.
 
 ## Agents (MCP)
 
@@ -202,7 +202,7 @@ keep the instance on loopback behind it.
 - **Snapshots** run on `snapshots.interval` into `snapshots.dir`, keeping `snapshots.keep`. Each is
   a complete database file, verified when written and again whenever the administration screen
   lists it.
-- **Any moment, off-host.** Set `snapshots.shipTo` to a second directory — a mount of another
+- **Any moment, off-host.** Set `snapshots.replica` to a second directory — a mount of another
   machine, an object-store gateway — and the write-ahead log is copied there continuously, within
   a second of each write, by [Litestream](https://litestream.io) running inside the server. The
   database can then be restored to any moment in the last `interval × keep` (14 × 6h, three and a

@@ -47,20 +47,20 @@ func startSnapshots(cfg config.Config, db *store.DB) func() {
 	return cancel
 }
 
-// startReplica copies the write-ahead log into snapshots.shipTo as it is
+// startReplica copies the write-ahead log into snapshots.replica as it is
 // written, for a restore to any moment (SPEC.md §13.3). Like snapshots, it is
 // the backup §13.3 asks for, not a background job in the sense of §13.2 rule 6.
 func startReplica(cfg config.Config, db *store.DB) (func(), error) {
-	if cfg.Snapshots.ShipTo == "" {
+	if cfg.Snapshots.Replica == "" {
 		return func() {}, nil
 	}
 	every, _ := cfg.SnapshotInterval() // validated on load
 	keep, _ := cfg.Retention()
-	stop, err := backup.Replicate(context.Background(), db.Path, cfg.Snapshots.ShipTo, every, keep)
+	stop, err := backup.Replicate(context.Background(), db.Path, cfg.Snapshots.Replica, every, keep)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("write-ahead log copied continuously into %s, restorable to any moment in the last %s", cfg.Snapshots.ShipTo, keep)
+	log.Printf("write-ahead log copied continuously into %s, restorable to any moment in the last %s", cfg.Snapshots.Replica, keep)
 	return func() {
 		ctx, done := context.WithTimeout(context.Background(), 30*time.Second)
 		defer done()
@@ -119,10 +119,10 @@ func snapshotOnce(cfg config.Config) error {
 }
 
 // restoreAt rebuilds the database as it was at a moment, from the replica in
-// snapshots.shipTo. "latest" is the newest moment it holds.
+// snapshots.replica. "latest" is the newest moment it holds.
 func restoreAt(cfg config.Config, at string) error {
-	if cfg.Snapshots.ShipTo == "" {
-		return errors.New("restoring to a moment needs snapshots.shipTo, where the replica is kept")
+	if cfg.Snapshots.Replica == "" {
+		return errors.New("restoring to a moment needs snapshots.replica set")
 	}
 	var moment time.Time
 	if at != "latest" {
@@ -131,7 +131,7 @@ func restoreAt(cfg config.Config, at string) error {
 			return err
 		}
 	}
-	if err := backup.RestoreAt(context.Background(), cfg.Snapshots.ShipTo, moment, cfg.Database); err != nil {
+	if err := backup.RestoreAt(context.Background(), cfg.Snapshots.Replica, moment, cfg.Database); err != nil {
 		return err
 	}
 	fmt.Printf("restored %s as it was at %s\n", cfg.Database, at)

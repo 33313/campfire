@@ -62,7 +62,7 @@ usage:
   campfire snapshot             take a snapshot now and exit
   campfire restore <snapshot>   replace the data file with a snapshot
   campfire restore -at <time>   rebuild the data file as it was at a moment, from
-                                the replica in snapshots.shipTo ("latest" for the newest)
+                                snapshots.replica ("latest" for the newest)
   campfire check                verify the database's integrity and exit
   campfire version              print the version and exit
 

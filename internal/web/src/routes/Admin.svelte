@@ -243,18 +243,18 @@
                 </table>
               {/snippet}
             </Section>
-            <Section title="Point in time" sub={snapshots.shipTo ? "on" : "off"}>
+            <Section title="Point in time" sub={snapshots.replica ? "on" : "off"}>
               {#snippet children()}
-                {#if !snapshots.shipTo}
+                {#if !snapshots.replica}
                   <p class="explain">
-                    Set <code>snapshots.shipTo</code> to a directory on another disk or machine, and
+                    Set <code>snapshots.replica</code> to a directory on another disk or machine, and
                     the database can be restored to any moment, not only to a snapshot.
                   </p>
-                {:else if !snapshots.replica}
-                  <p class="explain">Copying to {snapshots.shipTo}; nothing to restore to yet.</p>
+                {:else if !snapshots.replica.from}
+                  <p class="explain">Copying to {snapshots.replica.directory}; nothing to restore to yet.</p>
                 {:else}
                   <p class="explain">
-                    Copied continuously to {snapshots.shipTo}. Any moment from
+                    Copied continuously to {snapshots.replica.directory}. Any moment from
                     {new Date(snapshots.replica.from).toLocaleString()} to
                     {new Date(snapshots.replica.to).toLocaleString()}.
                   </p>

@@ -44,10 +44,10 @@ type Snapshots struct {
 	Dir      string `json:"dir"`
 	Interval string `json:"interval"`
 	Keep     int    `json:"keep"`
-	// ShipTo is a second directory, ideally on another machine, that the
+	// Replica is a second directory, ideally on another machine, that the
 	// write-ahead log is copied to continuously, so the database can be
 	// restored to any moment in the last Interval × Keep. Off by default.
-	ShipTo string `json:"shipTo"`
+	Replica string `json:"replica"`
 }
 
 type MCP struct {
@@ -158,7 +158,7 @@ func (c Config) HiddenTabGrace() (time.Duration, error) {
 }
 
 // Retention is how far back a restore reaches: Keep snapshots, Interval apart.
-// The replica in ShipTo keeps the same span, to any moment in it.
+// The replica keeps the same span, to any moment in it.
 func (c Config) Retention() (time.Duration, error) {
 	d, err := c.SnapshotInterval()
 	return d * time.Duration(max(c.Snapshots.Keep, 1)), err
