@@ -1,3 +1,0 @@
-kind: Changed
-body: 'A release is tagged on main again, so a build from main reports the version it follows. `go install` is no longer an install path: use a release binary or the image.'
-time: 2026-10-03T16:38:17.695319572+02:00

@@ -5,6 +5,16 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v0.9.0 - 2026-10-03
+
+### Changed
+
+- A release is tagged on main again, so a build from main reports the version it follows. `go install` is no longer an install path: use a release binary or the image.
+
+### Fixed
+
+- The board fits five columns on a 1366px laptop screen without scrolling sideways.
+
 ## v0.8.0 - 2026-10-03
 
 ### Added
