@@ -116,7 +116,7 @@ Three families, each with one job.
 | Filter / scope bar | 46px |
 | Right-hand detail aside (the preview) | 320px fixed |
 | Item detail column | 860px maximum, centred in what is left; 20px 24px padding |
-| Board column | 280px minimum, 12px gutter. Columns share spare width above that, capped at 420px, and scroll sideways below it |
+| Board column | 280px drawn, 12px gutter. Columns share spare width above that, capped at 420px; below it they give way to 200px, so five fit at 1366px, and scroll sideways past that |
 | Card | 10px 11px padding, 9px internal gap, 8px between cards |
 | Table row | 42px; header row 34px; 12px column gap; 14px side padding |
 | Button | 30px tall, 0 12px padding (primary 0 14px). 28px in a screen header or beside a field, where it sits with 28px inputs; only a dialog footer keeps 30px |
