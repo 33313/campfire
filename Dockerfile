@@ -31,7 +31,7 @@ ARG TARGETOS TARGETARCH VERSION
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o /out/campfire .
 
-FROM alpine:3.20
+FROM alpine:3.24
 RUN adduser -D -u 10001 campfire && mkdir -p /data && chown campfire /data
 COPY --from=build /out/campfire /usr/local/bin/campfire
 USER campfire

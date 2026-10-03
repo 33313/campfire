@@ -84,6 +84,11 @@ func (s *Server) routes() {
 	s.handle("GET /api/lookup/{identifier}", s.lookup)
 	s.handle("GET /api/labels", s.listLabels)
 
+	// Snapshots.
+	s.handle("GET /api/snapshots", s.listSnapshots)
+	s.handle("POST /api/snapshots", s.createSnapshot)
+	s.handle("POST /api/restore", s.restoreSnapshot)
+
 	// The audit log, and the stream that resumes from it.
 	s.handle("GET /api/log", s.log)
 	// Live updates are not described by the OpenAPI document, which does not
@@ -124,7 +129,7 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, a core.Actor) (a
 		return nil, err
 	}
 	if res.Token != "" {
-		s.setSession(w, res.Token)
+		s.setSession(w, r, res.Token)
 		// The token travels in the cookie only; echoing it into the body would
 		// put a credential somewhere a script can read it.
 		res.Token = ""
@@ -132,10 +137,10 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, a core.Actor) (a
 	return res, nil
 }
 
-func (s *Server) setSession(w http.ResponseWriter, token string) {
+func (s *Server) setSession(w http.ResponseWriter, r *http.Request, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name: sessionCookie, Value: token, Path: "/",
-		HttpOnly: true, Secure: s.Secure, SameSite: http.SameSiteLaxMode,
+		HttpOnly: true, Secure: secure(r), SameSite: http.SameSiteLaxMode,
 		Expires: time.Now().Add(30 * 24 * time.Hour),
 	})
 }
@@ -145,7 +150,7 @@ func (s *Server) signOut(w http.ResponseWriter, r *http.Request, a core.Actor) (
 		return nil, err
 	}
 	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/",
-		HttpOnly: true, Secure: s.Secure, SameSite: http.SameSiteLaxMode, MaxAge: -1})
+		HttpOnly: true, Secure: secure(r), SameSite: http.SameSiteLaxMode, MaxAge: -1})
 	return nil, nil
 }
 

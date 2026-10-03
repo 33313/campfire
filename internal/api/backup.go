@@ -1,0 +1,77 @@
+package api
+
+import (
+	"context"
+	"net/http"
+	"path/filepath"
+
+	"github.com/campfire/campfire/internal/backup"
+	"github.com/campfire/campfire/internal/config"
+	"github.com/campfire/campfire/internal/core"
+)
+
+// Snapshots is what the snapshot routes drive: the configured directory, and
+// how one is taken, which is the same for the schedule, the command line and
+// this API.
+type Snapshots struct {
+	config.Snapshots
+	Take func(context.Context) (backup.Snapshot, error)
+}
+
+func (s *Server) listSnapshots(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	if err := core.RequireInstanceAdmin(a); err != nil {
+		return nil, err
+	}
+	snaps, err := backup.List(s.Snapshots.Dir)
+	if err != nil {
+		return nil, backupErr(err)
+	}
+	// Verification is what makes the list worth showing: the screen marks a
+	// snapshot verified, and an unverified one is a warning.
+	for i := range snaps {
+		snaps[i].Verified = backup.Verify(snaps[i].Path) == nil
+	}
+	c := s.Snapshots.Snapshots
+	return map[string]any{"snapshots": snaps, "directory": c.Dir, "enabled": c.Enabled,
+		"keep": c.Keep, "interval": c.Interval, "shipTo": c.ShipTo}, nil
+}
+
+func (s *Server) createSnapshot(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	if err := core.RequireInstanceAdmin(a); err != nil {
+		return nil, err
+	}
+	snap, err := s.Snapshots.Take(r.Context())
+	if err != nil {
+		return nil, backupErr(err)
+	}
+	return snap, nil
+}
+
+// restoreSnapshot answers with the command to run. Restoring replaces the
+// instance, so it is not something the running server does to itself.
+func (s *Server) restoreSnapshot(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	if err := core.RequireInstanceAdmin(a); err != nil {
+		return nil, err
+	}
+	var in struct{ Path string }
+	if err := decode(r, &in); err != nil {
+		return nil, err
+	}
+	// Only a snapshot in the snapshot directory: the path is a name, never a
+	// way to have the server open any file it can read.
+	path := filepath.Join(s.Snapshots.Dir, filepath.Base(in.Path))
+	if err := backup.Verify(path); err != nil {
+		return nil, &core.Error{Code: core.CodeInvalid, Field: "path", Message: "that snapshot did not verify: " + err.Error()}
+	}
+	return map[string]string{
+		"command": "campfire restore " + path,
+		"note": "Stop the server, run this command, then start it again. " +
+			"Restoring replaces the data file, which one running process holds open.",
+	}, nil
+}
+
+// backupErr keeps the reason a backup failed: an administrator looking at a
+// disk that is full needs that, not "something went wrong".
+func backupErr(err error) error {
+	return &core.Error{Code: "internal", Message: err.Error()}
+}

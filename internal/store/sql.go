@@ -29,10 +29,6 @@ func null[T comparable](v T) any {
 // Zero-valued Go fields stand in for SQL NULL throughout. Identifiers are
 // never 0 and timestamps are never 0, so nothing is lost by the substitution
 // and every struct stays free of pointers.
-type nullID = sql.NullInt64
-
-func id(n sql.NullInt64) int64 { return n.Int64 }
-
 func text(n sql.NullString) string { return n.String }
 
 func num(n sql.NullInt64) int64 { return n.Int64 }

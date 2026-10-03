@@ -192,8 +192,9 @@ location / {
 }
 ```
 
-Serve it over TLS. The session cookie is marked `Secure` only when the server knows it is on HTTPS,
-so terminate TLS at the proxy and keep the instance on loopback behind it.
+Serve it over TLS. The session cookie is marked `Secure` when the request arrived over HTTPS, which
+behind a proxy the server learns from `X-Forwarded-Proto`: set it, terminate TLS at the proxy, and
+keep the instance on loopback behind it.
 
 ## Backup and recovery
 

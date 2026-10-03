@@ -132,7 +132,7 @@ func zone(tz string) (*time.Location, error) {
 func (s *Service) parseQuery(ctx context.Context, a Actor, q string, loc *time.Location) (csql.Node, error) {
 	n, err := csql.Parse(q)
 	if err == nil && n != nil {
-		err = csql.Resolve(n, resolver{ctx: ctx, q: s.DB.R, me: a.UserID, now: time.UnixMicro(s.now()).In(loc)})
+		err = csql.Resolve(n, resolver{ctx: ctx, q: s.DB.R, me: a.UserID, now: time.UnixMicro(s.Clock()).In(loc)})
 	}
 	var e *csql.Error
 	if errors.As(err, &e) {
@@ -166,7 +166,7 @@ func (s *Service) storeFilter(ctx context.Context, a Actor, f Filter) (store.Ite
 		vn, err := csql.Parse(v.Query)
 		if err == nil && vn != nil {
 			err = csql.Resolve(vn, resolver{ctx: ctx, q: s.DB.R, me: a.UserID, stored: true,
-				now: time.UnixMicro(s.now()).In(loc)})
+				now: time.UnixMicro(s.Clock()).In(loc)})
 		}
 		if err != nil {
 			return sf, err // stored canonical: not a reader's mistake

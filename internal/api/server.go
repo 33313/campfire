@@ -33,12 +33,10 @@ type Server struct {
 	// of the interface (SPEC.md §11); a route it does not describe is
 	// behaviour with no written contract.
 	patterns []string
-	// Secure marks the session cookie secure. Off for a plain-HTTP loopback
-	// instance, which is the individual profile's whole deployment.
-	Secure bool
 	// HiddenTabGrace is how long a hidden tab keeps its stream, for the client
 	// to read from getInstance (SPEC.md §12.4).
 	HiddenTabGrace time.Duration
+	Snapshots      Snapshots
 }
 
 func New(svc *core.Service, bus *stream.Bus) *Server {
@@ -96,6 +94,13 @@ func (s *Server) handle(pattern string, h handler) {
 		}
 		reply(w, r, body)
 	})
+}
+
+// secure reports whether the request reached the instance over HTTPS, here or
+// at the proxy in front, which is when the session cookie is marked secure. A
+// plain-HTTP loopback instance is the individual profile's whole deployment.
+func secure(r *http.Request) bool {
+	return r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
 }
 
 // sameOrigin rejects a state-changing request that did not come from a page on
