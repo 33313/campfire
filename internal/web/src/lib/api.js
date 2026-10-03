@@ -178,4 +178,5 @@ export const api = {
   listSnapshots: () => get("/api/snapshots"),
   createSnapshot: () => post("/api/snapshots"),
   restoreSnapshot: (path) => post("/api/restore", { path }),
+  restoreAt: (at) => post("/api/restore", { at }),
 };

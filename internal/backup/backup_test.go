@@ -119,31 +119,6 @@ func TestPruneKeepsTheNewest(t *testing.T) {
 	}
 }
 
-func TestShipCopiesTheSnapshotElsewhere(t *testing.T) {
-	dir := t.TempDir()
-	db, err := store.Open(filepath.Join(dir, "campfire.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	snap, err := Take(context.Background(), db, filepath.Join(dir, "snapshots"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	offHost := filepath.Join(dir, "elsewhere")
-	if err := Ship(snap, offHost); err != nil {
-		t.Fatal(err)
-	}
-	shipped := filepath.Join(offHost, filepath.Base(snap.Path))
-	if err := Verify(shipped); err != nil {
-		t.Fatalf("the shipped copy does not verify: %v", err)
-	}
-	// An empty destination is "shipping is off", not an error.
-	if err := Ship(snap, ""); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestVerifyRejectsRubbish(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "not-a-database.db")
 	if err := os.WriteFile(path, []byte("this is not a database"), 0o600); err != nil {

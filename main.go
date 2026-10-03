@@ -61,6 +61,8 @@ usage:
   campfire init                 write a configuration file with every setting in it
   campfire snapshot             take a snapshot now and exit
   campfire restore <snapshot>   replace the data file with a snapshot
+  campfire restore -at <time>   rebuild the data file as it was at a moment, from
+                                the replica in snapshots.shipTo ("latest" for the newest)
   campfire check                verify the database's integrity and exit
   campfire version              print the version and exit
 
@@ -79,6 +81,7 @@ func run(args []string) error {
 	fs := flag.NewFlagSet("campfire", flag.ContinueOnError)
 	configPath := fs.String("config", config.DefaultPath(), "configuration file")
 	showVersion := fs.Bool("version", false, "print the version and exit")
+	at := fs.String("at", "", "restore: the moment to restore to")
 	fs.Usage = func() { fmt.Fprint(os.Stderr, usage()) }
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -91,7 +94,12 @@ func run(args []string) error {
 	// — it takes no snapshot and says nothing.
 	rest := fs.Args()
 	if command == "serve" && len(rest) > 0 {
-		command, rest = rest[0], rest[1:]
+		command = rest[0]
+		// Flags may follow it too: campfire -config x restore -at latest.
+		if err := fs.Parse(rest[1:]); err != nil {
+			return err
+		}
+		rest = fs.Args()
 	}
 
 	// Read before the configuration: the version is asked for most when
@@ -102,6 +110,10 @@ func run(args []string) error {
 		}
 		fmt.Println(buildVersion())
 		return nil
+	}
+
+	if *at != "" && command != "restore" {
+		return fmt.Errorf("-at is for restore, not %s", command)
 	}
 
 	cfg, err := config.Load(*configPath)
@@ -120,8 +132,14 @@ func run(args []string) error {
 		fmt.Println("wrote", *configPath)
 		return nil
 	case "restore":
+		if *at != "" {
+			if err := requireNoArgs("restore -at", rest); err != nil {
+				return err
+			}
+			return restoreAt(cfg, *at)
+		}
 		if len(rest) != 1 {
-			return errors.New("restore needs the path of a snapshot")
+			return errors.New("restore needs the path of a snapshot, or -at and a moment")
 		}
 		return restore(cfg, rest[0])
 	case "snapshot":
@@ -231,6 +249,11 @@ func serve(cfg config.Config) error {
 
 	stopSnapshots := startSnapshots(cfg, db)
 	defer stopSnapshots()
+	stopReplica, err := startReplica(cfg, db)
+	if err != nil {
+		return err
+	}
+	defer stopReplica()
 	stopChecks := startIntegrityChecks(cfg, db)
 	defer stopChecks()
 

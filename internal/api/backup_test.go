@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -92,5 +93,15 @@ func TestSessionCookieIsSecureOverHTTPS(t *testing.T) {
 		if len(cookies) != 1 || cookies[0].Secure != want {
 			t.Fatalf("X-Forwarded-Proto %q: cookies %v, want secure %v", proto, cookies, want)
 		}
+	}
+}
+
+// A moment is restored to from the replica, which an instance without
+// snapshots.shipTo does not have.
+func TestRestoreAtNeedsAReplica(t *testing.T) {
+	c, _ := signedInAdmin(t)
+	code, out := c.do("POST", "/api/restore", map[string]string{"at": "2026-10-03T12:00:00Z"})
+	if code != http.StatusBadRequest || !strings.Contains(fmt.Sprint(out), "shipTo") {
+		t.Fatalf("restore to a moment with no replica: %d %v", code, out)
 	}
 }

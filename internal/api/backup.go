@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	"github.com/campfire/campfire/internal/backup"
 	"github.com/campfire/campfire/internal/config"
@@ -32,8 +33,19 @@ func (s *Server) listSnapshots(w http.ResponseWriter, r *http.Request, a core.Ac
 		snaps[i].Verified = backup.Verify(snaps[i].Path) == nil
 	}
 	c := s.Snapshots.Snapshots
-	return map[string]any{"snapshots": snaps, "directory": c.Dir, "enabled": c.Enabled,
-		"keep": c.Keep, "interval": c.Interval, "shipTo": c.ShipTo}, nil
+	out := map[string]any{"snapshots": snaps, "directory": c.Dir, "enabled": c.Enabled,
+		"keep": c.Keep, "interval": c.Interval, "shipTo": c.ShipTo}
+	// The span the replica can restore to, to any moment in it.
+	if c.ShipTo != "" {
+		from, to, err := backup.Window(r.Context(), c.ShipTo)
+		if err != nil {
+			return nil, backupErr(err)
+		}
+		if !to.IsZero() {
+			out["replica"] = map[string]time.Time{"from": from, "to": to}
+		}
+	}
+	return out, nil
 }
 
 func (s *Server) createSnapshot(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
@@ -47,15 +59,22 @@ func (s *Server) createSnapshot(w http.ResponseWriter, r *http.Request, a core.A
 	return snap, nil
 }
 
-// restoreSnapshot answers with the command to run. Restoring replaces the
-// instance, so it is not something the running server does to itself.
+// restoreSnapshot answers with the command to run: from a snapshot by its
+// path, or from the replica to a moment. Restoring replaces the instance, so
+// it is not something the running server does to itself.
 func (s *Server) restoreSnapshot(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
 	if err := core.RequireInstanceAdmin(a); err != nil {
 		return nil, err
 	}
-	var in struct{ Path string }
+	var in struct {
+		Path string
+		At   time.Time
+	}
 	if err := decode(r, &in); err != nil {
 		return nil, err
+	}
+	if !in.At.IsZero() {
+		return s.restoreAt(r, in.At)
 	}
 	// Only a snapshot in the snapshot directory: the path is a name, never a
 	// way to have the server open any file it can read.
@@ -65,6 +84,25 @@ func (s *Server) restoreSnapshot(w http.ResponseWriter, r *http.Request, a core.
 	}
 	return map[string]string{
 		"command": "campfire restore " + path,
+		"note": "Stop the server, run this command, then start it again. " +
+			"Restoring replaces the data file, which one running process holds open.",
+	}, nil
+}
+
+func (s *Server) restoreAt(r *http.Request, at time.Time) (any, error) {
+	dir := s.Snapshots.ShipTo
+	if dir == "" {
+		return nil, &core.Error{Code: core.CodeInvalid, Field: "at", Message: "there is no replica; set snapshots.shipTo"}
+	}
+	from, to, err := backup.Window(r.Context(), dir)
+	if err != nil {
+		return nil, backupErr(err)
+	}
+	if to.IsZero() || at.Before(from) || at.After(to) {
+		return nil, &core.Error{Code: core.CodeInvalid, Field: "at", Message: "the replica does not reach that moment"}
+	}
+	return map[string]string{
+		"command": "campfire restore -at " + at.UTC().Format(time.RFC3339),
 		"note": "Stop the server, run this command, then start it again. " +
 			"Restoring replaces the data file, which one running process holds open.",
 	}, nil

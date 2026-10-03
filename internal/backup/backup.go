@@ -136,23 +136,6 @@ func Prune(dir string, keep int) error {
 	return errors.Join(errs...)
 }
 
-// Ship copies a snapshot to a second directory, which may be a mount of
-// somewhere else entirely.
-//
-// ponytail: whole snapshots, not a continuous write-ahead log, so the recovery
-// point is the last snapshot (SPEC.md §13.3; point-in-time recovery is
-// deferred, §3.3). Upgrade path: a byte-copy base plus WAL segment shipping,
-// replacing this function and Restore's base selection.
-func Ship(snapshot Snapshot, dir string) error {
-	if dir == "" {
-		return nil
-	}
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err
-	}
-	return copyFile(snapshot.Path, filepath.Join(dir, filepath.Base(snapshot.Path)))
-}
-
 func copyFile(from, to string) error {
 	src, err := os.Open(from)
 	if err != nil {

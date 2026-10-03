@@ -44,9 +44,9 @@ type Snapshots struct {
 	Dir      string `json:"dir"`
 	Interval string `json:"interval"`
 	Keep     int    `json:"keep"`
-	// ShipTo is a second directory each snapshot is copied to, for an
-	// off-host copy. The recovery point is the last snapshot, not the last
-	// commit (backup.Ship). Off by default.
+	// ShipTo is a second directory, ideally on another machine, that the
+	// write-ahead log is copied to continuously, so the database can be
+	// restored to any moment in the last Interval × Keep. Off by default.
 	ShipTo string `json:"shipTo"`
 }
 
@@ -155,6 +155,13 @@ func (c Config) HiddenTabGrace() (time.Duration, error) {
 		return 0, errors.New("liveUpdates.hiddenTabGrace must not be negative")
 	}
 	return d, nil
+}
+
+// Retention is how far back a restore reaches: Keep snapshots, Interval apart.
+// The replica in ShipTo keeps the same span, to any moment in it.
+func (c Config) Retention() (time.Duration, error) {
+	d, err := c.SnapshotInterval()
+	return d * time.Duration(max(c.Snapshots.Keep, 1)), err
 }
 
 func (c Config) SnapshotInterval() (time.Duration, error) {

@@ -79,8 +79,16 @@
     });
   }
 
+  // A moment in this browser's zone, as the datetime input writes it.
+  let moment = $state("");
+  const local = (t) => {
+    const d = new Date(t);
+    return new Date(d - d.getTimezoneOffset() * 60e3).toISOString().slice(0, 16);
+  };
+
   async function restore(s) {
-    const out = await api.restoreSnapshot(s.path).catch(failure);
+    const out = await (s ? api.restoreSnapshot(s.path) : api.restoreAt(new Date(moment).toISOString()))
+      .catch(failure);
     if (!out) return;
     await openModal(ShowOnceDialog, {
       title: "Restore from a shell", explain: out.note, value: out.command,
@@ -205,7 +213,6 @@
               {#snippet children()}
                 <p class="explain">
                   Every {snapshots.interval} · keep {snapshots.keep} · {snapshots.directory}
-                  {snapshots.shipTo ? ` · shipped to ${snapshots.shipTo}` : ""}
                 </p>
                 <button class="btn small" style="margin:10px 0"
                         onclick={() => guard(() => api.createSnapshot())}>Take one now</button>
@@ -234,6 +241,30 @@
                     {/each}
                   </tbody>
                 </table>
+              {/snippet}
+            </Section>
+            <Section title="Point in time" sub={snapshots.shipTo ? "on" : "off"}>
+              {#snippet children()}
+                {#if !snapshots.shipTo}
+                  <p class="explain">
+                    Set <code>snapshots.shipTo</code> to a directory on another disk or machine, and
+                    the database can be restored to any moment, not only to a snapshot.
+                  </p>
+                {:else if !snapshots.replica}
+                  <p class="explain">Copying to {snapshots.shipTo}; nothing to restore to yet.</p>
+                {:else}
+                  <p class="explain">
+                    Copied continuously to {snapshots.shipTo}. Any moment from
+                    {new Date(snapshots.replica.from).toLocaleString()} to
+                    {new Date(snapshots.replica.to).toLocaleString()}.
+                  </p>
+                  <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+                    <input class="input" type="datetime-local" aria-label="Moment to restore to"
+                           min={local(snapshots.replica.from)} max={local(snapshots.replica.to)}
+                           bind:value={moment} />
+                    <button class="btn small" disabled={!moment} onclick={() => restore(null)}>Restore to this moment</button>
+                  </div>
+                {/if}
               {/snippet}
             </Section>
           {/if}
