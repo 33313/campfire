@@ -1,3 +1,0 @@
-kind: Changed
-body: 'The setting that turns on point-in-time recovery is `snapshots.replica`, not `snapshots.shipTo`: it names the directory the write-ahead log is replicated to. A configuration file that still says `shipTo` is refused at startup; rename the key. In the API, `GET /api/snapshots` returns `replica` as one object, `{directory, from, to}`, present when it is set.'
-time: 2026-10-03T05:32:44.23688364+02:00
