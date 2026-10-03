@@ -113,15 +113,20 @@
         {@render complaint("plannedEnd")}
       </label>
     </div>
-    <label class="field">
+    <!-- A div, not a label: a label would name the shortcut inside it too. -->
+    <div class="field">
       <!-- A bucket's assignee is its owner: the person accountable for the
            milestone (SPEC.md §6.2). -->
-      <span class="field-label">{chosen === "bucket" ? "Owner" : "Assignee"}</span>
-      <select class="input" bind:value={assigneeId}>
+      <span class="field-label">
+        {chosen === "bucket" ? "Owner" : "Assignee"}
+        <!-- The one assignee picked most often, without the drop-down (DEV-82). -->
+        <button type="button" class="pick-me" onclick={() => (assigneeId = app.user.id)}>(Me!)</button>
+      </span>
+      <select class="input" aria-label={chosen === "bucket" ? "Owner" : "Assignee"} bind:value={assigneeId}>
         <option value="">Unassigned</option>
         {#each app.users as u}<option value={u.id}>{u.username}</option>{/each}
       </select>
-    </label>
+    </div>
     {#if chosen === "bucket"}
       <div class="field">
         <span class="field-label">Icon</span>
