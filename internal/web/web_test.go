@@ -117,7 +117,7 @@ func TestOnlyStatusPipsAreRound(t *testing.T) {
 	if !strings.Contains(css, ".pip {") {
 		t.Error("there is no .pip rule")
 	}
-	for _, control := range []string{".check", ".radio"} {
+	for _, control := range []string{".check"} {
 		i := strings.Index(css, control+" {")
 		if i < 0 {
 			t.Errorf("no %s rule", control)

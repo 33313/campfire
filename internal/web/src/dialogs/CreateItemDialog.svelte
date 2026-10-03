@@ -7,6 +7,7 @@
   import LabelEditor from "../components/LabelEditor.svelte";
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
+  import { buckets as allBuckets } from "../lib/catalog.svelte.js";
   import { BUCKET_ICONS, BUCKET_COLOURS, PRIORITY, NAV } from "../lib/icons.js";
 
   /** Create a ticket or a bucket. A bucket carries an icon; a ticket does not. */
@@ -27,9 +28,7 @@
   let buckets = $state([]);
   let acceptedState = $derived(states.find((s) => s.role === "accepted"));
 
-  api.listItems({ csql: "kind = bucket" }, "", 200)
-    .then((page) => (buckets = page.items || []))
-    .catch(() => {});
+  allBuckets().then((list) => (buckets = list));
 
   // Labels are created by typing them: there is no separate label registry to
   // pick from first (SPEC.md §8.1). The editor is the ticket page's, so the two

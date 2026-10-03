@@ -11,7 +11,8 @@
   import { app, reloadContext } from "../lib/state.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
   import { toast, failure } from "../lib/ui.svelte.js";
-  import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
+  import { fieldName, eventChange } from "../lib/events.svelte.js";
+  import { ensure } from "../lib/catalog.svelte.js";
   import { when, plural } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
   import { pickPicture, AVATAR } from "../lib/picture.js";
@@ -43,7 +44,7 @@
   }
 
   load();
-  loadBuckets(); // the bucket ids the activity carries resolve against this
+  ensure("bucket"); // the bucket ids the activity carries resolve against this
   // Its own team's changes, and the users its members are.
   $effect(() => onNotify(load, (n) => !n.teamId || n.teamId === teamId));
 

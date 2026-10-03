@@ -10,7 +10,8 @@
   import { onNotify } from "../lib/stream.svelte.js";
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
   import { userOptions } from "../lib/options.js";
-  import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
+  import { fieldName, eventChange } from "../lib/events.svelte.js";
+  import { ensure } from "../lib/catalog.svelte.js";
   import { clock } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
 
@@ -67,7 +68,7 @@
   }
 
   load();
-  loadBuckets();
+  ensure("bucket");
   $effect(() => onNotify(() => (paged ? (stale = true) : load())));
 
   async function pickActor() {

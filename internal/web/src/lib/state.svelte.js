@@ -2,6 +2,7 @@
 // per-team lists the filter chips resolve names against.
 
 import { api } from "./api.js";
+import { pref, setPref } from "./prefs.js";
 
 export const app = $state({
   user: null,
@@ -50,7 +51,7 @@ export async function reloadViews() {
 // Which views are on is a preference of this browser, per team, like the
 // board's toggles: it decides what is drawn, never what is true.
 function stored(teamId) {
-  try { return JSON.parse(localStorage.getItem(`views:${teamId}`)) || []; } catch { return []; }
+  return pref(`views:${teamId}`, []);
 }
 
 /** The views switched on, in the sidebar's order. A deleted one drops out. */
@@ -61,13 +62,6 @@ export function viewsOn() {
 /** Switches a view on or off; with no `on`, flips it. */
 export function toggleView(id, on = !app.viewsOn.includes(id)) {
   app.viewsOn = on ? [...new Set([...app.viewsOn, id])] : app.viewsOn.filter((x) => x !== id);
-  try { localStorage.setItem(`views:${app.team.id}`, JSON.stringify(app.viewsOn)); } catch { /* private window */ }
+  setPref(`views:${app.team.id}`, app.viewsOn);
 }
 
-export function userName(id) {
-  return app.users.find((u) => u.id === id)?.username || `user ${id}`;
-}
-
-export function labelName(id) {
-  return app.labels.find((l) => l.id === id)?.name || `label ${id}`;
-}

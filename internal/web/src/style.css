@@ -76,7 +76,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: non
 /* Every control answers the pointer at once, and eases rather than snaps.
    Colour only: nothing here moves or resizes. */
 a, .btn, .chip, .nav-item, .card, .bucket-card, .input, .bare, .label-input, .toggle,
-.check, .radio, .tab, .team-switch, .team-option, .option-row, .aside-control,
+.check, .tab, .team-switch, .team-option, .option-row, .aside-control,
 .search-suggestion, .label-suggestion, .settings-rail button, .swatch, .load-older,
 .column-body, .table tbody tr {
   transition: color var(--snap) ease-out, background-color var(--snap) ease-out,
@@ -366,12 +366,6 @@ select.input {
   animation: tick var(--quick) var(--ease-out); }
 @keyframes tick { from { scale: 0.4; opacity: 0; } }
 
-.radio {
-  appearance: none; width: 14px; height: 14px; flex: 0 0 14px; border: 1px solid var(--accent);
-  background: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-}
-.radio:checked::after { content: ""; width: 6px; height: 6px; background: var(--accent); }
-
 /* Status pips are circular, and only status pips. */
 .pip { width: 5px; height: 5px; border-radius: 50%; background: var(--ghost); flex: 0 0 5px; }
 .pip.final { background: var(--ok); }
@@ -408,7 +402,6 @@ img.avatar { object-fit: cover; }
 
 .empty-note { padding: 24px 20px; color: var(--dim); font-size: 12.5px; }
 .dash { color: var(--ghost); }
-.dim { color: var(--dim); }
 
 /* Board ----------------------------------------------------------------- */
 
@@ -521,7 +514,6 @@ body.grabbing, body.grabbing * { cursor: grabbing !important; user-select: none;
 .table tbody tr:hover { background: var(--accent-tint-weak); }
 .table tbody tr.selected { background: var(--accent-tint-weak); }
 .table tbody tr.focused { background: var(--accent-tint); box-shadow: inset 2px 0 0 var(--accent); }
-.table tbody tr.deprioritised { opacity: 0.32; }
 .table .num { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
 .table .cell-title { color: var(--text); }
 
