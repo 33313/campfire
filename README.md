@@ -201,12 +201,16 @@ keep the instance on loopback behind it.
 - **Snapshots** run on `snapshots.interval` into `snapshots.dir`, keeping `snapshots.keep`. Each is
   a complete database file, verified when written and again whenever the administration screen
   lists it.
-- **Off-host copies.** Set `snapshots.shipTo` to a second directory — a mount of another machine, an
-  object-store gateway — and every snapshot is copied there as it is taken. The recovery point is
-  the last snapshot, so shorten the interval if you need a tighter one.
+- **Any moment, off-host.** Set `snapshots.shipTo` to a second directory — a mount of another
+  machine, an object-store gateway — and the write-ahead log is copied there continuously, within
+  a second of each write, by [Litestream](https://litestream.io) running inside the server. The
+  database can then be restored to any moment in the last `interval × keep` (14 × 6h, three and a
+  half days, by default), even when the machine it ran on is gone.
 - **Restoring** replaces the data file, which the running process holds open. Stop the server, run
-  `campfire restore <snapshot>`, start it again. The replaced file is moved aside rather than
-  deleted, so restoring the wrong snapshot is itself recoverable.
+  `campfire restore <snapshot>` for a snapshot, or `campfire restore -at "2026-10-03 14:05"` for a
+  moment (`-at latest` for the newest the replica holds), and start it again. The administration
+  screen shows the span the replica covers and writes the command for you. The replaced file is
+  moved aside rather than deleted, so restoring the wrong moment is itself recoverable.
 - **Integrity** is checked at startup and hourly. On corruption at startup the server refuses to
   start and names the snapshot to restore from.
 

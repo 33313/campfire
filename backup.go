@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -46,6 +47,29 @@ func startSnapshots(cfg config.Config, db *store.DB) func() {
 	return cancel
 }
 
+// startReplica copies the write-ahead log into snapshots.shipTo as it is
+// written, for a restore to any moment (SPEC.md §13.3). Like snapshots, it is
+// the backup §13.3 asks for, not a background job in the sense of §13.2 rule 6.
+func startReplica(cfg config.Config, db *store.DB) (func(), error) {
+	if cfg.Snapshots.ShipTo == "" {
+		return func() {}, nil
+	}
+	every, _ := cfg.SnapshotInterval() // validated on load
+	keep, _ := cfg.Retention()
+	stop, err := backup.Replicate(context.Background(), db.Path, cfg.Snapshots.ShipTo, every, keep)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("write-ahead log copied continuously into %s, restorable to any moment in the last %s", cfg.Snapshots.ShipTo, keep)
+	return func() {
+		ctx, done := context.WithTimeout(context.Background(), 30*time.Second)
+		defer done()
+		if err := stop(ctx); err != nil {
+			log.Printf("replication: %v", err)
+		}
+	}, nil
+}
+
 // Integrity is checked at startup and periodically (SPEC.md §13.3 rule 5).
 // Corruption found while running is logged with the snapshot to restore from;
 // found at startup, it stops the server rather than serving bad data.
@@ -73,9 +97,6 @@ func takeSnapshot(ctx context.Context, cfg config.Config, db *store.DB) (backup.
 	if err != nil {
 		return snap, err
 	}
-	if err := backup.Ship(snap, cfg.Snapshots.ShipTo); err != nil {
-		return snap, fmt.Errorf("shipping %s: %w", snap.Path, err)
-	}
 	if err := backup.Prune(cfg.Snapshots.Dir, cfg.Snapshots.Keep); err != nil {
 		return snap, err
 	}
@@ -95,6 +116,40 @@ func snapshotOnce(cfg config.Config) error {
 	}
 	fmt.Println(snap.Path)
 	return nil
+}
+
+// restoreAt rebuilds the database as it was at a moment, from the replica in
+// snapshots.shipTo. "latest" is the newest moment it holds.
+func restoreAt(cfg config.Config, at string) error {
+	if cfg.Snapshots.ShipTo == "" {
+		return errors.New("restoring to a moment needs snapshots.shipTo, where the replica is kept")
+	}
+	var moment time.Time
+	if at != "latest" {
+		var err error
+		if moment, err = parseMoment(at); err != nil {
+			return err
+		}
+	}
+	if err := backup.RestoreAt(context.Background(), cfg.Snapshots.ShipTo, moment, cfg.Database); err != nil {
+		return err
+	}
+	fmt.Printf("restored %s as it was at %s\n", cfg.Database, at)
+	return nil
+}
+
+// parseMoment reads a time with its zone (2026-10-03T14:05:00+02:00) or in
+// this machine's (2026-10-03 14:05).
+func parseMoment(s string) (time.Time, error) {
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t, nil
+	}
+	for _, layout := range []string{"2006-01-02 15:04:05", "2006-01-02 15:04", "2006-01-02T15:04"} {
+		if t, err := time.ParseInLocation(layout, s, time.Local); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("%q is not a moment; write 2026-10-03 14:05, or with a zone, 2026-10-03T14:05:00+02:00", s)
 }
 
 // restore is invoked the same way in both deployment profiles

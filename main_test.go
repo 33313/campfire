@@ -71,15 +71,14 @@ func TestAnArgumentNothingReadsIsRefused(t *testing.T) {
 }
 
 // SPEC.md §13.3: the restore path is exercised in CI. A snapshot taken from
-// the command line, and shipped, is restored over later writes and brings
-// back exactly what it held.
+// the command line is restored over later writes and brings back exactly what
+// it held. Restoring to a moment is internal/backup's TestReplicaRestoresToAMoment.
 func TestSnapshotRestoreAndCheckFromTheCommandLine(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "campfire.db")
-	snaps, offsite := filepath.Join(dir, "snapshots"), filepath.Join(dir, "offsite")
+	snaps := filepath.Join(dir, "snapshots")
 	cfg := filepath.Join(dir, "campfire.json")
-	body := fmt.Sprintf(`{"database":%q,"snapshots":{"enabled":true,"dir":%q,"keep":3,"shipTo":%q}}`,
-		dbPath, snaps, offsite)
+	body := fmt.Sprintf(`{"database":%q,"snapshots":{"enabled":true,"dir":%q,"keep":3}}`, dbPath, snaps)
 	if err := os.WriteFile(cfg, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -125,9 +124,6 @@ func TestSnapshotRestoreAndCheckFromTheCommandLine(t *testing.T) {
 	if err != nil || len(taken) != 1 {
 		t.Fatalf("snapshots: %v, %v", taken, err)
 	}
-	if _, err := os.Stat(filepath.Join(offsite, filepath.Base(taken[0].Path))); err != nil {
-		t.Fatalf("the snapshot was not shipped: %v", err)
-	}
 	create("after the snapshot")
 
 	// A bare name is looked up in the snapshot directory.
@@ -146,4 +142,24 @@ func TestSnapshotRestoreAndCheckFromTheCommandLine(t *testing.T) {
 			t.Fatalf("restored %+v, want only what the snapshot held", page.Items)
 		}
 	})
+}
+
+// A moment is written with its zone or in this machine's, and -at belongs to
+// restore alone.
+func TestRestoreAtReadsAMoment(t *testing.T) {
+	for _, s := range []string{"2026-10-03T14:05:00+02:00", "2026-10-03 14:05", "2026-10-03 14:05:09"} {
+		if _, err := parseMoment(s); err != nil {
+			t.Errorf("%q: %v", s, err)
+		}
+	}
+	if _, err := parseMoment("yesterday"); err == nil {
+		t.Error("yesterday was read as a moment")
+	}
+	cfg := filepath.Join(t.TempDir(), "campfire.json")
+	if err := run([]string{"-config", cfg, "-at", "latest", "check"}); err == nil || !strings.Contains(err.Error(), "-at is for restore") {
+		t.Errorf("-at on check: %v", err)
+	}
+	if err := run([]string{"-config", cfg, "restore", "-at", "latest"}); err == nil || !strings.Contains(err.Error(), "shipTo") {
+		t.Errorf("restore -at with no replica: %v", err)
+	}
 }
