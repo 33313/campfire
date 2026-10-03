@@ -34,16 +34,19 @@ func (s *Server) listSnapshots(w http.ResponseWriter, r *http.Request, a core.Ac
 	}
 	c := s.Snapshots.Snapshots
 	out := map[string]any{"snapshots": snaps, "directory": c.Dir, "enabled": c.Enabled,
-		"keep": c.Keep, "interval": c.Interval, "shipTo": c.ShipTo}
-	// The span the replica can restore to, to any moment in it.
-	if c.ShipTo != "" {
-		from, to, err := backup.Window(r.Context(), c.ShipTo)
+		"keep": c.Keep, "interval": c.Interval}
+	// The replica's directory, and the span it can restore to, to any moment
+	// in it, once it holds one.
+	if c.Replica != "" {
+		from, to, err := backup.Window(r.Context(), c.Replica)
 		if err != nil {
 			return nil, backupErr(err)
 		}
+		replica := map[string]any{"directory": c.Replica}
 		if !to.IsZero() {
-			out["replica"] = map[string]time.Time{"from": from, "to": to}
+			replica["from"], replica["to"] = from, to
 		}
+		out["replica"] = replica
 	}
 	return out, nil
 }
@@ -90,9 +93,9 @@ func (s *Server) restoreSnapshot(w http.ResponseWriter, r *http.Request, a core.
 }
 
 func (s *Server) restoreAt(r *http.Request, at time.Time) (any, error) {
-	dir := s.Snapshots.ShipTo
+	dir := s.Snapshots.Replica
 	if dir == "" {
-		return nil, &core.Error{Code: core.CodeInvalid, Field: "at", Message: "there is no replica; set snapshots.shipTo"}
+		return nil, &core.Error{Code: core.CodeInvalid, Field: "at", Message: "there is no replica; set snapshots.replica"}
 	}
 	from, to, err := backup.Window(r.Context(), dir)
 	if err != nil {

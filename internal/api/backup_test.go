@@ -97,11 +97,11 @@ func TestSessionCookieIsSecureOverHTTPS(t *testing.T) {
 }
 
 // A moment is restored to from the replica, which an instance without
-// snapshots.shipTo does not have.
+// snapshots.replica does not have.
 func TestRestoreAtNeedsAReplica(t *testing.T) {
 	c, _ := signedInAdmin(t)
 	code, out := c.do("POST", "/api/restore", map[string]string{"at": "2026-10-03T12:00:00Z"})
-	if code != http.StatusBadRequest || !strings.Contains(fmt.Sprint(out), "shipTo") {
+	if code != http.StatusBadRequest || !strings.Contains(fmt.Sprint(out), "replica") {
 		t.Fatalf("restore to a moment with no replica: %d %v", code, out)
 	}
 }

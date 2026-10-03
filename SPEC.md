@@ -759,8 +759,8 @@ The audience has no operator, so recovery is a feature of the application rather
    user who has never considered backups.
 2. **Optional off-host log shipping.** Continuous write-ahead log shipping to a directory, giving
    point-in-time recovery over the snapshots' retention. It runs inside the server process, as a
-   library rather than a sidecar ([§13](#13-deployment-and-storage)). Off by default; one setting to
-   enable.
+   library rather than a sidecar ([§13](#13-deployment-and-storage)). Off by default; one setting,
+   `snapshots.replica`, to enable.
 3. **Restore is a first-class command**, invoked the same way in both profiles.
 4. **The restore path MUST be exercised in continuous integration.** A backup that has never been
    restored is not a backup.
