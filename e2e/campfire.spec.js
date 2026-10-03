@@ -1537,3 +1537,20 @@ test.describe("the caret", () => {
     expect((await blink()).at).toBeLessThan(300);
   });
 });
+
+// DEV-82: assigning a new ticket to yourself is one click beside the label.
+test("(Me!) beside the assignee assigns the new ticket to you", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+
+  const form = page.getByRole("dialog");
+  await form.getByLabel("Title").fill("Mine from the start");
+  await form.getByRole("button", { name: "(Me!)" }).click();
+  await expect(form.getByLabel("Assignee").locator("option:checked")).toHaveText("root");
+  await form.getByRole("button", { name: "Create" }).click();
+
+  const created = (await page.locator(".toast").last().textContent()).match(/SOL-\d+/)[0];
+  const item = await (await page.request.get(`/api/lookup/${created}`)).json();
+  expect(item.assigneeName).toBe("root");
+});
