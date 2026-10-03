@@ -1,5 +1,5 @@
 # Release notes, one file per change (README "Releases"). A pull request adds
-# its file with `go tool changie new`; merging it into main releases it.
+# its file with `npm run changie -- new`; merging it into main releases it.
 changesDir: .changes
 unreleasedDir: unreleased
 # Milliseconds: to the second, two files written in the same second share a

@@ -70,9 +70,9 @@ jobs:
       - name: Version and changelog
         if: steps.plan.outputs.cut
         run: |
-          go tool changie batch auto
-          go tool changie merge
-          v=$(go tool changie latest)
+          npm run -s changie -- batch auto
+          npm run -s changie -- merge
+          v=$(npm run -s changie -- latest)
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
           git add -A .changes CHANGELOG.md
