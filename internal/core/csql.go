@@ -8,8 +8,8 @@ import (
 	"time"
 	_ "time/tzdata" // one binary: a reader's zone must not depend on the host having zoneinfo
 
-	"github.com/campfire/campfire/internal/csql"
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/csql"
+	"github.com/33313/campfire/internal/store"
 )
 
 // A CSQL query arrives as text from the filter bar, an agent or a saved view,

@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // namePrefix and nameLayout make a snapshot's file name sort chronologically,

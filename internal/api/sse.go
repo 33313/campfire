@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/campfire/campfire/internal/core"
-	"github.com/campfire/campfire/internal/stream"
+	"github.com/33313/campfire/internal/core"
+	"github.com/33313/campfire/internal/stream"
 )
 
 // Live updates over server-sent events, on the same origin and under the same

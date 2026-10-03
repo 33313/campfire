@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // NewItem is what creating a ticket or a bucket takes.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // Comments are markdown, flat, and may be written by any authenticated user on

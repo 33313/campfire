@@ -3,7 +3,7 @@ package core
 import (
 	"context"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // A bulk edit gives a selection one new value for one field, in one action

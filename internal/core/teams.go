@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 func validateShortCode(code string) error {

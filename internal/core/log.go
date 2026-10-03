@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // The log is ordered by sequence number, never by timestamp, and paginated by

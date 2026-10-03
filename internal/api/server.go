@@ -18,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/campfire/campfire/internal/core"
-	"github.com/campfire/campfire/internal/stream"
+	"github.com/33313/campfire/internal/core"
+	"github.com/33313/campfire/internal/stream"
 )
 
 const sessionCookie = "campfire_session"

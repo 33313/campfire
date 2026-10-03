@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // SPEC.md §7.2: the board shows every state except the default and the

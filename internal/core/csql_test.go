@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // SPEC.md §9.2: a CSQL query composes conditions with and, or and not, and

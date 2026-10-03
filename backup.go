@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/campfire/campfire/internal/backup"
-	"github.com/campfire/campfire/internal/config"
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/backup"
+	"github.com/33313/campfire/internal/config"
+	"github.com/33313/campfire/internal/store"
 )
 
 // Snapshots run on a ticker inside the one process. This is not a background

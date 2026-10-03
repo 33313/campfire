@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/campfire/campfire/internal/backup"
-	"github.com/campfire/campfire/internal/config"
-	"github.com/campfire/campfire/internal/core"
+	"github.com/33313/campfire/internal/backup"
+	"github.com/33313/campfire/internal/config"
+	"github.com/33313/campfire/internal/core"
 )
 
 // Snapshots is what the snapshot routes drive: the configured directory, and

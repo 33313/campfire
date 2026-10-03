@@ -3,7 +3,7 @@ package core
 import (
 	"testing"
 
-	"github.com/campfire/campfire/internal/store"
+	"github.com/33313/campfire/internal/store"
 )
 
 // SPEC.md §6.5: a clone copies title, description, priority, assignee, bucket

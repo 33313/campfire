@@ -19,14 +19,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/campfire/campfire/internal/api"
-	"github.com/campfire/campfire/internal/backup"
-	"github.com/campfire/campfire/internal/config"
-	"github.com/campfire/campfire/internal/core"
-	"github.com/campfire/campfire/internal/mcp"
-	"github.com/campfire/campfire/internal/store"
-	"github.com/campfire/campfire/internal/stream"
-	"github.com/campfire/campfire/internal/web"
+	"github.com/33313/campfire/internal/api"
+	"github.com/33313/campfire/internal/backup"
+	"github.com/33313/campfire/internal/config"
+	"github.com/33313/campfire/internal/core"
+	"github.com/33313/campfire/internal/mcp"
+	"github.com/33313/campfire/internal/store"
+	"github.com/33313/campfire/internal/stream"
+	"github.com/33313/campfire/internal/web"
 )
 
 // version is set when a release is built: -ldflags "-X main.version=v1.2.3".
