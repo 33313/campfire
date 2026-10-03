@@ -1,98 +1,87 @@
-Campfire is a kanban board for a team's work. This page is everything the screens do, on one page.
-The API and the agent interface are described elsewhere: `api/openapi.yaml` in the source.
+Campfire is a kanban board for your team's work. This page covers everything you can do on
+screen. The API is described in `api/openapi.yaml` in the source.
 
 ## The board and the backlog
 
-Each team has its own **work states**, the columns of its board. Four of them carry a role:
+Each team has its own **work states**, the columns of its board. Four have a special role:
 
 | Role | Meaning |
 |---|---|
-| default | Where new work lands. Its items are the **backlog**. |
+| default | New work lands here. These items are the **backlog**. |
 | accepted | Agreed to, not started. |
-| final | Done. Items here more than three days are hidden unless **Show old done** is on. |
-| rejected | Will not be done. On no board; reachable by a filter and by its identifier. |
+| final | Done. Hidden after three days unless **Show old done** is on. |
+| rejected | Won't be done. Not on the board; find it with a filter or its identifier. |
 
-The **board** shows every state but the default and the rejected one; the backlog is the default
-state as a table. Any item may move to any state at any time: there are no rules about which
-state comes after which, and the log records who moved what. Rejecting asks for a reason,
-*cancelled* or *duplicate*, and a note if you like.
+The **board** shows the other states as columns. The **backlog** shows the default state as a table.
 
-An item's **actual start** is set the first time it leaves the backlog, and its **actual end** when
-it reaches done or rejected (it is cleared if it leaves again).
-
-The board scrolls as one: every column moves together, and the board scrolls sideways when its
-columns do not fit the screen.
+- Move any item to any state, at any time. The log records who moved what.
+- Rejecting asks for a reason, *cancelled* or *duplicate*, and an optional note.
+- **Actual start** is set when an item first leaves the backlog. **Actual end** is set when it
+  reaches done or rejected, and cleared if it leaves again.
 
 ## Tickets and buckets
 
 A **ticket** is a piece of work. A **bucket** is a milestone that groups tickets, such as *Release
-1.0*; it carries an icon and, if you like, a colour, which its tickets wear on the board. A bucket
-takes tickets from any team, and its page shows them by team, with progress counted as how many
-are done or rejected.
+1.0*. It has an icon and an optional colour, which its tickets show on the board.
 
-Both have an **identifier** such as `SOL-42`, from the team that made them. It is permanent and it
-is the address: `/SOL-42` opens it. Buckets stay off the board unless **Show buckets** is on.
-
-**Buckets** in the sidebar lists them three ways: those your team takes part in (owns, or has a
-ticket in), those it owns, and the whole instance.
+- Every item has a permanent **identifier** such as `SOL-42`. `/SOL-42` opens it.
+- A bucket takes tickets from any team. Its page groups them by team and counts done or rejected
+  ones as progress.
+- Buckets stay off the board unless **Show buckets** is on.
+- **Buckets** in the sidebar lists the ones your team is in, the ones it owns, or all of them.
 
 ## Creating
 
-**Create** opens the form. Every field an item has is on it, so nothing needs a second visit.
+**Create** opens a form with every field, so you can fill it all in at once.
 
-- **(Me!)** beside *Assignee* assigns it to you.
-- **(Several)** beside *Title* takes a title per line: one item for each, with the rest of the form
-  applied to all of them. Pasting a list into the title does the same. If one is refused, the ones
-  before it are made and the rest stay in the box.
-- **Mark as accepted** puts it straight into the accepted state instead of the backlog.
-- Labels are made by typing them: Enter adds one, Backspace in the empty box takes the last back.
+- **(Me!)** assigns it to you.
+- **(Several)** makes one item per line of the title, sharing the rest of the form. Pasting a list
+  into the title does the same. If one fails, the ones before it are made and the rest stay in the
+  box.
+- **Mark as accepted** skips the backlog.
+- Type a label and press Enter to add it. Backspace in the empty box removes the last one.
 
 ## Working with cards
 
-- **Click** a card to read it in the preview beside the board, and edit it there. Its identifier
-  opens the full page.
-- **Drag** a card to move it. The amber line shows where it will land. Held near the top or bottom
-  of the screen, the board scrolls; near its side, it scrolls sideways. Escape, or letting
-  go outside a column, puts it back.
-- **Ctrl-click** (**⌘-click** on a Mac) adds cards to a selection, and dragging any of them carries
-  them all. In the backlog, the checkboxes select, and the header box selects everything shown.
-- With a selection, the **selection bar** takes the filter bar's place: *Move to…*, *Reject…*,
-  *Assignee*, *Priority* and *Bucket* change every selected item at once, one field at a time.
+- **Click** a card to open it in the preview and edit it there. Click its identifier for the full
+  page.
+- **Drag** a card to move it; the amber line shows where it will land. Hold it near the edge of the
+  screen to scroll. Escape, or dropping outside a column, cancels.
+- **Ctrl-click** (**⌘-click** on a Mac) selects several cards, and dragging one moves them all. In
+  the backlog, use the checkboxes.
+- With cards selected, the **selection bar** replaces the filter bar. *Move to…*, *Reject…*,
+  *Assignee*, *Priority* and *Bucket* change them all at once.
 
 ### The card menu
 
-**Right-click** a card for the selection bar's actions at the pointer. Right-clicking a card outside
-the selection selects it first, so the menu always acts on what it names.
+**Right-click** a card for the same actions. A card outside the selection is selected first.
 
-- **Move to**, **Assignee**, **Priority** and **Bucket** open a sub-menu of their values; a click
-  applies one at once. For a single card its current value is marked. The sub-menu opens on hover,
-  on a click, or with →; ← goes back.
+- **Move to**, **Assignee**, **Priority** and **Bucket** open a sub-menu; click a value to apply
+  it. For a single card, its current value is marked.
 - **Reject…** asks for a reason.
-- For one ticket: **Clone** copies it into a new ticket that *relates to* it; **Split…** makes a new
-  ticket per title, each *following up* this one, and can reject the original; **Open** opens it.
+- On one ticket: **Clone** copies it as a related ticket, **Split…** makes a follow-up ticket per
+  title and can reject the original, and **Open** opens it.
 
 ## Writing: Markdown and pictures
 
-Descriptions and comments are Markdown, as on GitHub: `**bold**`, `*italic*`, `` `code` ``,
-`~~struck~~`, `# headings`, lists, `- [ ] tasks`, `> quotes`, tables, fenced code blocks and links.
-A line break you type is kept. An identifier such as `SOL-42` becomes a link to its item.
+Descriptions and comments use Markdown, as on GitHub: `**bold**`, `*italic*`, `` `code` ``,
+`~~struck~~`, `# headings`, lists, `- [ ] tasks`, `> quotes`, tables, code blocks and links. Line
+breaks are kept, and identifiers such as `SOL-42` become links.
 
-**Paste** or **drop** a picture into a description or a comment and it is uploaded and added where
-the caret is, as `![name](/api/images/12)`. The instance sets the largest picture it takes. A
-picture linked from another site is shown as a link, not loaded.
+**Paste** or **drop** a picture to upload it at the cursor. The instance sets the size limit.
+Pictures from other sites show as links.
 
-In the preview, click the description to edit it; Escape puts back what was there.
+In the preview, click the description to edit it. Escape discards the edit.
 
 ## Filtering
 
-Every filter is a query in **CSQL**, the Campfire Simple Query Language. The filter bar writes one
-for you with **chips**: *Assignee*, *State*, *Label*, *Bucket*, *Priority*, and more under
-*+ More*. In a chip's list, a click cycles a value through `[+]` (must match), `[−]` (must not) and
-off; the filter applies when the list closes, and Escape leaves it as it was.
+Filters are queries in **CSQL**, the Campfire Simple Query Language, but you rarely need to type
+one. The filter bar builds it from **chips**: *Assignee*, *State*, *Label*, *Bucket*, *Priority*,
+and more under *+ More*. Click a value to cycle it through `[+]` (must match), `[−]` (must not)
+and off. The filter applies when the list closes; Escape cancels.
 
-The `</>` switch shows the query itself, to read or type. Suggestions follow the caret: Tab takes the first
-(or the one chosen with ↑↓), and Enter runs the query. A mistake is underlined where it is. The `?`
-beside the box is a one-screen summary of what follows.
+The `</>` switch shows the query to read or type. Tab takes a suggestion, Enter runs the query,
+and mistakes are underlined. The `?` beside the box is a quick summary.
 
 ### Fields
 
@@ -100,26 +89,24 @@ beside the box is a one-screen summary of what follows.
 |---|---|---|
 | `assignee`, `reporter` | a username; `me`; `none` (assignee only) | `=` `!=` `in` `not in` |
 | `label` | a label; `none` | `=` `!=` `in` `not in` |
-| `bucket` | an identifier such as `SOL-6`, or a bucket's title in quotes; `none` | `=` `!=` `in` `not in` |
+| `bucket` | an identifier such as `SOL-6`, or a title in quotes; `none` | `=` `!=` `in` `not in` |
 | `priority` | `1` to `4`, or `P1` to `P4`; 1 is highest | `=` `!=` `in` `not in` `<` `<=` `>` `>=` |
-| `state` | a work state's name, in every team | `=` `!=` `in` `not in` |
+| `state` | a work state's name, in any team | `=` `!=` `in` `not in` |
 | `team` | a short code or a team's name | `=` `!=` `in` `not in` |
 | `kind` | `ticket` or `bucket` | `=` `!=` `in` `not in` |
 | `created`, `started`, `completed`, `due` | a day: `2026-09-01`, `today`, `-7d`, `+2w`; `none` (not `created`) | `=` `!=` `<` `<=` `>` `>=` |
 | `text` | a phrase, searched in titles and descriptions | `~` contains, `!~` does not |
 
-### Putting conditions together
+### Combining conditions
 
-- Join conditions with `and`, `or` and `not`, and group them with parentheses. `and` binds
-  tighter than `or`.
-- `in (a, b)` is any of them; `not in (a, b)` is none of them.
-- `!=` is exactly `not =`: `assignee != marta` includes the unassigned.
-- Several `label = …` joined by `and` mean every one of those labels.
-- Quote a value with spaces in it: `state = "In Review"`. Field names and keywords are not case
-  sensitive.
-- Days are whole days in your time zone. `created >= -7d` is the last seven days and today; a
-  relative day stays relative when it is saved.
-- `#12` names a label, user, bucket, team or state by its id.
+- Use `and`, `or`, `not` and parentheses. `and` binds tighter than `or`.
+- `in (a, b)` matches any of them; `not in (a, b)` matches none.
+- `!=` means `not =`, so `assignee != marta` includes unassigned items.
+- `label = a and label = b` needs both labels.
+- Quote values with spaces: `state = "In Review"`. Fields and keywords ignore case.
+- Days are whole days in your time zone. `created >= -7d` is the last seven days and today. A
+  relative day stays relative in a saved view.
+- `#12` refers to a label, user, bucket, team or state by its id.
 
 ### Examples
 
@@ -127,52 +114,51 @@ beside the box is a one-screen summary of what follows.
 |---|---|
 | `assignee in (marta, me) and state != Done` | open work of yours and Marta's |
 | `label = api or label = none` | labelled api, or not labelled at all |
-| `due < today and completed = none` | late |
+| `due < today and completed = none` | late work |
 | `bucket = SOL-6 and not priority = 4` | the milestone's work, less the lowest priority |
 | `created >= -7d and kind = ticket` | tickets from the last week |
 | `text ~ "boiler"` | anything that mentions the boiler |
 
-The search box in the header is the same as `text ~`, and drops matches under it as you type.
+The search box in the header is a shortcut for `text ~`, showing matches as you type.
 
 ## Saved views
 
-A **view** is a named query, listed under *Views* in the sidebar for the team that owns it. A view
-is a switch, not a place: a click turns it on or off, and several can be on at once.
+A **view** is a saved query, listed under *Views* in the sidebar of the team that owns it. Click a
+view to turn it on or off. Several can be on at once.
 
-**How they combine.** Every view that is on, and the filter bar's query, are joined with `and`:
-each one narrows the board or backlog further. *All off* turns them all off.
+Every view that is on and the filter bar are joined with `and`, so each narrows the results
+further. *All off* turns them all off.
 
-- **Save as view** in the filter bar names the filter in it, or + beside *Views* starts from none.
-- **Right-click** a view for *Edit…* and *Delete…*. Anyone in its team may change it, and the
-  change is everyone's.
-- A view is **pinned** to the board, the backlog, or both. Switched on from another screen, it
-  opens the board, or the backlog if it is pinned only there.
-- A view that names something since deleted is marked **!**; that condition matches nothing until
-  the view is edited.
+- **Save as view** saves the current filter. **+** beside *Views* starts from scratch.
+- **Right-click** a view to edit or delete it. Anyone in the team can, and the change is everyone's.
+- **Pin** a view to the board, the backlog, or both. Turned on from elsewhere, it opens the board,
+  or the backlog if pinned only there.
+- A view marked **!** names something since deleted. That condition matches nothing until you edit
+  the view.
 
 ## Keys and menus
 
 | Where | Key | Does |
 |---|---|---|
-| Anywhere | Escape | closes the dialog, menu or list on top, and calls off a drag |
-| A card | Ctrl-click / ⌘-click | adds it to the selection, or takes it out |
-| A card | right-click | the card menu |
+| Anywhere | Escape | closes the top dialog, menu or list; cancels a drag |
+| A card | Ctrl-click / ⌘-click | adds it to or removes it from the selection |
+| A card | right-click | opens the card menu |
 | The card menu | → / ← | opens a sub-menu / goes back |
 | A view | right-click, or the menu key | *Edit…* and *Delete…* |
-| The search box | ↑ ↓, Enter | chooses a match, opens it; Enter on none searches |
+| The search box | ↑ ↓, Enter | picks a match and opens it; Enter with none picked searches |
 | The query box | Tab, ↑ ↓, Enter | takes a suggestion, moves between them, runs the query |
 | A filter chip's list | ↑ ↓, Space, Enter | moves, cycles a value, applies |
-| Labels | Enter, Backspace, ↑ ↓ | adds a label, takes the last back, chooses a suggestion |
-| The preview's title | Enter, Escape | saves it, puts it back |
-| The preview's description | Enter, then Escape | opens it to edit; puts back what was there |
+| Labels | Enter, Backspace, ↑ ↓ | adds a label, removes the last, picks a suggestion |
+| The preview's title | Enter, Escape | saves, discards |
+| The preview's description | Enter, then Escape | edits, discards |
 | A backlog row | double-click | opens the item |
 
 ## The log and live updates
 
-**Log** lists every change, newest first: who, what, and from what to what. A change an agent made
-carries the agent mark beside the person, and the *Agent* chip shows only those; *Field* and *Item*
-narrow it further. An item's own history is its *History* tab.
+**Log** lists every change, newest first: who changed what, from what to what. Changes by an agent
+carry the agent mark, and the *Agent* chip shows only those. *Field* and *Item* narrow it further.
+An item's own history is its *History* tab.
 
-Boards update as other people work. The campfire at the top of the sidebar is lit while live
-updates are flowing, flares for each change that arrives, and burns down while they are away.
-Nothing on screen is wrong while it is out: it catches up when it is back.
+Boards update live as others work. The campfire at the top of the sidebar is lit while connected,
+flares with each change, and burns down while disconnected. Nothing is lost: it catches up when it
+reconnects.

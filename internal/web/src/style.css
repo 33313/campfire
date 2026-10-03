@@ -714,7 +714,7 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 .settings-main { flex: 1; min-width: 0; }
 /* The docs: the rail stays beside whatever section is being read. */
 .settings-rail:has(+ .settings-main .docs) { position: sticky; top: 0; align-self: flex-start; }
-.docs { padding: 22px 28px 60vh; max-width: calc(72ch + 56px); }
+.docs { padding: 22px 28px 60vh; max-width: calc(72ch + 56px); margin-inline: auto; }
 /* Written wrapped, in docs.md, not typed line by line: its breaks are not
    the reader's. */
 .docs.markdown :is(p, li) { white-space: normal; }
