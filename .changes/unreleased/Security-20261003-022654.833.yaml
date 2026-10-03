@@ -1,0 +1,3 @@
+kind: Security
+body: The session cookie is marked Secure behind an HTTPS proxy that sends X-Forwarded-Proto, as the README always said; it never was. Taking a snapshot is refused from another site, like every other write, and a restore only verifies snapshots in the snapshot directory. The image is built on Alpine 3.24; 3.20 is past its end of life.
+time: 2026-10-03T02:26:54.833914811+02:00

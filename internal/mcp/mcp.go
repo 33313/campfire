@@ -25,12 +25,14 @@ import (
 const protocolVersion = "2025-06-18"
 
 type Server struct {
-	svc   *core.Service
-	tools map[string]tool
+	svc     *core.Service
+	version string
+	tools   map[string]tool
 }
 
-func New(svc *core.Service) *Server {
-	s := &Server{svc: svc, tools: map[string]tool{}}
+// New serves the tools over svc, reporting version as the server's own.
+func New(svc *core.Service, version string) *Server {
+	s := &Server{svc: svc, version: version, tools: map[string]tool{}}
 	for _, t := range s.toolset() {
 		s.tools[t.Name] = t
 	}
@@ -147,7 +149,7 @@ func (s *Server) dispatch(ctx context.Context, a core.Actor, req request) (any, 
 		return map[string]any{
 			"protocolVersion": protocolVersion,
 			"capabilities":    map[string]any{"tools": map[string]any{}},
-			"serverInfo":      map[string]any{"name": "campfire", "version": "1.0"},
+			"serverInfo":      map[string]any{"name": "campfire", "version": s.version},
 			"instructions": "Campfire is a kanban work tracker. You act as " + a.Username +
 				" with exactly that user's permissions. Items are tickets and buckets in one " +
 				"namespace: SOL-42 may be either. Any item may move to any work state at any " +
@@ -183,24 +185,24 @@ func (s *Server) list() []map[string]any {
 }
 
 func (s *Server) callTool(ctx context.Context, a core.Actor, params json.RawMessage) (any, *rpcError) {
-	var call struct {
+	var req struct {
 		Name      string          `json:"name"`
 		Arguments json.RawMessage `json:"arguments"`
 	}
-	if err := json.Unmarshal(params, &call); err != nil {
+	if err := json.Unmarshal(params, &req); err != nil {
 		return nil, &rpcError{codeInvalidParams, "the call is malformed"}
 	}
-	t, ok := s.tools[call.Name]
+	t, ok := s.tools[req.Name]
 	if !ok {
 		// A tool that does not exist needs no rule: the operations of
 		// SPEC.md §14.3 are excluded by not being here at all, rather than by
 		// a second permission model.
-		return nil, &rpcError{codeMethodNotFound, "no such tool: " + call.Name}
+		return nil, &rpcError{codeMethodNotFound, "no such tool: " + req.Name}
 	}
-	if len(call.Arguments) == 0 {
-		call.Arguments = json.RawMessage("{}")
+	if len(req.Arguments) == 0 {
+		req.Arguments = json.RawMessage("{}")
 	}
-	result, err := t.Call(ctx, a, call.Arguments)
+	result, err := t.Call(ctx, a, req.Arguments)
 	if err != nil {
 		// A refused call is a tool error the model can read and act on, not a
 		// protocol error.

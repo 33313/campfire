@@ -27,16 +27,8 @@ func TestEveryRouteHasAnOperationAndViceVersa(t *testing.T) {
 		routed[p] = true
 	}
 
-	// The stream is deliberately absent from the document (SPEC.md §12), and
-	// backup lives on its own routes registered by the snapshot server.
-	notRouted := map[string]bool{
-		"GET /api/snapshots":  true,
-		"POST /api/snapshots": true,
-		"POST /api/restore":   true,
-	}
-
 	for op := range documented {
-		if !routed[op] && !notRouted[op] {
+		if !routed[op] {
 			t.Errorf("api/openapi.yaml describes %s, which no route serves", op)
 		}
 	}

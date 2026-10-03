@@ -99,7 +99,7 @@ func requireCode(t *testing.T, err error, want Code) {
 
 func totpNow(t *testing.T, secret string, f *fixture) string {
 	t.Helper()
-	code, err := auth.TOTPCode(secret, time.UnixMicro(f.now()))
+	code, err := auth.TOTPCode(secret, time.UnixMicro(f.Clock()))
 	if err != nil {
 		t.Fatal(err)
 	}

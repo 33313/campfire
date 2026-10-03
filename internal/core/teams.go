@@ -29,7 +29,7 @@ func validateShortCode(code string) error {
 // CreateTeam gives the team the six work states of SPEC.md §7.1 and makes its
 // creator an administrator of it.
 func (s *Service) CreateTeam(ctx context.Context, a Actor, name, shortCode string) (*store.Team, error) {
-	if err := requireInstanceAdmin(a); err != nil {
+	if err := RequireInstanceAdmin(a); err != nil {
 		return nil, err
 	}
 	name = strings.TrimSpace(name)
@@ -167,7 +167,7 @@ func (s *Service) SetTeamProfile(ctx context.Context, a Actor, teamID int64, ava
 }
 
 func (s *Service) ArchiveTeam(ctx context.Context, a Actor, teamID int64, archived bool) error {
-	if err := requireInstanceAdmin(a); err != nil {
+	if err := RequireInstanceAdmin(a); err != nil {
 		return err
 	}
 	return s.write(ctx, a, func(t *wtx) error {

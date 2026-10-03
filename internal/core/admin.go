@@ -34,7 +34,7 @@ func validateUsername(name string) error {
 // CreateUser is the instance administrator's direct route. The password is
 // handed over out of band, the same way an invitation link is.
 func (s *Service) CreateUser(ctx context.Context, a Actor, username, password, email string, isAdmin bool) (*User, error) {
-	if err := requireInstanceAdmin(a); err != nil {
+	if err := RequireInstanceAdmin(a); err != nil {
 		return nil, err
 	}
 	if err := validateUsername(username); err != nil {
@@ -72,7 +72,7 @@ type Invitation struct {
 }
 
 func (s *Service) CreateInvitation(ctx context.Context, a Actor) (*Invitation, error) {
-	if err := requireInstanceAdmin(a); err != nil {
+	if err := RequireInstanceAdmin(a); err != nil {
 		return nil, err
 	}
 	return s.oneTimeLink(ctx, a, "invite", 0, "")
@@ -84,7 +84,7 @@ func (s *Service) CreateInvitation(ctx context.Context, a Actor) (*Invitation, e
 // so the administrator issues the link and hands it over; there is no mailed
 // link anywhere in the application.
 func (s *Service) CreatePasswordReset(ctx context.Context, a Actor, userID int64) (*Invitation, error) {
-	if err := requireInstanceAdmin(a); err != nil {
+	if err := RequireInstanceAdmin(a); err != nil {
 		return nil, err
 	}
 	u, err := store.UserByID(ctx, s.DB.R, userID)
@@ -261,7 +261,7 @@ func (s *Service) UpdateProfile(ctx context.Context, a Actor, email, avatar, bio
 }
 
 func (s *Service) SetUserAdmin(ctx context.Context, a Actor, userID int64, isAdmin bool) error {
-	if err := requireInstanceAdmin(a); err != nil {
+	if err := RequireInstanceAdmin(a); err != nil {
 		return err
 	}
 	if userID == a.UserID && !isAdmin {

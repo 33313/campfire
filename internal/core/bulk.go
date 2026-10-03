@@ -108,7 +108,7 @@ func reasonOf(err error) string {
 // many items across how many teams it affects — which is what BucketImpact is
 // for, and which the client shows before calling this.
 func (s *Service) DeleteItem(ctx context.Context, a Actor, itemID int64) error {
-	if err := requireInstanceAdmin(a); err != nil {
+	if err := RequireInstanceAdmin(a); err != nil {
 		return err
 	}
 	return s.write(ctx, a, func(t *wtx) error {
@@ -143,7 +143,7 @@ func (s *Service) ItemImpact(ctx context.Context, a Actor, itemID int64) (items,
 // the prefix records origin, not current ownership (SPEC.md §6.3). A ticket's
 // owning team MUST NOT change, so this refuses anything but a bucket.
 func (s *Service) ReassignBucket(ctx context.Context, a Actor, bucketID, teamID int64) (*Item, error) {
-	if err := requireInstanceAdmin(a); err != nil {
+	if err := RequireInstanceAdmin(a); err != nil {
 		return nil, err
 	}
 	var out *Item

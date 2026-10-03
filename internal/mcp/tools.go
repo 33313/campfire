@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 
@@ -36,14 +37,19 @@ var (
 	pQuery   = map[string]any{"type": "string", "description": csqlHelp}
 )
 
-// decodeInto unmarshals a tool's arguments, refusing unknown fields so that a
-// mistyped argument is an error the agent can see rather than a silently
+// call is a tool's Call for arguments of type T. They are decoded strictly, so
+// a mistyped argument is an error the agent can see rather than a silently
 // ignored value.
-func decodeInto(args json.RawMessage, v any) error {
-	if err := json.Unmarshal(args, v); err != nil {
-		return &core.Error{Code: core.CodeInvalid, Message: "the arguments are not valid: " + err.Error()}
+func call[T any](fn func(context.Context, core.Actor, T) (any, error)) func(context.Context, core.Actor, json.RawMessage) (any, error) {
+	return func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
+		var in T
+		dec := json.NewDecoder(bytes.NewReader(args))
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&in); err != nil {
+			return nil, &core.Error{Code: core.CodeInvalid, Message: "the arguments are not valid: " + err.Error()}
+		}
+		return fn(ctx, a, in)
 	}
-	return nil
 }
 
 func (s *Server) toolset() []tool {
@@ -55,73 +61,53 @@ func (s *Server) toolset() []tool {
 			Name: "list_teams", Operation: "listTeams",
 			Description: "List the teams in this instance, with their short codes.",
 			Schema:      obj(map[string]any{"includeArchived": pBool}),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ IncludeArchived bool }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ IncludeArchived bool }) (any, error) {
 				return svc.ListTeams(ctx, a, in.IncludeArchived)
-			},
+			}),
 		},
 		{
 			Name: "get_team", Operation: "getTeam",
 			Description: "One team by id.",
 			Schema:      obj(map[string]any{"teamId": pInt}, "teamId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ TeamID int64 }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ TeamID int64 }) (any, error) {
 				return svc.Team(ctx, a, in.TeamID)
-			},
+			}),
 		},
 		{
 			Name: "list_team_members", Operation: "listMembers",
 			Description: "The members of a team and their roles.",
 			Schema:      obj(map[string]any{"teamId": pInt}, "teamId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ TeamID int64 }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ TeamID int64 }) (any, error) {
 				return svc.ListMembers(ctx, a, in.TeamID)
-			},
+			}),
 		},
 		{
 			Name: "list_work_states", Operation: "listWorkStates",
 			Description: "A team's work states in board order. Exactly one holds each of the " +
 				"roles default, accepted, rejected and final; the rest are intermediate.",
 			Schema: obj(map[string]any{"teamId": pInt}, "teamId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ TeamID int64 }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ TeamID int64 }) (any, error) {
 				return svc.ListWorkStates(ctx, a, in.TeamID)
-			},
+			}),
 		},
 		{
 			Name: "list_users", Operation: "listUsers",
 			Description: "The accounts on this instance, for finding an assignee's id.",
 			Schema:      obj(map[string]any{"after": pInt, "limit": pInt}),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					After int64
-					Limit int
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				After int64
+				Limit int
+			}) (any, error) {
 				return svc.ListUsers(ctx, a, in.After, in.Limit)
-			},
+			}),
 		},
 		{
 			Name: "list_labels", Operation: "listLabels",
 			Description: "Every label in the instance. Labels are free text, created by typing them.",
 			Schema:      pEmpty,
-			Call: func(ctx context.Context, a core.Actor, _ json.RawMessage) (any, error) {
+			Call: call(func(ctx context.Context, a core.Actor, _ struct{}) (any, error) {
 				return svc.ListLabels(ctx, a)
-			},
+			}),
 		},
 		{
 			Name: "get_board", Operation: "getBoard",
@@ -133,18 +119,14 @@ func (s *Server) toolset() []tool {
 				"teamId": pInt, "allDone": pBool, "limit": pInt,
 				"query": pQuery, "viewIds": pIntList, "tz": pString,
 			}, "teamId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					TeamID  int64
-					AllDone bool
-					Limit   int
-					core.Filter
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				TeamID  int64
+				AllDone bool
+				Limit   int
+				core.Filter
+			}) (any, error) {
 				return svc.Board(ctx, a, in.TeamID, in.Filter, in.AllDone, in.Limit)
-			},
+			}),
 		},
 		{
 			Name: "get_backlog", Operation: "getBacklog",
@@ -154,18 +136,14 @@ func (s *Server) toolset() []tool {
 				"teamId": pInt, "cursor": pString, "limit": pInt,
 				"query": pQuery, "viewIds": pIntList, "tz": pString,
 			}, "teamId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					TeamID int64
-					Cursor string
-					Limit  int
-					core.Filter
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				TeamID int64
+				Cursor string
+				Limit  int
+				core.Filter
+			}) (any, error) {
 				return svc.Backlog(ctx, a, in.TeamID, in.Filter, in.Cursor, in.Limit)
-			},
+			}),
 		},
 		{
 			Name: "list_items", Operation: "listItems",
@@ -175,57 +153,41 @@ func (s *Server) toolset() []tool {
 				"cursor": pString, "limit": pInt,
 				"query": pQuery, "viewIds": pIntList, "tz": pString,
 			}),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					core.Filter
-					Cursor string
-					Limit  int
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				core.Filter
+				Cursor string
+				Limit  int
+			}) (any, error) {
 				return svc.ListItems(ctx, a, in.Filter, in.Cursor, in.Limit)
-			},
+			}),
 		},
 		{
 			Name: "get_item", Operation: "getItem",
 			Description: "One item in full, with its labels, relations and bucket progress.",
 			Schema:      obj(map[string]any{"itemId": pInt}, "itemId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ ItemID int64 }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ ItemID int64 }) (any, error) {
 				return svc.GetItem(ctx, a, in.ItemID)
-			},
+			}),
 		},
 		{
 			Name: "lookup_item", Operation: "lookupItem",
 			Description: "Resolve an identifier such as SOL-42. The identifier does not say " +
 				"whether the item is a ticket or a bucket; the kind field does.",
 			Schema: obj(map[string]any{"identifier": pString}, "identifier"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ Identifier string }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ Identifier string }) (any, error) {
 				return svc.GetItemByIdentifier(ctx, a, in.Identifier)
-			},
+			}),
 		},
 		{
 			Name: "list_buckets", Operation: "listBuckets",
 			Description: "The bucket index. Scope is participation (owned, plus buckets " +
 				"holding one of the team's tickets), owned, or instance.",
 			Schema: obj(map[string]any{"teamId": pInt, "scope": pString, "cursor": pString}, "teamId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					TeamID int64
-					Scope  string
-					Cursor string
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				TeamID int64
+				Scope  string
+				Cursor string
+			}) (any, error) {
 				if in.Scope == "" {
 					in.Scope = core.ScopeParticipation
 				}
@@ -234,48 +196,36 @@ func (s *Server) toolset() []tool {
 					return nil, err
 				}
 				return map[string]any{"buckets": cards, "cursor": cursor}, nil
-			},
+			}),
 		},
 		{
 			Name: "get_bucket_contents", Operation: "getBucketContents",
 			Description: "What is in a bucket, grouped by owning team. A bucket's lifecycle " +
 				"is independent of its contents in both directions.",
 			Schema: obj(map[string]any{"bucketId": pInt}, "bucketId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ BucketID int64 }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ BucketID int64 }) (any, error) {
 				return svc.BucketContents(ctx, a, in.BucketID)
-			},
+			}),
 		},
 		{
 			Name: "get_item_impact", Operation: "getItemImpact",
 			Description: "How many items across how many teams would lose a bucket if it went.",
 			Schema:      obj(map[string]any{"itemId": pInt}, "itemId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ ItemID int64 }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ ItemID int64 }) (any, error) {
 				items, teams, err := svc.ItemImpact(ctx, a, in.ItemID)
 				if err != nil {
 					return nil, err
 				}
 				return map[string]int{"items": items, "teams": teams}, nil
-			},
+			}),
 		},
 		{
 			Name: "list_comments", Operation: "listComments",
 			Description: "An item's comments, oldest first.",
 			Schema:      obj(map[string]any{"itemId": pInt, "after": pInt}, "itemId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ ItemID, After int64 }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ ItemID, After int64 }) (any, error) {
 				return svc.ListComments(ctx, a, in.ItemID, in.After, 0)
-			},
+			}),
 		},
 		{
 			Name: "get_log", Operation: "getLog",
@@ -286,18 +236,14 @@ func (s *Server) toolset() []tool {
 				"itemId": pInt, "teamId": pInt, "actorId": pInt,
 				"agentOnly": pBool, "before": pInt, "limit": pInt,
 			}),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					ItemID, TeamID, ActorID, Before int64
-					AgentOnly                       bool
-					Limit                           int
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				ItemID, TeamID, ActorID, Before int64
+				AgentOnly                       bool
+				Limit                           int
+			}) (any, error) {
 				return svc.Log(ctx, a, store.EventFilter{ItemID: in.ItemID, TeamID: in.TeamID,
 					ActorID: in.ActorID, AgentOnly: in.AgentOnly}, in.Before, in.Limit)
-			},
+			}),
 		},
 
 		// Writing. Each goes through the same handler and the same permission
@@ -316,13 +262,9 @@ func (s *Server) toolset() []tool {
 				"color":      map[string]any{"type": "string", "enum": store.BucketColours},
 				"plannedEnd": pString, "labels": pStrList, "accepted": pBool,
 			}, "kind", "teamId", "title"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in core.NewItem
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in core.NewItem) (any, error) {
 				return svc.CreateItem(ctx, a, in)
-			},
+			}),
 		},
 		{
 			Name: "update_item", Operation: "updateItem",
@@ -333,16 +275,12 @@ func (s *Server) toolset() []tool {
 				"assigneeId": pInt, "priority": pInt, "icon": pString, "color": pString,
 				"bucketId": pInt, "plannedEnd": pString,
 			}, "itemId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					ItemID int64 `json:"itemId"`
-					core.ItemPatch
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				ItemID int64 `json:"itemId"`
+				core.ItemPatch
+			}) (any, error) {
 				return svc.UpdateItem(ctx, a, in.ItemID, in.ItemPatch)
-			},
+			}),
 		},
 		{
 			Name: "move_item", Operation: "moveItem",
@@ -354,16 +292,12 @@ func (s *Server) toolset() []tool {
 				"reason": map[string]any{"type": "string", "enum": []string{"cancelled", "duplicate"}},
 				"note":   pString,
 			}, "itemId", "stateId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					ItemID, StateID int64
-					Reason, Note    string
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				ItemID, StateID int64
+				Reason, Note    string
+			}) (any, error) {
 				return svc.MoveItem(ctx, a, in.ItemID, in.StateID, in.Reason, in.Note)
-			},
+			}),
 		},
 		{
 			Name: "rank_item", Operation: "rankItem",
@@ -372,26 +306,18 @@ func (s *Server) toolset() []tool {
 			Schema: obj(map[string]any{
 				"itemId": pInt, "stateId": pInt, "afterId": pInt, "beforeId": pInt,
 			}, "itemId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ ItemID, StateID, AfterID, BeforeID int64 }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ ItemID, StateID, AfterID, BeforeID int64 }) (any, error) {
 				return svc.RankItem(ctx, a, in.ItemID, in.StateID, in.AfterID, in.BeforeID)
-			},
+			}),
 		},
 		{
 			Name: "clone_item", Operation: "cloneItem",
 			Description: "Clone a ticket. The copy takes a fresh identifier, enters the default " +
 				"state, and carries a relates-to relation back to the original.",
 			Schema: obj(map[string]any{"itemId": pInt}, "itemId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ ItemID int64 }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ ItemID int64 }) (any, error) {
 				return svc.Clone(ctx, a, in.ItemID)
-			},
+			}),
 		},
 		{
 			Name: "split_item", Operation: "splitItem",
@@ -401,17 +327,13 @@ func (s *Server) toolset() []tool {
 			Schema: obj(map[string]any{
 				"itemId": pInt, "titles": pStrList, "rejectSource": pBool,
 			}, "itemId", "titles"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					ItemID       int64
-					Titles       []string
-					RejectSource bool
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				ItemID       int64
+				Titles       []string
+				RejectSource bool
+			}) (any, error) {
 				return svc.Split(ctx, a, in.ItemID, in.Titles, in.RejectSource)
-			},
+			}),
 		},
 		{
 			Name: "bulk_edit_items", Operation: "bulkEditItems",
@@ -426,43 +348,31 @@ func (s *Server) toolset() []tool {
 				"reason": map[string]any{"type": "string", "enum": []string{"cancelled", "duplicate"}},
 				"note":   pString,
 			}, "itemIds", "field"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in core.BulkEdit
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in core.BulkEdit) (any, error) {
 				return svc.ApplyBulkEdit(ctx, a, in)
-			},
+			}),
 		},
 		{
 			Name: "add_label", Operation: "addLabel",
 			Description: "Add a label to an item, creating the label if it is new.",
 			Schema:      obj(map[string]any{"itemId": pInt, "name": pString}, "itemId", "name"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					ItemID int64
-					Name   string
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				ItemID int64
+				Name   string
+			}) (any, error) {
 				return svc.AddLabel(ctx, a, in.ItemID, in.Name)
-			},
+			}),
 		},
 		{
 			Name: "remove_label", Operation: "removeLabel",
 			Description: "Remove a label from an item.",
 			Schema:      obj(map[string]any{"itemId": pInt, "name": pString}, "itemId", "name"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					ItemID int64
-					Name   string
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				ItemID int64
+				Name   string
+			}) (any, error) {
 				return svc.RemoveLabel(ctx, a, in.ItemID, in.Name)
-			},
+			}),
 		},
 		{
 			Name: "add_relation", Operation: "addRelation",
@@ -474,71 +384,51 @@ func (s *Server) toolset() []tool {
 				"kind": map[string]any{"type": "string",
 					"enum": []string{"blocks", "follows_up", "duplicates", "relates_to"}},
 			}, "itemId", "toId", "kind"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					ItemID, ToID int64
-					Kind         string
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				ItemID, ToID int64
+				Kind         string
+			}) (any, error) {
 				return svc.AddRelation(ctx, a, in.ItemID, in.ToID, in.Kind)
-			},
+			}),
 		},
 		{
 			Name: "remove_relation", Operation: "removeRelation",
 			Description: "Remove a relation by its id, as shown on either item.",
 			Schema:      obj(map[string]any{"relationId": pInt}, "relationId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ RelationID int64 }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ RelationID int64 }) (any, error) {
 				return nil, svc.RemoveRelation(ctx, a, in.RelationID)
-			},
+			}),
 		},
 		{
 			Name: "add_comment", Operation: "addComment",
 			Description: "Comment on any item, in Markdown. Team membership is not needed.",
 			Schema:      obj(map[string]any{"itemId": pInt, "body": pString}, "itemId", "body"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					ItemID int64
-					Body   string
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				ItemID int64
+				Body   string
+			}) (any, error) {
 				return svc.AddComment(ctx, a, in.ItemID, in.Body)
-			},
+			}),
 		},
 		{
 			Name: "update_comment", Operation: "updateComment",
 			Description: "Edit a comment you wrote.",
 			Schema:      obj(map[string]any{"commentId": pInt, "body": pString}, "commentId", "body"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					CommentID int64
-					Body      string
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				CommentID int64
+				Body      string
+			}) (any, error) {
 				return svc.UpdateComment(ctx, a, in.CommentID, in.Body)
-			},
+			}),
 		},
 		{
 			Name: "list_saved_views", Operation: "listSavedViews",
 			Description: "A team's saved views. A saved view is a named CSQL query; missing " +
 				"lists what it names that has been deleted.",
 			Schema: obj(map[string]any{"teamId": pInt}, "teamId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ TeamID int64 }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ TeamID int64 }) (any, error) {
 				return svc.ListSavedViews(ctx, a, in.TeamID)
-			},
+			}),
 		},
 		{
 			Name: "create_saved_view", Operation: "createSavedView",
@@ -547,13 +437,9 @@ func (s *Server) toolset() []tool {
 				"teamId": pInt, "name": pString, "pinBoard": pBool, "pinBacklog": pBool,
 				"query": map[string]any{"type": "string", "description": csqlHelp},
 			}, "teamId", "name"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in core.ViewInput
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in core.ViewInput) (any, error) {
 				return svc.CreateSavedView(ctx, a, in)
-			},
+			}),
 		},
 		{
 			Name: "update_saved_view", Operation: "updateSavedView",
@@ -563,28 +449,20 @@ func (s *Server) toolset() []tool {
 				"pinBoard": pBool, "pinBacklog": pBool,
 				"query": map[string]any{"type": "string", "description": csqlHelp},
 			}, "viewId", "name"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct {
-					ViewID int64 `json:"viewId"`
-					core.ViewInput
-				}
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct {
+				ViewID int64 `json:"viewId"`
+				core.ViewInput
+			}) (any, error) {
 				return svc.UpdateSavedView(ctx, a, in.ViewID, in.ViewInput)
-			},
+			}),
 		},
 		{
 			Name: "delete_saved_view", Operation: "deleteSavedView",
 			Description: "Delete a saved view. It holds no work, and what it used to be is in the log.",
 			Schema:      obj(map[string]any{"viewId": pInt}, "viewId"),
-			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
-				var in struct{ ViewID int64 }
-				if err := decodeInto(args, &in); err != nil {
-					return nil, err
-				}
+			Call: call(func(ctx context.Context, a core.Actor, in struct{ ViewID int64 }) (any, error) {
 				return nil, svc.DeleteSavedView(ctx, a, in.ViewID)
-			},
+			}),
 		},
 	}
 }

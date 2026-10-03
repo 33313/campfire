@@ -2,16 +2,14 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/campfire/campfire/internal/backup"
 	"github.com/campfire/campfire/internal/config"
-	"github.com/campfire/campfire/internal/core"
 	"github.com/campfire/campfire/internal/store"
 )
 
@@ -106,7 +104,7 @@ func restore(cfg config.Config, snapshot string) error {
 	if _, err := os.Stat(snapshot); err != nil {
 		// A bare name is looked up in the snapshot directory, so that the
 		// name printed by `campfire snapshot` can be pasted back.
-		alt := cfg.Snapshots.Dir + string(os.PathSeparator) + snapshot
+		alt := filepath.Join(cfg.Snapshots.Dir, snapshot)
 		if _, err2 := os.Stat(alt); err2 == nil {
 			snapshot = alt
 		} else {
@@ -130,103 +128,4 @@ func withRecoveryAdvice(cfg config.Config, err error) error {
 	}
 	return fmt.Errorf("%w\n\nthe most recent snapshot is %s (%s)\nrestore it with:  campfire restore %s",
 		err, snaps[0].Path, snaps[0].Taken.Format(time.RFC3339), snaps[0].Path)
-}
-
-// mountBackup serves the three snapshot routes of api/openapi.yaml. They live
-// here rather than in the api package because they are the only operations
-// that need the configuration file.
-func mountBackup(mux *http.ServeMux, cfg config.Config, db *store.DB, svc *core.Service) {
-	admin := func(w http.ResponseWriter, r *http.Request) (core.Actor, bool) {
-		c, err := r.Cookie("campfire_session")
-		if err != nil {
-			writeErr(w, http.StatusUnauthorized, "sign in first")
-			return core.Actor{}, false
-		}
-		a, err := svc.ResolveSession(r.Context(), c.Value)
-		if err != nil || !a.IsAdmin {
-			writeErr(w, http.StatusForbidden, "you may not do that")
-			return core.Actor{}, false
-		}
-		return a, true
-	}
-
-	mux.HandleFunc("GET /api/snapshots", func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := admin(w, r); !ok {
-			return
-		}
-		snaps, err := backup.List(cfg.Snapshots.Dir)
-		if err != nil {
-			writeErr(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		// Verification is what makes the list worth showing: the screen marks
-		// a snapshot verified, and an unverified one is a warning.
-		for i := range snaps {
-			snaps[i].Verified = backup.Verify(snaps[i].Path) == nil
-		}
-		writeJSON(w, map[string]any{"snapshots": snaps, "directory": cfg.Snapshots.Dir,
-			"enabled": cfg.Snapshots.Enabled, "keep": cfg.Snapshots.Keep,
-			"interval": cfg.Snapshots.Interval, "shipTo": cfg.Snapshots.ShipTo})
-	})
-
-	mux.HandleFunc("POST /api/snapshots", func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := admin(w, r); !ok {
-			return
-		}
-		snap, err := takeSnapshot(r.Context(), cfg, db)
-		if err != nil {
-			writeErr(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		writeJSON(w, snap)
-	})
-
-	// Restoring replaces the instance, so it is not something the running
-	// server does to itself. The endpoint answers with the command to run.
-	mux.HandleFunc("POST /api/restore", func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := admin(w, r); !ok {
-			return
-		}
-		var in struct {
-			Path string `json:"path"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-			writeErr(w, http.StatusBadRequest, "the request body is not valid")
-			return
-		}
-		if err := backup.Verify(in.Path); err != nil {
-			writeErr(w, http.StatusBadRequest, "that snapshot did not verify: "+err.Error())
-			return
-		}
-		writeJSON(w, map[string]string{
-			"command": "campfire restore " + in.Path,
-			"note": "Stop the server, run this command, then start it again. " +
-				"Restoring replaces the data file, which one running process holds open.",
-		})
-	})
-}
-
-func writeJSON(w http.ResponseWriter, body any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	json.NewEncoder(w).Encode(body)
-}
-
-func writeErr(w http.ResponseWriter, code int, message string) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]any{
-		"error": map[string]string{"code": codeFor(code), "message": message}})
-}
-
-func codeFor(status int) string {
-	switch status {
-	case http.StatusUnauthorized:
-		return "unauthenticated"
-	case http.StatusForbidden:
-		return "forbidden"
-	case http.StatusBadRequest:
-		return "invalid"
-	}
-	return "internal"
 }

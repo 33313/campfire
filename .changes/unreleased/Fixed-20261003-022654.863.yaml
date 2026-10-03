@@ -1,0 +1,3 @@
+kind: Fixed
+body: An agent passing an argument a tool does not take is told so instead of having it ignored, and the agent interface reports the real version.
+time: 2026-10-03T02:26:54.863244058+02:00

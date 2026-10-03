@@ -26,7 +26,7 @@ type client struct {
 	http *http.Client
 }
 
-func newTestServer(t *testing.T) (*client, *core.Service, *stream.Bus) {
+func newTestServer(t *testing.T) (*client, *core.Service, *Server) {
 	t.Helper()
 	db, err := store.Open(filepath.Join(t.TempDir(), "campfire.db"))
 	if err != nil {
@@ -40,15 +40,12 @@ func newTestServer(t *testing.T) (*client, *core.Service, *stream.Bus) {
 		bus.Publish(stream.Notification{Seq: e.Seq, Kind: e.Kind,
 			Identifier: e.ItemIdentifier, TeamID: e.TeamID})
 	}
-	srv := httptest.NewServer(New(svc, bus))
+	api := New(svc, bus)
+	srv := httptest.NewServer(api)
 	t.Cleanup(srv.Close)
 
-	jar, _ := newJar()
-	return &client{t: t, base: srv.URL, http: &http.Client{Jar: jar}}, svc, bus
-}
-
-func newJar() (http.CookieJar, error) {
-	return &jar{cookies: map[string][]*http.Cookie{}}, nil
+	jar := &jar{cookies: map[string][]*http.Cookie{}}
+	return &client{t: t, base: srv.URL, http: &http.Client{Jar: jar}}, svc, api
 }
 
 // jar is a cookie jar small enough to read: the tests need one origin.

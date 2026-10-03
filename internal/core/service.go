@@ -46,13 +46,6 @@ func New(db *store.DB) *Service {
 	return &Service{DB: db, Clock: store.Now}
 }
 
-func (s *Service) now() int64 {
-	if s.Clock != nil {
-		return s.Clock()
-	}
-	return store.Now()
-}
-
 // wtx is a write transaction that also collects the events written inside it.
 //
 // Events are appended within the transaction, so the log cannot disagree with
@@ -98,7 +91,7 @@ func (t *wtx) logField(ctx context.Context, it store.Item, field, old, new strin
 }
 
 func (s *Service) write(ctx context.Context, a Actor, fn func(*wtx) error) error {
-	t := &wtx{svc: s, actor: a, now: s.now()}
+	t := &wtx{svc: s, actor: a, now: s.Clock()}
 	err := s.DB.Write(ctx, func(tx *sql.Tx) error {
 		t.Tx = tx
 		t.pending = t.pending[:0]

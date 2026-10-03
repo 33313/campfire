@@ -48,7 +48,7 @@ func newHarness(t *testing.T) *harness {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(New(svc))
+	srv := httptest.NewServer(New(svc, "test"))
 	t.Cleanup(srv.Close)
 	return &harness{t: t, server: srv, svc: svc, token: issued.Token, admin: admin, team: team}
 }
@@ -140,7 +140,7 @@ func TestToolsMatchTheExposedOperations(t *testing.T) {
 		t.Fatal("no operations are marked x-agent: true")
 	}
 
-	s := New(nil)
+	s := New(nil, "test")
 	have := map[string]bool{}
 	for _, op := range s.Operations() {
 		if have[op] {
@@ -376,7 +376,7 @@ func TestTheAgentInterfaceDoesNotStream(t *testing.T) {
 }
 
 func TestToolNamesAreStableAndSorted(t *testing.T) {
-	s := New(nil)
+	s := New(nil, "test")
 	names := make([]string, 0, len(s.tools))
 	for name := range s.tools {
 		names = append(names, name)
@@ -387,6 +387,30 @@ func TestToolNamesAreStableAndSorted(t *testing.T) {
 	for _, name := range names {
 		if strings.ToLower(name) != name || strings.Contains(name, " ") {
 			t.Errorf("tool name %q is not lower_snake_case", name)
+		}
+	}
+}
+
+// Every argument a tool advertises is one it reads, and one it does not
+// advertise is refused: arguments are decoded strictly.
+func TestToolsReadExactlyWhatTheyAdvertise(t *testing.T) {
+	h := newHarness(t)
+	zero := map[string]any{"integer": 0, "string": "", "boolean": false, "array": []any{}}
+	for name, tl := range New(h.svc, "test").tools {
+		args := map[string]any{}
+		for prop, schema := range tl.Schema["properties"].(map[string]any) {
+			args[prop] = zero[schema.(map[string]any)["type"].(string)]
+		}
+		raw, _ := json.Marshal(args)
+		if _, err := tl.Call(context.Background(), core.Actor{}, raw); err != nil &&
+			strings.Contains(err.Error(), "the arguments are not valid") {
+			t.Errorf("%s does not read what it advertises: %v", name, err)
+		}
+		args["notAnArgument"] = 1
+		raw, _ = json.Marshal(args)
+		if _, err := tl.Call(context.Background(), core.Actor{}, raw); err == nil ||
+			!strings.Contains(err.Error(), "notAnArgument") {
+			t.Errorf("%s accepted an argument it does not have: %v", name, err)
 		}
 	}
 }

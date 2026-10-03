@@ -20,8 +20,10 @@ import (
 	"time"
 
 	"github.com/campfire/campfire/internal/api"
+	"github.com/campfire/campfire/internal/backup"
 	"github.com/campfire/campfire/internal/config"
 	"github.com/campfire/campfire/internal/core"
+	"github.com/campfire/campfire/internal/mcp"
 	"github.com/campfire/campfire/internal/store"
 	"github.com/campfire/campfire/internal/stream"
 	"github.com/campfire/campfire/internal/web"
@@ -200,10 +202,15 @@ func serve(cfg config.Config) error {
 	mux := http.NewServeMux()
 	apiServer := api.New(svc, bus)
 	apiServer.HiddenTabGrace, _ = cfg.HiddenTabGrace() // validated on load
+	apiServer.Snapshots = api.Snapshots{Snapshots: cfg.Snapshots,
+		Take: func(ctx context.Context) (backup.Snapshot, error) { return takeSnapshot(ctx, cfg, db) }}
 	mux.Handle("/api/", apiServer)
-	mountBackup(mux, cfg, db, svc)
 	if cfg.MCP.Enabled {
-		mountMCP(mux, svc)
+		// The agent interface is served from this process, on this origin, at
+		// a fixed path, over streamable HTTP (SPEC.md §14.2). An agent that
+		// speaks only stdio puts its own proxy in front.
+		mux.Handle("/mcp", mcp.New(svc, buildVersion()))
+		log.Print("agent interface (MCP) on /mcp, authenticated by agent token")
 	} else {
 		// While it is disabled the path MUST NOT be served, so that turning
 		// the setting off is a complete answer to whether the interface is

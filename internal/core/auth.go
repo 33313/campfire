@@ -55,7 +55,7 @@ func publicUser(u store.User) *User {
 // transaction as the check would roll the counter back with the rejection and
 // leave the throttle doing nothing.
 func (s *Service) SignIn(ctx context.Context, username, password, code string) (SignInResult, error) {
-	now := s.now()
+	now := s.Clock()
 	bucket := "signin:" + store.Fold(username)
 	var over bool
 	if err := s.DB.Write(ctx, func(tx *sql.Tx) error {
@@ -131,7 +131,7 @@ func (s *Service) ResolveSession(ctx context.Context, token string) (Actor, erro
 	if token == "" {
 		return Actor{}, nil
 	}
-	now := s.now()
+	now := s.Clock()
 	sess, err := store.SessionByToken(ctx, s.DB.R, auth.HashToken(token), now)
 	if errors.Is(err, store.ErrNotFound) {
 		return Actor{}, nil
@@ -174,7 +174,7 @@ func (s *Service) ResolveAgentToken(ctx context.Context, token string) (Actor, e
 	if err != nil {
 		return Actor{}, err
 	}
-	now := s.now()
+	now := s.Clock()
 	if now-tok.LastUsedAt > int64(time.Hour/time.Microsecond) {
 		_ = s.DB.Write(ctx, func(tx *sql.Tx) error {
 			return store.TouchAgentToken(ctx, tx, tok.ID, now)
@@ -242,7 +242,7 @@ func (s *Service) EnableTOTP(ctx context.Context, a Actor, secret, code string) 
 	if err := requireUser(a); err != nil {
 		return err
 	}
-	if !auth.VerifyTOTP(secret, code, time.UnixMicro(s.now())) {
+	if !auth.VerifyTOTP(secret, code, time.UnixMicro(s.Clock())) {
 		return errf(CodeInvalid, "that code is not right")
 	}
 	return s.write(ctx, a, func(t *wtx) error {

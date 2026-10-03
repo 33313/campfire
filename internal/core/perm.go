@@ -70,7 +70,10 @@ func (s *Service) requireTeamAdmin(ctx context.Context, q store.Q, a Actor, team
 	return nil
 }
 
-func requireInstanceAdmin(a Actor) error {
+// RequireInstanceAdmin refuses anyone but an instance administrator. It is
+// exported for the snapshot routes, which need the configuration file and so
+// live outside core.
+func RequireInstanceAdmin(a Actor) error {
 	if err := requireUser(a); err != nil {
 		return err
 	}

@@ -71,7 +71,7 @@ func (s *Service) Board(ctx context.Context, a Actor, teamID int64, f Filter, al
 		}
 		var endedSince int64
 		if st.Role == store.RoleFinal && !allDone {
-			endedSince = s.now() - DoneFor
+			endedSince = s.Clock() - DoneFor
 		}
 		col, err := s.column(ctx, teamID, st, sf, endedSince, "", perColumn)
 		if err != nil {
