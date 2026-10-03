@@ -271,7 +271,57 @@
       ghost = lift(held, drag.x, drag.y, drag.ids.length); // held where it was pressed
     }
     ghost.move(e.clientX, e.clientY);
+    pointer = { x: e.clientX, y: e.clientY };
     drag.target = targetAt(e.clientX, e.clientY);
+    if (!scrolling) scrolling = requestAnimationFrame(autoscroll);
+  }
+
+  // Held near the top or bottom of the screen, the screen scrolls, every
+  // column together; near the left or right of the board, the board does
+  // (DEV-69). The nearer the edge, the faster, up to EDGE_SPEED at it and past
+  // it, until the pointer is EDGE beyond it: over the filter bar still
+  // scrolls, over the screen header does not. The pointer is still while it
+  // scrolls, so the drop line is aimed again every frame, at whatever is now
+  // under it.
+  const EDGE = 48;          // px, the zone either side of an edge
+  const EDGE_SPEED = 1100;  // px a second, at the edge
+  let scrolling = 0, last = 0, pointer = { x: 0, y: 0 };
+  const carry = { x: 0, y: 0 }; // what a frame moved short of a whole pixel
+
+  /** How hard to scroll for a pointer at `at` between `lo` and `hi`: -1 to 1. */
+  function pull(at, lo, hi) {
+    const zone = Math.min(EDGE, (hi - lo) / 4);
+    const depth = at < lo + zone ? (at - lo - zone) / zone : at > hi - zone ? (at - hi + zone) / zone : 0;
+    if (Math.abs(depth) > 1 + EDGE / zone) return 0; // well past the edge: out of the zone
+    return Math.sign(depth) * Math.min(1, Math.abs(depth)) ** 2;
+  }
+
+  function autoscroll(now) {
+    if (!drag?.live) { scrolling = 0; last = 0; return; }
+    const dt = last ? Math.min(now - last, 50) / 1000 : 0;
+    last = now;
+    const { x, y } = pointer;
+    const step = (axis, speed) => {
+      const want = speed * EDGE_SPEED * dt + carry[axis];
+      const whole = Math.trunc(want);
+      carry[axis] = speed ? want - whole : 0;
+      return whole;
+    };
+    const board = document.querySelector(".board")?.parentElement;
+    const body = board?.closest(".body");
+    let moved = false;
+    if (body) {
+      const r = body.getBoundingClientRect();
+      const by = step("y", pull(y, r.top, r.bottom));
+      if (by) { const was = body.scrollTop; body.scrollTop += by; moved ||= body.scrollTop !== was; }
+    }
+    if (board) {
+      const r = board.getBoundingClientRect();
+      const bx = step("x", pull(x, r.left, r.right));
+      if (bx) { const was = board.scrollLeft; board.scrollLeft += bx; moved ||= board.scrollLeft !== was; }
+    }
+    if (moved) drag.target = targetAt(x, y);
+    scrolling = requestAnimationFrame(autoscroll);
   }
 
   // Where a drop would land: between the two cards around the pointer, by

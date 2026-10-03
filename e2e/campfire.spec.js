@@ -1644,3 +1644,51 @@ test("the card menu's sub-menus set a field on the selection in one click", asyn
   await expect.poll(async () =>
     (await (await page.request.get(`/api/items/${ids[0]}`)).json()).assigneeId ?? 0).toBe(0);
 });
+
+// DEV-69: a card held near the top or bottom of the screen scrolls it, every
+// column together, and near the left or right of the board scrolls the board,
+// so it can be dropped where the screen did not reach. Moving off the edge
+// stops it.
+test("a held card scrolls the screen at its edge, and the board at its side", async ({ page }) => {
+  await signIn(page);
+  // Short, so To Do runs past the bottom; narrow, so the board runs past the side.
+  await page.setViewportSize({ width: 1000, height: 520 });
+  for (let i = 0; i < 12; i++) {
+    await page.request.post("/api/items", { data: { kind: "ticket", teamId: 1, title: `Pile ${i}`, accepted: true } });
+  }
+  await page.goto("/t/1/board");
+  const screen = page.locator(".body");
+  expect(await screen.evaluate((b) => b.scrollHeight > b.clientHeight)).toBe(true);
+  // Columns do not scroll on their own: the screen scrolls them together.
+  const todo = page.locator(".column", { has: page.getByRole("heading", { name: "To Do" }) }).locator(".column-body");
+  expect(await todo.evaluate((b) => b.scrollHeight <= b.clientHeight)).toBe(true);
+  const card = todo.locator(".card").first();
+  const id = await card.getAttribute("data-id");
+  const box = await card.boundingBox();
+  const frame = await screen.boundingBox();
+
+  await page.mouse.move(box.x + 30, box.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 30, frame.y + frame.height - 4, { steps: 5 });
+  await expect.poll(() => screen.evaluate((b) => b.scrollTop)).toBeGreaterThan(100);
+  // The line keeps up with what scrolled under the still pointer.
+  const line = await todo.locator(".drop-line").evaluate((l) => l.offsetTop);
+  expect(line).toBeGreaterThan(frame.height);
+
+  // Out of the zone, it stops.
+  await page.mouse.move(box.x + 30, frame.y + frame.height / 2, { steps: 2 });
+  const stopped = await screen.evaluate((b) => b.scrollTop);
+  await page.waitForTimeout(300);
+  expect(await screen.evaluate((b) => b.scrollTop)).toBe(stopped);
+
+  // Sideways, to the last column, and the card lands there.
+  const board = page.locator(".board").locator("..");
+  expect(await board.evaluate((b) => b.scrollWidth > b.clientWidth)).toBe(true);
+  const side = await board.boundingBox();
+  await page.mouse.move(side.x + side.width - 30, frame.y + frame.height / 2, { steps: 5 });
+  await expect.poll(() => board.evaluate((b) => b.scrollLeft + b.clientWidth >= b.scrollWidth - 1)).toBe(true);
+  const last = page.locator(".column").last();
+  await expect(last.locator(".drop-line")).toHaveCount(1);
+  await page.mouse.up();
+  await expect(last.locator(`.card[data-id="${id}"]`)).toBeVisible();
+});
