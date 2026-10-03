@@ -991,8 +991,8 @@ building:
 
 | Work | Detail |
 |---|---|
-| Full-text search | Reimplemented against the new engine. |
-| Migrations | A second set, sharing one version number with the first. |
+| Text search | The `text` condition is a `LIKE` scan, which folds ASCII case in SQLite and not in most engines; it needs the new engine's case-insensitive match. |
+| Schema | A second schema file in the new engine's dialect. |
 | Live-update fan-out | A second implementation behind one interface, using the engine's own notification channel. A broker or additional service WILL NOT be needed. |
 
 One hazard must be handled deliberately, because it cannot occur under a single writer and would

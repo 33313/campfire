@@ -1,4 +1,4 @@
-// Package store owns the database: the connection pools, the migrations, and
+// Package store owns the database: the connection pools, the schema, and
 // the small set of primitives every other package builds on.
 //
 // The application runs against one embedded SQLite file (SPEC.md §13). Two
@@ -16,13 +16,11 @@ package store
 import (
 	"context"
 	"database/sql"
-	"embed"
+	_ "embed"
 	"errors"
 	"fmt"
-	"io/fs"
 	"net/url"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -30,8 +28,8 @@ import (
 	sqlite3 "modernc.org/sqlite/lib"
 )
 
-//go:embed migrations/*.sql
-var migrations embed.FS
+//go:embed schema.sql
+var schema string
 
 // DB is an open Campfire database.
 type DB struct {
@@ -69,7 +67,7 @@ func dsn(path string, readonly bool) string {
 }
 
 // Open opens (creating if absent) the database at path, checks its integrity,
-// and applies any pending migrations.
+// and gives a new, empty file the schema.
 func Open(path string) (*DB, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
@@ -95,7 +93,7 @@ func Open(path string) (*DB, error) {
 		w.Close()
 		return nil, err
 	}
-	if err := db.migrate(); err != nil {
+	if err := db.create(); err != nil {
 		w.Close()
 		return nil, err
 	}
@@ -143,51 +141,26 @@ func (d *DB) checkIntegrity() error {
 	return nil
 }
 
-// migrate applies every embedded migration whose ordinal is above the file's
-// PRAGMA user_version, each in its own transaction.
-func (d *DB) migrate() error {
-	entries, err := fs.ReadDir(migrations, "migrations")
+// create applies the schema to a file with no tables. A file that has any is
+// taken as it is: there are no migrations, and a schema change before v1 is
+// made to a live database by hand.
+func (d *DB) create() error {
+	var tables int
+	if err := d.W.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type = 'table'`).Scan(&tables); err != nil {
+		return err
+	}
+	if tables > 0 {
+		return nil
+	}
+	tx, err := d.W.Begin()
 	if err != nil {
 		return err
 	}
-	names := make([]string, 0, len(entries))
-	for _, e := range entries {
-		names = append(names, e.Name())
+	if _, err := tx.Exec(schema); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("schema: %w", err)
 	}
-	sort.Strings(names)
-
-	var version int
-	if err := d.W.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
-		return err
-	}
-
-	for i, name := range names {
-		ordinal := i + 1
-		if ordinal <= version {
-			continue
-		}
-		body, err := migrations.ReadFile("migrations/" + name)
-		if err != nil {
-			return err
-		}
-		tx, err := d.W.Begin()
-		if err != nil {
-			return err
-		}
-		if _, err := tx.Exec(string(body)); err != nil {
-			tx.Rollback()
-			return fmt.Errorf("migration %s: %w", name, err)
-		}
-		// PRAGMA takes no bound parameters, and ordinal is a loop index.
-		if _, err := tx.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, ordinal)); err != nil {
-			tx.Rollback()
-			return fmt.Errorf("migration %s: %w", name, err)
-		}
-		if err := tx.Commit(); err != nil {
-			return fmt.Errorf("migration %s: %w", name, err)
-		}
-	}
-	return nil
+	return tx.Commit()
 }
 
 // Write runs fn inside a write transaction, retrying when SQLite reports the
