@@ -12,6 +12,7 @@ Backup is copying that file; recovery is putting it back.
 - [Backup and recovery](#backup-and-recovery)
 - [Scale](#scale)
 - [Contributing](#contributing)
+- [License](#license)
 
 ## Install
 
@@ -277,3 +278,15 @@ On the merge, [`release.yaml`](.github/workflows/release.yaml) writes `CHANGELOG
 tags `Release vX.Y.Z` with the deploy key in the `GH_DK` secret, pushes the image to ghcr.io, and
 publishes the GitHub release with the binaries and `SHA256SUMS`. If it fails after the tag is
 pushed, rerun it: it finishes a release that has no published GitHub release.
+
+## License
+
+Copyright (C) 2026 33313
+
+Campfire is free software: you can redistribute it and/or modify it under the terms of the GNU
+Affero General Public License, version 3 or (at your option) any later version. It comes with no
+warranty. If you run a modified Campfire for others over a network, offer them its source. See
+[`LICENSE`](LICENSE).
+
+The bundled IBM Plex and Source Serif 4 fonts are under the SIL Open Font License 1.1; see
+[`internal/web/static/fonts/OFL.txt`](internal/web/static/fonts/OFL.txt).
