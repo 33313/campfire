@@ -10,7 +10,7 @@ import MoveDialog from "../dialogs/MoveDialog.svelte";
 import BulkEditDialog from "../dialogs/BulkEditDialog.svelte";
 
 /** Applies one field to every id. Resolves true when something was written. */
-async function applyToAll(ids, field, value, reason, note) {
+export async function applyToAll(ids, field, value, reason, note) {
   try {
     const res = await api.bulkEditItems({ itemIds: ids, field, value, reason, note });
     // An item the actor may not edit is refused on its own; the rest go

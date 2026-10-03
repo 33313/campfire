@@ -752,19 +752,18 @@ test("right-clicking a card offers what the selection bar offers, and more", asy
   const menu = page.locator(".card-menu");
   await expect(menu).toBeVisible();
   // One card: the bulk actions plus the two that only mean anything alone.
-  for (const name of ["Move to…", "Reject…", "Assignee…", "Priority…", "Bucket…",
+  for (const name of ["Move to", "Reject…", "Assignee", "Priority", "Bucket",
                       "Clone", "Split…", "Open"]) {
     await expect(menu.getByRole("button", { name, exact: true })).toBeVisible();
   }
   // It acts on what it names, so the card it was opened on is the selection.
   await expect(page.locator(".selection-bar .count")).toContainText("1");
 
-  // Move to… writes through the same bulk endpoint the bar uses.
-  await menu.getByRole("button", { name: "Move to…" }).click();
-  await expect(menu).toHaveCount(0); // the menu goes before the dialog it opened
-  const dialog = page.getByRole("dialog");
-  await dialog.locator(".option-row", { hasText: "In Progress" }).click();
-  await dialog.getByRole("button", { name: "Move" }).click();
+  // Move to opens its states beside it, and a state is applied as it is
+  // clicked, through the same bulk endpoint the bar uses (DEV-81).
+  await menu.getByRole("button", { name: "Move to" }).hover();
+  await page.getByRole("menu", { name: "Move to" }).getByRole("menuitem", { name: "In Progress" }).click();
+  await expect(menu).toHaveCount(0);
 
   const progress = page.locator(".column", { has: page.getByRole("heading", { name: "In Progress" }) });
   await expect(progress.locator(".card").first()).toBeVisible();
@@ -1603,4 +1602,45 @@ test("(Me!) beside the assignee assigns the new ticket to you", async ({ page })
   const created = (await page.locator(".toast").last().textContent()).match(/SOL-\d+/)[0];
   const item = await (await page.request.get(`/api/lookup/${created}`)).json();
   expect(item.assigneeName).toBe("root");
+});
+
+// DEV-81: the card menu's fields open sub-menus of their values, applied as
+// they are clicked, to the whole selection.
+test("the card menu's sub-menus set a field on the selection in one click", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  const cards = page.locator(".column-body .card");
+  await expect(cards.nth(1)).toBeVisible();
+  const ids = [await cards.nth(0).getAttribute("data-id"), await cards.nth(1).getAttribute("data-id")];
+  await cards.nth(0).click({ modifiers: ["Control"] });
+  await cards.nth(1).click({ modifiers: ["Control"] });
+  await cards.nth(1).click({ button: "right" });
+
+  const menu = page.locator(".card-menu").first();
+  await expect(menu.locator(".menu-head")).toHaveText("2 selected");
+  await menu.getByRole("button", { name: "Priority" }).hover();
+  const priority = page.getByRole("menu", { name: "Priority" });
+  await expect(priority.getByRole("menuitem")).toHaveCount(4);
+  // The pointer crossing Bucket on its way into the Priority sub-menu does not
+  // swap it out.
+  const box = await priority.getByRole("menuitem", { name: "P1 · Highest" }).boundingBox();
+  const bucket = await menu.getByRole("button", { name: "Bucket" }).boundingBox();
+  await page.mouse.move(bucket.x + bucket.width - 10, bucket.y + bucket.height / 2);
+  await page.mouse.move(box.x + 20, box.y + box.height / 2, { steps: 3 });
+  await expect(priority).toBeVisible();
+  await page.mouse.click(box.x + 20, box.y + box.height / 2);
+  await expect(page.locator(".card-menu")).toHaveCount(0);
+
+  await expect.poll(async () => Promise.all(ids.map(async (id) =>
+    (await (await page.request.get(`/api/items/${id}`)).json()).priority))).toEqual([1, 1]);
+
+  // One card: its value now is marked, and a click on Assignee opens the
+  // sub-menu too.
+  await cards.nth(0).click({ button: "right" });
+  await menu.getByRole("button", { name: "Priority" }).click();
+  await expect(page.getByRole("menu", { name: "Priority" }).locator(".team-option.on")).toContainText("P1 · Highest");
+  await menu.getByRole("button", { name: "Assignee" }).click();
+  await page.getByRole("menu", { name: "Assignee" }).getByRole("menuitem", { name: "Unassigned" }).click();
+  await expect.poll(async () =>
+    (await (await page.request.get(`/api/items/${ids[0]}`)).json()).assigneeId ?? 0).toBe(0);
 });
