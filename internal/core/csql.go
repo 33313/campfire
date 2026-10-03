@@ -36,7 +36,7 @@ func (r resolver) StateExists(name string) bool {
 	}
 	var one int
 	return r.q.QueryRowContext(r.ctx,
-		`SELECT 1 FROM work_states WHERE name = ? COLLATE NOCASE LIMIT 1`, name).Scan(&one) == nil
+		`SELECT 1 FROM work_states WHERE name_folded = ? LIMIT 1`, store.Fold(name)).Scan(&one) == nil
 }
 
 func (r resolver) Resolve(field, name string) (int64, error) {
@@ -76,10 +76,12 @@ func (r resolver) Resolve(field, name string) (int64, error) {
 			}
 			return it.ID, nil
 		}
+		// Titles have no folded column, so they are folded here; buckets are
+		// few enough to read them all.
 		rows, err := r.q.QueryContext(r.ctx, `
-			SELECT i.id, ot.short_code || '-' || i.number FROM items i
+			SELECT i.id, ot.short_code || '-' || i.number, i.title FROM items i
 			JOIN teams ot ON ot.id = i.origin_team_id
-			WHERE i.kind = 'bucket' AND i.title = ? COLLATE NOCASE`, name)
+			WHERE i.kind = 'bucket'`)
 		if err != nil {
 			return 0, err
 		}
@@ -87,11 +89,18 @@ func (r resolver) Resolve(field, name string) (int64, error) {
 		var id int64
 		var found []string
 		for rows.Next() {
-			var ident string
-			if err := rows.Scan(&id, &ident); err != nil {
+			var bid int64
+			var ident, title string
+			if err := rows.Scan(&bid, &ident, &title); err != nil {
 				return 0, err
 			}
-			found = append(found, ident)
+			if store.Fold(title) == store.Fold(name) {
+				id = bid
+				found = append(found, ident)
+			}
+		}
+		if err := rows.Err(); err != nil {
+			return 0, err
 		}
 		switch len(found) {
 		case 0:
@@ -136,7 +145,7 @@ func (s *Service) parseQuery(ctx context.Context, a Actor, q string, loc *time.L
 // queries of its views, and-ed and compiled. Only the query can be wrong, so
 // an error's span is always into it.
 func (s *Service) storeFilter(ctx context.Context, a Actor, f Filter) (store.ItemFilter, error) {
-	sf := f.store()
+	var sf store.ItemFilter
 	loc, err := zone(f.TZ)
 	if err != nil {
 		return sf, err

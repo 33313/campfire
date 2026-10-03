@@ -14,7 +14,7 @@ export function priorityOptions() {
 }
 
 export async function bucketOptions() {
-  const page = await api.listItems({ kinds: ["bucket"] }, "", 200);
+  const page = await api.listItems({ csql: "kind = bucket" }, "", 200);
   return [{ value: 0, label: "No bucket" }].concat((page.items || []).map((b) => ({
     value: b.id, label: `${b.identifier}  ${b.title}`, icon: { bucket: b.icon },
   })));

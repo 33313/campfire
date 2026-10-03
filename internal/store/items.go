@@ -360,29 +360,21 @@ func RankAfterExisting(ctx context.Context, q Q, stateID, afterID int64) (string
 	return RankBetween(lo, text(hi))
 }
 
-// ItemFilter is the structured filter of SPEC.md §9.2, and nothing more. There
-// is no query language: every dimension here is a column or a join, so a saved
-// view can be stored as clauses referencing rows by identity (§9.4).
+// ItemFilter is what the item queries select by: the scope a screen sets
+// (team, state, kind, a bucket's members), and a compiled CSQL condition for
+// everything a reader filters on (SPEC.md §9.2).
 type ItemFilter struct {
-	// IDs restricts to a known set. It is not a filter dimension of §9.2: it
-	// is how the bucket index's participation scope hands its set to the same
-	// query everything else uses.
+	// IDs restricts to a known set: how the bucket index's participation scope
+	// hands its set to the same query everything else uses.
 	IDs          []int64
-	Kinds        []string
+	Kind         string
 	TeamIDs      []int64
 	StateIDs     []int64
 	StateRoles   []string // states holding one of these roles
 	ExcludeRoles []string // states holding none of these roles
-	LabelIDs     []int64
-	AssigneeIDs  []int64
-	Unassigned   bool
-	ReporterIDs  []int64
 	BucketIDs    []int64
-	InAnyBucket  bool
-	Priorities   []int64
-	Text         string
 	// Where is a compiled CSQL condition over the aliases i and s, and its
-	// arguments; it narrows whatever else the filter says.
+	// arguments.
 	Where     string
 	WhereArgs []any
 	// EndedSince drops items that reached a terminal state before this time.
@@ -406,11 +398,9 @@ func (f ItemFilter) where() (string, []any) {
 			args = append(args, v)
 		}
 	}
-	if len(f.Kinds) > 0 {
-		w = append(w, "i.kind IN ("+placeholders(len(f.Kinds))+")")
-		for _, k := range f.Kinds {
-			args = append(args, k)
-		}
+	if f.Kind != "" {
+		w = append(w, "i.kind = ?")
+		args = append(args, f.Kind)
 	}
 	add("i.id", f.IDs)
 	add("i.team_id", f.TeamIDs)
@@ -427,42 +417,10 @@ func (f ItemFilter) where() (string, []any) {
 			args = append(args, r)
 		}
 	}
-	// Unassigned is one more value of the assignee dimension: picked beside
-	// people, it widens the choice like any other value.
-	switch {
-	case f.Unassigned && len(f.AssigneeIDs) > 0:
-		w = append(w, "(i.assignee_id IS NULL OR i.assignee_id IN ("+placeholders(len(f.AssigneeIDs))+"))")
-		for _, v := range f.AssigneeIDs {
-			args = append(args, v)
-		}
-	case f.Unassigned:
-		w = append(w, "i.assignee_id IS NULL")
-	default:
-		add("i.assignee_id", f.AssigneeIDs)
-	}
-	add("i.reporter_id", f.ReporterIDs)
 	add("i.bucket_id", f.BucketIDs)
-	if f.InAnyBucket {
-		w = append(w, "i.bucket_id IS NOT NULL")
-	}
-	add("i.priority", f.Priorities)
 	if f.EndedSince > 0 {
 		w = append(w, "(i.actual_end IS NULL OR i.actual_end >= ?)")
 		args = append(args, f.EndedSince)
-	}
-	for _, id := range f.LabelIDs {
-		// Several label clauses intersect: an item must carry all of them.
-		w = append(w, "EXISTS (SELECT 1 FROM item_labels il WHERE il.item_id = i.id AND il.label_id = ?)")
-		args = append(args, id)
-	}
-	if q := strings.TrimSpace(f.Text); q != "" {
-		// ponytail: LIKE scan over title and description. At the sizes of
-		// SPEC.md §13.5 — under a million rows — this is milliseconds and
-		// needs no second index to keep in step. Move to FTS5 if a search
-		// measurably drags.
-		w = append(w, "(i.title LIKE ? ESCAPE '\\' OR i.description LIKE ? ESCAPE '\\')")
-		pattern := "%" + escapeLike(q) + "%"
-		args = append(args, pattern, pattern)
 	}
 	if f.Where != "" {
 		w = append(w, f.Where)
@@ -472,11 +430,6 @@ func (f ItemFilter) where() (string, []any) {
 		return "", nil
 	}
 	return " WHERE " + strings.Join(w, " AND "), args
-}
-
-func escapeLike(s string) string {
-	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
-	return r.Replace(s)
 }
 
 // ListItems returns a page of items, keyset-paginated (SPEC.md §13.2 rule 9).

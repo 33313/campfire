@@ -10,6 +10,7 @@
   import { onNotify, touches } from "../lib/stream.svelte.js";
   import { failure } from "../lib/ui.svelte.js";
   import { createItem } from "../lib/create.js";
+  import { conjoin, quote } from "../lib/csql.js";
     import { whenDay } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
 
@@ -50,10 +51,14 @@
   const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
   let drawn = "";
   const asking = (filter) => JSON.stringify([filter, viewsOn().map((v) => [v.id, v.query]), showBuckets]);
+  // The search and the buckets toggle are clauses of the backlog's own,
+  // and-ed with the reader's query.
+  const composed = (filter) => conjoin(filter.csql,
+    filter.text && `text ~ ${quote(filter.text)}`, !showBuckets && "kind = ticket");
   // The filter as the API takes it, for the column and for "load older".
-  const asked = (filter) => ({ ...filter, viewIds: viewsOn().map((v) => v.id), tz: TZ });
+  const asked = (filter) => ({ csql: composed(filter).query, viewIds: viewsOn().map((v) => v.id), tz: TZ });
 
-  const fetchColumn = (filter, signal) => api.getBacklog(teamId, asked(filter), showBuckets, 100, signal);
+  const fetchColumn = (filter, signal) => api.getBacklog(teamId, asked(filter), "", 100, signal);
 
   // Coming back to the backlog draws it at once, as it was last shown, and
   // asks again behind it: a 304 when nothing changed (SPEC.md §12.4). The
@@ -86,7 +91,11 @@
     });
     if (res.superseded) return res;
     if (res.error) {
-      if (res.error.field === "query") return res; // the backlog stays as it was
+      if (res.error.field === "query") { // the backlog stays as it was
+        const { offset } = composed(filter);
+        res.error.span &&= res.error.span.map((n) => n - offset);
+        return res;
+      }
       error = res.error;
       return { failed: true };
     }
@@ -149,13 +158,10 @@
     selected = allSelected ? [] : items.map((i) => i.id);
   }
 
-  // The backlog's "load older" is the ordinary filtered list continued from
-  // the column's cursor (SPEC.md §13.2 rule 9).
+  // "Load older" continues the column from its cursor (SPEC.md §13.2 rule 9).
   async function loadOlder() {
-    const f = { ...asked(applied), teamIds: [teamId], stateIds: [column.state.id] };
-    if (!showBuckets) f.kinds = ["ticket"];
     try {
-      const page = await api.listItems(f, column.cursor);
+      const page = await api.getBacklog(teamId, asked(applied), column.cursor);
       column.items = items.concat(page.items || []);
       column.cursor = page.cursor || "";
       paged = true;

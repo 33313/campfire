@@ -79,20 +79,15 @@ const patch = (p, b) => request("PATCH", p, b);
 const put = (p, b) => request("PUT", p, b);
 const del = (p) => request("DELETE", p);
 
-/** Turns a filter object into the query parameters of §9.2: a CSQL query in
-    csql, the views switched on, and the structured dimensions. */
-export function filterQuery(filter = {}) {
+/** A filter's query parameters (SPEC.md §9.2): a CSQL query in csql, the
+    views switched on, and the reader's time zone, plus the paging asked for. */
+function filterQuery(filter = {}, { cursor, limit } = {}) {
   const q = new URLSearchParams();
-  const many = { state: "stateIds", label: "labelIds", assignee: "assigneeIds",
-    reporter: "reporterIds", bucket: "bucketIds", priority: "priorities",
-    team: "teamIds", kind: "kinds", view: "viewIds" };
-  for (const [param, key] of Object.entries(many)) {
-    for (const value of filter[key] || []) q.append(param, value);
-  }
-  if (filter.unassigned) q.set("unassigned", "1");
-  if (filter.text) q.set("q", filter.text);
   if (filter.csql?.trim()) q.set("csql", filter.csql);
-  if (filter.tz) q.set("tz", filter.tz); // days in a query are the reader's (SPEC.md §9.2)
+  for (const id of filter.viewIds || []) q.append("view", id);
+  if (filter.tz) q.set("tz", filter.tz); // days in a query are the reader's
+  if (cursor) q.set("cursor", cursor);
+  if (limit) q.set("limit", limit);
   return q;
 }
 
@@ -138,13 +133,13 @@ export const api = {
   deleteWorkState: (id) => del(`/api/states/${id}`),
 
   // Views over items
-  getBoard: (teamId, filter, buckets, allDone, limit = 100, signal) => {
-    const q = withFlags(filter, buckets, limit);
+  getBoard: (teamId, filter, allDone, limit = 100, signal) => {
+    const q = filterQuery(filter, { limit });
     if (allDone) q.set("allDone", "1");
     return get(`/api/teams/${teamId}/board?${q}`, signal);
   },
-  getBacklog: (teamId, filter, buckets, limit = 100, signal) =>
-    get(`/api/teams/${teamId}/backlog?${withFlags(filter, buckets, limit)}`, signal),
+  getBacklog: (teamId, filter, cursor = "", limit = 100, signal) =>
+    get(`/api/teams/${teamId}/backlog?${filterQuery(filter, { cursor, limit })}`, signal),
   listSavedViews: (teamId) => get(`/api/teams/${teamId}/views`),
   createSavedView: (body) => post("/api/views", body),
   updateSavedView: (id, body) => patch(`/api/views/${id}`, body),
@@ -153,12 +148,7 @@ export const api = {
     get(`/api/buckets?team=${teamId}&scope=${scope}&limit=60${cursor ? `&cursor=${cursor}` : ""}`),
 
   // Items
-  listItems: (filter, cursor = "", limit = 100) => {
-    const q = filterQuery(filter);
-    q.set("limit", limit);
-    if (cursor) q.set("cursor", cursor);
-    return get(`/api/items?${q}`);
-  },
+  listItems: (filter, cursor = "", limit = 100) => get(`/api/items?${filterQuery(filter, { cursor, limit })}`),
   createItem: (body) => post("/api/items", body),
   bulkEditItems: (body) => post("/api/items/bulk", body),
   getItem: (id) => get(`/api/items/${id}`),
@@ -189,10 +179,3 @@ export const api = {
   createSnapshot: () => post("/api/snapshots"),
   restoreSnapshot: (path) => post("/api/restore", { path }),
 };
-
-function withFlags(filter, buckets, limit) {
-  const q = filterQuery(filter);
-  if (buckets) q.set("buckets", "1");
-  q.set("limit", limit);
-  return q;
-}

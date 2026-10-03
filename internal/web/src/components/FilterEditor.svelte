@@ -23,9 +23,9 @@
   let { value = "", onapply, draft = $bindable(""), error: given = null } = $props();
 
   const SHOWN = ["assignee", "state", "label", "bucket", "priority"];
-  const MORE = ["reporter", "team", "created", "started", "completed", "due"];
+  const MORE = ["reporter", "team", "kind", "created", "started", "completed", "due"];
   const TITLES = { assignee: "Assignee", reporter: "Reporter", label: "Label", bucket: "Bucket",
-    priority: "Priority", state: "State", team: "Team", created: "Created", started: "Started",
+    priority: "Priority", state: "State", team: "Team", kind: "Kind", created: "Created", started: "Started",
     completed: "Completed", due: "Due" };
 
   const chipsOf = (q) => { try { return toBasic(parse(q)); } catch { return null; } };

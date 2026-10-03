@@ -43,7 +43,7 @@ const FETCH = {
   users: async () => { app.users = (await api.listUsers()) || []; },
   labels: async () => { app.labels = (await api.listLabels()) || []; },
   teams: async () => { app.allTeams = (await api.listTeams()) || []; },
-  buckets: async () => { lists.buckets = (await api.listItems({ kinds: ["bucket"] }, "", 200)).items || []; },
+  buckets: async () => { lists.buckets = (await api.listItems({ csql: "kind = bucket" }, "", 200)).items || []; },
   states: async () => {
     statesOf = app.team?.id;
     lists.states = statesOf ? (await api.listWorkStates(statesOf)) || [] : [];
@@ -83,6 +83,8 @@ export function values(field) {
       return [1, 2, 3, 4].map((p) => ({ token: String(p), label: PRIORITY[p].name }));
     case "state":
       return [...new Set((lists.states || []).map((s) => s.name))].map(tok);
+    case "kind":
+      return [{ token: "ticket", label: "Tickets" }, { token: "bucket", label: "Buckets" }];
     case "team":
       return app.allTeams.map((t) => ({ token: t.shortCode, label: t.shortCode, note: t.name }));
   }

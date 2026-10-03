@@ -17,6 +17,7 @@
     import { NAV } from "../lib/icons.js";
   import { ms, easeOut, QUICK, GLIDE } from "../lib/motion.js";
   import { kindle } from "../lib/embers.js";
+  import { conjoin, quote } from "../lib/csql.js";
   import { lift } from "../lib/ghost.js";
 
   import Icon from "../components/Icon.svelte";
@@ -91,8 +92,12 @@
       .flatMap((c) => (c.items || []).filter((i) => open.has(i.id)).map((i) => [i.id, c.state.id]));
   }
 
+  // The search and the buckets toggle are clauses of the board's own, and-ed
+  // with the reader's query.
+  const composed = (filter) => conjoin(filter.csql,
+    filter.text && `text ~ ${quote(filter.text)}`, !showBuckets && "kind = ticket");
   const fetchBoard = (filter, signal) => api.getBoard(teamId,
-    { ...filter, viewIds: viewsOn().map((v) => v.id), tz: TZ }, showBuckets, allDone, 100, signal);
+    { csql: composed(filter).query, viewIds: viewsOn().map((v) => v.id), tz: TZ }, allDone, 100, signal);
 
   // Coming back to the board draws it at once, as it was last shown, and asks
   // again behind it: a 304 when nothing changed, and when something did, the
@@ -124,7 +129,11 @@
     });
     if (res.superseded) return res;
     if (res.error) {
-      if (res.error.field === "query") return res; // the board stays as it was
+      if (res.error.field === "query") { // the board stays as it was
+        const { offset } = composed(filter);
+        res.error.span &&= res.error.span.map((n) => n - offset);
+        return res;
+      }
       error = res.error;
       return { failed: true };
     }

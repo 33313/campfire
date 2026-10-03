@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"slices"
 
 	"github.com/campfire/campfire/internal/store"
 )
@@ -29,34 +28,15 @@ type Board struct {
 	Columns []Column   `json:"columns"`
 }
 
-// Filter is what an interface asks for items by: a CSQL query (SPEC.md §9.2),
-// and the structured dimensions an agent may pass instead or as well. All of
-// it narrows: the query and every dimension given are and-ed.
+// Filter is what an interface asks for items by: a CSQL query (SPEC.md §9.2)
+// and the saved views switched on, all and-ed.
 type Filter struct {
 	Query string `json:"query,omitempty"`
 	// ViewIDs are saved views switched on: each one's query is and-ed in.
 	ViewIDs []int64 `json:"viewIds,omitempty"`
 	// TZ is the reader's time zone, an IANA name; a day in a query is read in
 	// it. Empty is UTC.
-	TZ          string   `json:"tz,omitempty"`
-	StateIDs    []int64  `json:"stateIds,omitempty"`
-	LabelIDs    []int64  `json:"labelIds,omitempty"`
-	AssigneeIDs []int64  `json:"assigneeIds,omitempty"`
-	Unassigned  bool     `json:"unassigned,omitempty"`
-	ReporterIDs []int64  `json:"reporterIds,omitempty"`
-	BucketIDs   []int64  `json:"bucketIds,omitempty"`
-	Priorities  []int64  `json:"priorities,omitempty"`
-	TeamIDs     []int64  `json:"teamIds,omitempty"`
-	Text        string   `json:"text,omitempty"`
-	Kinds       []string `json:"kinds,omitempty"`
-}
-
-func (f Filter) store() store.ItemFilter {
-	return store.ItemFilter{
-		Kinds: f.Kinds, TeamIDs: f.TeamIDs, StateIDs: f.StateIDs, LabelIDs: f.LabelIDs,
-		AssigneeIDs: f.AssigneeIDs, Unassigned: f.Unassigned, ReporterIDs: f.ReporterIDs,
-		BucketIDs: f.BucketIDs, Priorities: f.Priorities, Text: f.Text,
-	}
+	TZ string `json:"tz,omitempty"`
 }
 
 // DoneFor is how long an item stays in the board's final column after it
@@ -67,11 +47,8 @@ const DoneFor = 3 * 24 * 60 * 60 * 1_000_000 // microseconds, like every timesta
 // Board returns one team's board: one column per work state, excluding the
 // default and rejected states.
 //
-// Buckets are hidden from board columns by default and shown by a per-board
-// toggle, so that an engineering board is not diluted by milestones and a
-// planning team's board can consist entirely of them (SPEC.md §6.2). Items
-// done for longer than DoneFor are hidden the same way, behind allDone.
-func (s *Service) Board(ctx context.Context, a Actor, teamID int64, f Filter, showBuckets, allDone bool, perColumn int) (*Board, error) {
+// Items done for longer than DoneFor are hidden unless allDone is set.
+func (s *Service) Board(ctx context.Context, a Actor, teamID int64, f Filter, allDone bool, perColumn int) (*Board, error) {
 	if err := requireUser(a); err != nil {
 		return nil, err
 	}
@@ -96,7 +73,7 @@ func (s *Service) Board(ctx context.Context, a Actor, teamID int64, f Filter, sh
 		if st.Role == store.RoleFinal && !allDone {
 			endedSince = s.now() - DoneFor
 		}
-		col, err := s.column(ctx, teamID, st, sf, showBuckets, endedSince, perColumn)
+		col, err := s.column(ctx, teamID, st, sf, endedSince, "", perColumn)
 		if err != nil {
 			return nil, err
 		}
@@ -105,8 +82,9 @@ func (s *Service) Board(ctx context.Context, a Actor, teamID int64, f Filter, sh
 	return b, nil
 }
 
-// Backlog returns the team's items in its default state, as a single column.
-func (s *Service) Backlog(ctx context.Context, a Actor, teamID int64, f Filter, showBuckets bool, limit int) (*Column, error) {
+// Backlog returns the team's items in its default state, as a single column,
+// continued from cursor when one is given.
+func (s *Service) Backlog(ctx context.Context, a Actor, teamID int64, f Filter, cursor string, limit int) (*Column, error) {
 	if err := requireUser(a); err != nil {
 		return nil, err
 	}
@@ -118,24 +96,16 @@ func (s *Service) Backlog(ctx context.Context, a Actor, teamID int64, f Filter, 
 	if err != nil {
 		return nil, err
 	}
-	col, err := s.column(ctx, teamID, st, sf, showBuckets, 0, limit)
+	col, err := s.column(ctx, teamID, st, sf, 0, cursor, limit)
 	return &col, err
 }
 
-func (s *Service) column(ctx context.Context, teamID int64, st store.WorkState, sf store.ItemFilter, showBuckets bool, endedSince int64, limit int) (Column, error) {
+func (s *Service) column(ctx context.Context, teamID int64, st store.WorkState, sf store.ItemFilter, endedSince int64, cursor string, limit int) (Column, error) {
 	sf.TeamIDs = []int64{teamID}
 	sf.EndedSince = endedSince
-	// A filter may name states of its own. The column is those intersected
-	// with the column's own state, never the column's state silently
-	// replacing them. A query's state conditions are and-ed the same way.
-	if len(sf.StateIDs) > 0 && !slices.Contains(sf.StateIDs, st.ID) {
-		return Column{State: st, Items: []store.Item{}}, nil
-	}
+	// A query's state conditions are and-ed with the column's own state.
 	sf.StateIDs = []int64{st.ID}
-	if !showBuckets && len(sf.Kinds) == 0 {
-		sf.Kinds = []string{store.KindTicket}
-	}
-	items, cursor, err := store.ListItems(ctx, s.DB.R, sf, "", clampLimit(limit))
+	items, next, err := store.ListItems(ctx, s.DB.R, sf, cursor, clampLimit(limit))
 	if err != nil {
 		return Column{}, mapErr(err)
 	}
@@ -149,7 +119,7 @@ func (s *Service) column(ctx context.Context, teamID int64, st store.WorkState, 
 	if items == nil {
 		items = []store.Item{}
 	}
-	return Column{State: st, Items: items, Count: count, Cursor: cursor}, nil
+	return Column{State: st, Items: items, Count: count, Cursor: next}, nil
 }
 
 // Page is a keyset page of items, which every unbounded list returns
@@ -208,7 +178,7 @@ func (s *Service) BucketIndex(ctx context.Context, a Actor, teamID int64, scope,
 	if err := requireUser(a); err != nil {
 		return nil, "", err
 	}
-	f := store.ItemFilter{Kinds: []string{store.KindBucket}}
+	f := store.ItemFilter{Kind: store.KindBucket}
 	switch scope {
 	case ScopeInstance:
 	case ScopeOwned:

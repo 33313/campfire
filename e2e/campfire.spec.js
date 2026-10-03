@@ -355,6 +355,8 @@ test("raw CSQL offers what comes next, says what is wrong, and never applies a r
   await query.fill("label = plumbing and assignee = nobody-yet");
   await query.press("Enter");
   await expect(offers.locator(".query-error")).toHaveText(/no user is called "nobody-yet"/);
+  // The board sends it bracketed beside its own clauses; the mark is still on the name.
+  await expect(page.locator(".query-mirror mark")).toHaveText("nobody-yet");
   await expect(cards).toHaveCount(1);
   // Nothing has to be fixed: Discard puts back the query in use.
   await bar.getByRole("button", { name: "Discard" }).click();

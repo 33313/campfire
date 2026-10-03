@@ -37,7 +37,7 @@ var (
 
 // Fields, in the order they are offered.
 var Fields = []string{"assignee", "reporter", "label", "bucket", "priority", "state", "team",
-	"created", "started", "completed", "due", "text"}
+	"kind", "created", "started", "completed", "due", "text"}
 
 var fields = map[string]Field{
 	"assignee":  {Ops: valueOps, Nullable: true, Named: true},
@@ -47,6 +47,7 @@ var fields = map[string]Field{
 	"priority":  {Ops: append(append([]string{}, valueOps...), "<", "<=", ">", ">=")},
 	"state":     {Ops: valueOps},
 	"team":      {Ops: valueOps, Named: true},
+	"kind":      {Ops: valueOps},
 	"created":   {Ops: dayOps},
 	"started":   {Ops: dayOps, Nullable: true},
 	"completed": {Ops: dayOps, Nullable: true},
@@ -394,6 +395,11 @@ func (p *parser) value(field string) (*Value, error) {
 			return nil, errAt(t.pos, t.end, "priority is 1 to 4, or P1 to P4")
 		}
 		v.Raw, v.ID = strconv.Itoa(n), int64(n)
+	case field == "kind":
+		v.Raw = strings.ToLower(v.Raw)
+		if v.Raw != "ticket" && v.Raw != "bucket" {
+			return nil, errAt(t.pos, t.end, "kind is ticket or bucket")
+		}
 	case isDay(field):
 		v.Raw = strings.ToLower(v.Raw)
 		if _, err := time.Parse("2006-01-02", v.Raw); err != nil && v.Raw != "today" && !relative.MatchString(v.Raw) {
@@ -425,7 +431,7 @@ func Resolve(n Node, r Resolver) error {
 				end += 2
 			}
 			switch {
-			case v.Ref || v.None || c.Field == "text" || c.Field == "priority":
+			case v.Ref || v.None || c.Field == "text" || c.Field == "priority" || c.Field == "kind":
 			case isDay(c.Field):
 				day := resolveDay(v.Raw, r.Now())
 				v.Day = day.Format("2006-01-02")
@@ -705,8 +711,11 @@ func cond(c *Cond, args *[]any, negated bool) string {
 			arg(v.ID)
 			return "i.state_id = ?"
 		case c.Field == "state":
+			arg(strings.ToLower(v.Raw)) // as store.Fold: the database never folds case
+			return "s.name_folded = ?"
+		case c.Field == "kind":
 			arg(v.Raw)
-			return "s.name = ? COLLATE NOCASE"
+			return "i.kind = ?"
 		case c.Field == "due":
 			arg(v.Day)
 			return col + " = ?"

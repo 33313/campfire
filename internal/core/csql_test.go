@@ -26,7 +26,7 @@ func TestQueriesComposeWithAndOrNot(t *testing.T) {
 
 	titles := func(q string) []string {
 		t.Helper()
-		page, err := w.ListItems(w.ctx, w.marta, Filter{Query: q, Kinds: []string{store.KindTicket}}, "", 50)
+		page, err := w.ListItems(w.ctx, w.marta, Filter{Query: "kind = ticket and (" + q + ")"}, "", 50)
 		if err != nil {
 			t.Fatalf("%q: %v", q, err)
 		}
@@ -49,6 +49,7 @@ func TestQueriesComposeWithAndOrNot(t *testing.T) {
 		"label in (soil) or bucket != none":                       {"compost", "pruning"},
 		`text ~ heap or text ~ "PRUN"`:                            {"compost", "pruning"},
 		"label not in (garden, soil) and priority > 3":            {"fence"},
+		"kind != bucket and priority = 4":                         {"fence"},
 	} {
 		if got := titles(q); !slices.Equal(got, want) {
 			t.Errorf("%q matched %v, want %v", q, got, want)
@@ -78,7 +79,7 @@ func TestDaysAreReadInTheReadersZone(t *testing.T) {
 
 	titles := func(q, tz string) []string {
 		t.Helper()
-		page, err := w.ListItems(w.ctx, w.marta, Filter{Query: q, TZ: tz, Kinds: []string{store.KindTicket}}, "", 50)
+		page, err := w.ListItems(w.ctx, w.marta, Filter{Query: "kind = ticket and (" + q + ")", TZ: tz}, "", 50)
 		if err != nil {
 			t.Fatalf("%q in %q: %v", q, tz, err)
 		}

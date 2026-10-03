@@ -38,7 +38,7 @@ export async function reloadContext(teamId) {
 export async function refreshBacklogCount() {
   const id = app.team?.id;
   if (!id) return;
-  const backlog = await api.getBacklog(id, {}, false, 1).catch(() => null);
+  const backlog = await api.getBacklog(id, { csql: "kind = ticket" }, "", 1).catch(() => null);
   // A team switch while this was in flight has already counted the new team.
   if (app.team?.id === id) app.backlogCount = backlog ? backlog.count : 0;
 }
