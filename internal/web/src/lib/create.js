@@ -12,9 +12,10 @@ import { openModal, toast } from "./ui.svelte.js";
 import CreateItemDialog from "../dialogs/CreateItemDialog.svelte";
 
 export async function createItem({ team, states, kind = "ticket", reload }) {
-  const res = await openModal(CreateItemDialog, { team, states, kind });
-  if (!res) return null;
-  toast(`${res.identifier} created`);
+  const made = await openModal(CreateItemDialog, { team, states, kind });
+  if (!made) return null;
+  toast(made.length > 1 ? `${made.length} created, ${made[0].identifier} to ${made.at(-1).identifier}`
+    : `${made[0].identifier} created`);
   await reload();
-  return res;
+  return made;
 }

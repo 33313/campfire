@@ -269,9 +269,10 @@ how many teams are affected.
 
 ### 6.5 Cloning, splitting and bulk edits
 
-Three operations over items that already exist. None of them is a new concept. Each is a shorthand
-for edits a member could make one at a time, governed by ordinary ticket-edit permission
-([§6.4](#64-bucket-membership)), and each leaves the same trail in the log as the long way round.
+Three operations over items that already exist, and one way to create several. None of them is a
+new concept. Each is a shorthand for edits a member could make one at a time, governed by
+ordinary ticket-edit permission ([§6.4](#64-bucket-membership)), and each leaves the same trail in
+the log as the long way round.
 
 **Clone.** One ticket becomes two. The new ticket takes a fresh identifier from its team's counter
 and copies title, description, priority, assignee, bucket and labels. It enters the default state,
@@ -284,6 +285,11 @@ created the way a clone is, and carries a *follows up* relation to the source in
 to*. The source keeps its state unless the actor also rejects it in the same action, in which case
 the reason is `cancelled`. A split WILL NOT delete or absorb the source: deletion is not a state, and
 the tickets that replaced it are reachable from it.
+
+**Create several.** The create form takes a title per line, and every other field it carries
+applies to each new item. It is the ordinary create, made once per line in order: there is no batch
+to fail halfway through on the server, and a line refused stops the run with the earlier ones made
+and the rest left in the form.
 
 **Bulk edit.** A selection of items on a board or in a backlog takes one new value for one field, in
 one action. Four fields are editable this way:

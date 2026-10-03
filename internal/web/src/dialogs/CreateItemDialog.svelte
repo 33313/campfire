@@ -9,14 +9,17 @@
   import { app } from "../lib/state.svelte.js";
   import { buckets as allBuckets } from "../lib/catalog.svelte.js";
   import { BUCKET_ICONS, BUCKET_COLOURS, PRIORITY, NAV } from "../lib/icons.js";
+  import { plural } from "../lib/format.js";
 
-  /** Create a ticket or a bucket. A bucket carries an icon; a ticket does not. */
+  /** Create a ticket or a bucket, or several: one per line of titles, each
+      with the rest of the form. Closes with what was created, as a list. */
   let { team, states, kind = "ticket", close } = $props();
 
   let chosen = $state(untrack(() => kind));
   let icon = $state("bookmark");
   let color = $state("");
   let title = $state("");
+  let several = $state(false);
   let description = $state("");
   let priority = $state(3);
   let assigneeId = $state("");
@@ -48,27 +51,56 @@
     if (invalid?.field === field) invalid = null;
   };
 
+  // Several at once is the one create, once per line, in order (DEV-44):
+  // no batch to go half through on the server. A list pasted into the single
+  // title is taken as several.
+  let titles = $derived(several ? title.split("\n").map((t) => t.trim()).filter(Boolean) : [title]);
+
+  // The box that takes over from the single title is typed into where that
+  // left off.
+  function focusEnd(el) {
+    el.focus();
+    el.selectionStart = el.value.length;
+  }
+
+  function pasted(e) {
+    const text = e.clipboardData.getData("text");
+    if (!text.trim().includes("\n")) return;
+    e.preventDefault();
+    title = (title ? title + "\n" : "") + text.trim();
+    several = true;
+  }
+
   async function create() {
     addLabel(); // whatever is still in the box was meant to be one
     invalid = null;
-    if (!title.trim()) {
+    if (!titles.some((t) => t.trim())) {
       invalid = { field: "title", message: "An item needs a title." };
       return;
     }
     const body = {
-      kind: chosen, teamId: team.id, title, description,
+      kind: chosen, teamId: team.id, description,
       priority: +priority, plannedEnd: plannedEnd || "", accepted,
       assigneeId: +assigneeId || 0, labels,
     };
     if (chosen === "bucket") { body.icon = icon; body.color = color; }
     else if (bucketId) body.bucketId = +bucketId;
-    try {
-      close(await api.createItem(body));
-    } catch (err) {
-      // The API names the offending field; without one the message still has
-      // to land somewhere, so it lands under the footer.
-      invalid = { field: err.field || "", message: err.message };
+    const made = [];
+    for (const t of titles) {
+      try {
+        made.push(await api.createItem({ ...body, title: t }));
+      } catch (err) {
+        // The API names the offending field; without one the message still
+        // has to land somewhere, so it lands under the footer. What was
+        // created stays created, and leaves the box: what is left in it is
+        // what a second Create would make.
+        if (made.length) title = titles.slice(made.length).join("\n");
+        invalid = { field: err.field || "",
+          message: made.length ? `${made.length} created. ${err.message}` : err.message };
+        return;
+      }
     }
+    close(made);
   }
 </script>
 
@@ -87,12 +119,24 @@
         </button>
       {/each}
     </div>
-    <label class="field">
-      <span class="field-label">Title</span>
-      <input class="input" class:error={invalid?.field === "title"} placeholder="What needs doing?"
-             bind:value={title} oninput={clearIf("title")} />
+    <div class="field">
+      <span class="field-label">
+        {several ? "Titles, one per line" : "Title"}
+        <button type="button" class="pick-me" onclick={() => {
+          several = !several;
+          if (!several) title = titles[0] || "";
+        }}>{several ? "(One)" : "(Several)"}</button>
+      </span>
+      {#if several}
+        <textarea class="input" class:error={invalid?.field === "title"} rows="5" aria-label="Titles"
+                  placeholder={"One item per line\nAnother"} bind:value={title} oninput={clearIf("title")}
+                  use:focusEnd></textarea>
+      {:else}
+        <input class="input" class:error={invalid?.field === "title"} placeholder="What needs doing?"
+               aria-label="Title" bind:value={title} oninput={clearIf("title")} onpaste={pasted} />
+      {/if}
       {@render complaint("title")}
-    </label>
+    </div>
     <label class="field">
       <span class="field-label">Description</span>
       <textarea class="input" rows="4" placeholder="Markdown…" bind:value={description}></textarea>
@@ -180,7 +224,10 @@
     {#if invalid && !invalid.field}
       <span class="field-error">{invalid.message}</span>
     {:else}
-      <span class="consequence">{chosen === "bucket" ? "A new bucket" : "A new ticket"}</span>
+      <span class="consequence">
+        {titles.length > 1 ? plural(titles.length, `new ${chosen}`)
+          : chosen === "bucket" ? "A new bucket" : "A new ticket"}
+      </span>
     {/if}
     <div class="actions">
       <button class="btn" onclick={() => close(undefined)}>Cancel</button>

@@ -1,0 +1,3 @@
+kind: Added
+body: "Create several tickets at once: the create dialog takes a title per line, and the rest of the form applies to each. A list pasted into the title does the same."
+time: 2026-10-03T17:36:44.729605243+02:00

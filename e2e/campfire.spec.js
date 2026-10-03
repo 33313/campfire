@@ -1554,3 +1554,53 @@ test("(Me!) beside the assignee assigns the new ticket to you", async ({ page })
   const item = await (await page.request.get(`/api/lookup/${created}`)).json();
   expect(item.assigneeName).toBe("root");
 });
+
+// DEV-44: several tickets at once, one per line, each with the rest of the
+// form; a list pasted into the title is taken as several.
+test("several tickets are created at once, one per line, sharing the form", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/backlog");
+  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+
+  const form = page.getByRole("dialog");
+  await form.getByLabel("Title").focus();
+  await page.evaluate(() => {
+    const data = new DataTransfer();
+    data.setData("text/plain", "Paint the hall\nFix the gate\n\nOil the hinges\n");
+    document.activeElement.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+  });
+  const titles = form.getByLabel("Titles");
+  await expect(titles).toBeFocused();
+  await expect(titles).toHaveValue("Paint the hall\nFix the gate\n\nOil the hinges");
+  await expect(form.locator(".consequence")).toHaveText("3 new tickets");
+  await form.getByLabel("Labels").fill("house");
+  await form.getByRole("button", { name: "(Me!)" }).click();
+  await form.getByRole("button", { name: "Create" }).click();
+
+  await expect(page.locator(".toast").last()).toHaveText(/3 created, SOL-\d+ to SOL-\d+/);
+  const [, first, last] = (await page.locator(".toast").last().textContent()).match(/SOL-(\d+) to SOL-(\d+)/);
+  expect(+last - +first).toBe(2);
+  const made = await Promise.all([0, 1, 2].map(async (n) =>
+    (await page.request.get(`/api/lookup/SOL-${+first + n}`)).json()));
+  expect(made.map((i) => i.title)).toEqual(["Paint the hall", "Fix the gate", "Oil the hinges"]);
+  for (const item of made) {
+    expect(item.labels).toEqual(["house"]);
+    expect(item.assigneeName).toBe("root");
+  }
+});
+
+test("a several-at-once create that is refused partway keeps what is left to make", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/backlog");
+  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+
+  const form = page.getByRole("dialog");
+  await form.getByRole("button", { name: "(Several)" }).click();
+  await form.getByLabel("Titles").fill(`Sweep the yard\n${"x".repeat(5000)}\nWash the windows`);
+  await form.getByRole("button", { name: "Create" }).click();
+
+  // The first was made; the refused one and the one after it stay to be fixed.
+  await expect(form.locator(".field-error")).toHaveText(/^1 created\. /);
+  await expect(form.getByLabel("Titles")).toHaveValue(`${"x".repeat(5000)}\nWash the windows`);
+  await form.getByRole("button", { name: "Cancel" }).click();
+});
