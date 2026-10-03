@@ -1,4 +1,6 @@
--- Campfire initial schema.
+-- The Campfire schema, applied to a database that has no tables yet. There
+-- are no migrations: a change to this file before v1 is made to a live
+-- database by hand.
 --
 -- Conventions (SPEC.md §13.2):
 --   * Every table is STRICT: the engine rejects wrongly typed values (rule 8).
@@ -24,6 +26,8 @@ CREATE TABLE users (
     email_folded   TEXT,
     totp_secret    TEXT,
     avatar         TEXT,
+    -- Prose about themselves, for their profile page. Nothing reads it.
+    bio            TEXT,
     is_admin       INTEGER NOT NULL DEFAULT 0,
     created_at     INTEGER NOT NULL
 ) STRICT;
@@ -96,6 +100,9 @@ CREATE TABLE teams (
                      CHECK (icon_rendering IN ('mono', 'colour')),
     -- One counter per team, shared by tickets and buckets (SPEC.md §6.3).
     next_number      INTEGER NOT NULL DEFAULT 1,
+    -- A picture and a paragraph for the team's profile page. Nothing reads them.
+    avatar           TEXT,
+    description      TEXT,
     archived_at      INTEGER,
     created_at       INTEGER NOT NULL
 ) STRICT;
@@ -145,6 +152,9 @@ CREATE TABLE items (
     priority       INTEGER NOT NULL DEFAULT 3 CHECK (priority BETWEEN 1 AND 4),
     -- Buckets only, one of the fixed set (DESIGN.md §4). A ticket has none.
     icon           TEXT,
+    -- Buckets only, one of the fixed set, optional: a bucket's tickets are
+    -- recognisable on a board at a glance.
+    color          TEXT,
     -- Tickets only. A bucket never belongs to another bucket (SPEC.md §6.2).
     bucket_id      INTEGER REFERENCES items (id),
     state_id       INTEGER NOT NULL REFERENCES work_states (id),
@@ -175,6 +185,11 @@ CREATE INDEX items_bucket ON items (bucket_id) WHERE bucket_id IS NOT NULL;
 CREATE INDEX items_assignee ON items (assignee_id) WHERE assignee_id IS NOT NULL;
 CREATE INDEX items_reporter ON items (reporter_id);
 CREATE INDEX items_kind ON items (kind);
+-- The date fields a query filters on.
+CREATE INDEX items_created ON items (created_at);
+CREATE INDEX items_started ON items (actual_start) WHERE actual_start IS NOT NULL;
+CREATE INDEX items_completed ON items (actual_end) WHERE actual_end IS NOT NULL;
+CREATE INDEX items_due ON items (planned_end) WHERE planned_end IS NOT NULL;
 
 -- Labels are free text, instance-wide, created by typing them (SPEC.md §8.1).
 CREATE TABLE labels (
@@ -220,12 +235,15 @@ CREATE TABLE comments (
 
 CREATE INDEX comments_item ON comments (item_id, id);
 
--- A named filter over the dimensions of SPEC.md §9.2, owned by one team.
+-- A named CSQL query, owned by one team (SPEC.md §9.4). The query is stored in
+-- its canonical form, naming what it references by #id, so a rename changes
+-- nothing and a deleted referent matches nothing.
 CREATE TABLE saved_views (
     id          INTEGER PRIMARY KEY,
     team_id     INTEGER NOT NULL REFERENCES teams (id) ON DELETE CASCADE,
     name        TEXT    NOT NULL,
     name_folded TEXT    NOT NULL,
+    query       TEXT    NOT NULL DEFAULT '',
     pin_board   INTEGER NOT NULL DEFAULT 0,
     pin_backlog INTEGER NOT NULL DEFAULT 0,
     created_at  INTEGER NOT NULL,
@@ -234,24 +252,23 @@ CREATE TABLE saved_views (
 
 CREATE UNIQUE INDEX saved_views_team_name ON saved_views (team_id, name_folded);
 
--- One row per clause, referencing its target by identity — never a serialised
--- query string (SPEC.md §9.4).
+-- What each view's query names by id, kept beside the text: a label a view
+-- names MUST NOT be reaped, and a deleted referent is named wherever the view
+-- is offered.
 --
--- `ref_id` deliberately carries no foreign key. A clause MUST NOT be removed
--- by cascade when its referent is deleted: it is kept, matches nothing, and
--- names the missing reference wherever the view is offered.
-CREATE TABLE saved_view_clauses (
+-- `ref_id` deliberately carries no foreign key. A row MUST NOT be removed by
+-- cascade when its referent is deleted: the condition is kept, matches
+-- nothing, and names the missing reference.
+CREATE TABLE saved_view_refs (
     id         INTEGER PRIMARY KEY,
     view_id    INTEGER NOT NULL REFERENCES saved_views (id) ON DELETE CASCADE,
     dimension  TEXT    NOT NULL
-               CHECK (dimension IN ('state', 'label', 'assignee', 'reporter',
-                                    'bucket', 'priority', 'team', 'text')),
-    ref_id     INTEGER,
-    text_value TEXT
+               CHECK (dimension IN ('state', 'label', 'assignee', 'reporter', 'bucket', 'team')),
+    ref_id     INTEGER
 ) STRICT;
 
-CREATE INDEX saved_view_clauses_view ON saved_view_clauses (view_id);
-CREATE INDEX saved_view_clauses_ref ON saved_view_clauses (dimension, ref_id);
+CREATE INDEX saved_view_refs_view ON saved_view_refs (view_id);
+CREATE INDEX saved_view_refs_ref ON saved_view_refs (dimension, ref_id);
 
 -- One append-only table serves every history surface (SPEC.md §10). Rows are
 -- never edited or deleted. `seq` is monotonic and is also the resume cursor

@@ -234,7 +234,7 @@ same corpus as the server's; `npx playwright test` drives the built binary in a 
 | Path | What is there |
 |---|---|
 | `main.go`, `backup.go`, `mcp.go` | The command: serve, init, check, snapshot, restore, version. |
-| `internal/store` | The schema, the migrations, and every query. One SQLite file behind a single writer and a read pool. |
+| `internal/store` | The schema and every query. One SQLite file behind a single writer and a read pool. |
 | `internal/csql` | CSQL, the filter language: parser, printer and compiler to SQL. `testdata/corpus.json` is what it and the client's parser must both say. |
 | `internal/core` | The application. Every operation exists here exactly once, behind one permission check and one validation. |
 | `internal/api` | The HTTP interface described by [`api/openapi.yaml`](api/openapi.yaml), plus the event stream. |
