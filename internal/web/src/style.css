@@ -406,17 +406,18 @@ img.avatar { object-fit: cover; }
 /* Board ----------------------------------------------------------------- */
 
 .board { display: flex; gap: 12px; padding: 16px 20px 20px; height: 100%; align-items: stretch; }
-/* 280px is the drawn width and the floor: columns never shrink below it, and
- * scroll sideways once they no longer fit. Above that they share whatever the
- * viewport has spare, so a wide screen is not a board with a field of empty
- * page beside it — capped, because a column much wider than half again its
- * drawn width stops reading as a column. */
+/* 280px is the drawn width. Columns share whatever the viewport has spare
+ * above it, so a wide screen is not a board with a field of empty page beside
+ * it — capped, because a column much wider than half again its drawn width
+ * stops reading as a column. Below it they give way down to 200px, so a
+ * laptop's 1366px holds five columns beside the sidebar (DEV-66), and scroll
+ * sideways only past that. */
 .column {
-  display: flex; flex-direction: column; flex: 1 0 280px; max-width: 420px;
+  display: flex; flex-direction: column; flex: 1 1 280px; max-width: 420px;
   background: var(--sunk); border: 1px solid var(--border); min-height: 0;
   /* What is on a card never sets the column's width: a flex item grows to
      its content by default, and one long bucket name widened a column. */
-  min-width: 0;
+  min-width: 200px;
 }
 .column-head {
   display: flex; align-items: center; gap: 8px; padding: 10px 11px;

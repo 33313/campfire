@@ -1490,3 +1490,23 @@ test.describe(() => {
     expect(Math.abs(trail.at(-1) - landed.x)).toBeLessThan(3);
   });
 });
+
+// DEV-66: a laptop sees five columns beside the sidebar without scrolling
+// sideways; the columns give way below their drawn width to fit.
+test("a laptop holds five columns without scrolling sideways", async ({ page }) => {
+  await signIn(page);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto("/t/1/board");
+  const columns = page.locator(".column");
+  await expect(columns.first()).toBeVisible();
+  for (let n = await columns.count(); n < 5; n++) {
+    await page.request.post("/api/teams/1/states", { data: { name: `Stage ${n}` } });
+  }
+  await page.reload();
+  await expect(columns).toHaveCount(5);
+
+  const board = page.locator(".board");
+  expect(await board.evaluate((b) => b.parentElement.scrollWidth <= b.parentElement.clientWidth)).toBe(true);
+  const widths = await columns.evaluateAll((cols) => cols.map((c) => c.getBoundingClientRect().width));
+  expect(Math.min(...widths)).toBeGreaterThanOrEqual(200);
+});
