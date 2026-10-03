@@ -1,3 +1,0 @@
-kind: Fixed
-body: The log, history and pick dialogs name a bucket made after they were first opened, instead of showing its number or leaving it out. The board, backlog and bucket index open in a browser that blocks storage, rather than failing.
-time: 2026-10-03T02:31:14.689436825+02:00
