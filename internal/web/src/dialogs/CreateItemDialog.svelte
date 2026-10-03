@@ -27,7 +27,7 @@
   let buckets = $state([]);
   let acceptedState = $derived(states.find((s) => s.role === "accepted"));
 
-  api.listItems({ kinds: ["bucket"] }, "", 200)
+  api.listItems({ csql: "kind = bucket" }, "", 200)
     .then((page) => (buckets = page.items || []))
     .catch(() => {});
 

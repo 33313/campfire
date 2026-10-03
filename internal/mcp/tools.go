@@ -33,6 +33,7 @@ var (
 	pIntList = map[string]any{"type": "array", "items": map[string]any{"type": "integer"}}
 	pStrList = map[string]any{"type": "array", "items": map[string]any{"type": "string"}}
 	pEmpty   = map[string]any{"type": "object", "properties": map[string]any{}}
+	pQuery   = map[string]any{"type": "string", "description": csqlHelp}
 )
 
 // decodeInto unmarshals a tool's arguments, refusing unknown fields so that a
@@ -125,60 +126,54 @@ func (s *Server) toolset() []tool {
 		{
 			Name: "get_board", Operation: "getBoard",
 			Description: "A team's board: one column per work state, excluding the default " +
-				"and rejected states. Buckets are hidden unless showBuckets is true. Items done " +
-				"for more than three days are hidden unless allDone is true.",
+				"and rejected states. Buckets are items like tickets; add kind = ticket to the " +
+				"query to leave them out. Items done for more than three days are hidden unless " +
+				"allDone is true.",
 			Schema: obj(map[string]any{
-				"teamId": pInt, "showBuckets": pBool, "allDone": pBool, "limit": pInt,
-				"assigneeIds": pIntList, "labelIds": pIntList, "priorities": pIntList,
-				"bucketIds": pIntList, "text": pString,
-				"query": map[string]any{"type": "string", "description": csqlHelp}, "viewIds": pIntList, "tz": pString,
+				"teamId": pInt, "allDone": pBool, "limit": pInt,
+				"query": pQuery, "viewIds": pIntList, "tz": pString,
 			}, "teamId"),
 			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
 				var in struct {
-					TeamID      int64
-					ShowBuckets bool
-					AllDone     bool
-					Limit       int
+					TeamID  int64
+					AllDone bool
+					Limit   int
 					core.Filter
 				}
 				if err := decodeInto(args, &in); err != nil {
 					return nil, err
 				}
-				return svc.Board(ctx, a, in.TeamID, in.Filter, in.ShowBuckets, in.AllDone, in.Limit)
+				return svc.Board(ctx, a, in.TeamID, in.Filter, in.AllDone, in.Limit)
 			},
 		},
 		{
 			Name: "get_backlog", Operation: "getBacklog",
-			Description: "A team's items in its default state, in manual rank order.",
+			Description: "A team's items in its default state, in manual rank order. " +
+				"Pass the returned cursor back for the next page.",
 			Schema: obj(map[string]any{
-				"teamId": pInt, "showBuckets": pBool, "limit": pInt,
-				"assigneeIds": pIntList, "labelIds": pIntList, "priorities": pIntList,
-				"bucketIds": pIntList, "text": pString,
-				"query": map[string]any{"type": "string", "description": csqlHelp}, "viewIds": pIntList, "tz": pString,
+				"teamId": pInt, "cursor": pString, "limit": pInt,
+				"query": pQuery, "viewIds": pIntList, "tz": pString,
 			}, "teamId"),
 			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
 				var in struct {
-					TeamID      int64
-					ShowBuckets bool
-					Limit       int
+					TeamID int64
+					Cursor string
+					Limit  int
 					core.Filter
 				}
 				if err := decodeInto(args, &in); err != nil {
 					return nil, err
 				}
-				return svc.Backlog(ctx, a, in.TeamID, in.Filter, in.ShowBuckets, in.Limit)
+				return svc.Backlog(ctx, a, in.TeamID, in.Filter, in.Cursor, in.Limit)
 			},
 		},
 		{
 			Name: "list_items", Operation: "listItems",
-			Description: "Items matching a CSQL query and any structured dimensions given, " +
-				"all and-ed. Keyset-paginated; pass the returned cursor back.",
+			Description: "Items matching a CSQL query and the saved views given, all and-ed. " +
+				"Keyset-paginated; pass the returned cursor back.",
 			Schema: obj(map[string]any{
-				"teamIds": pIntList, "stateIds": pIntList, "labelIds": pIntList,
-				"assigneeIds": pIntList, "unassigned": pBool, "reporterIds": pIntList,
-				"bucketIds": pIntList, "priorities": pIntList, "kinds": pStrList,
-				"text": pString, "cursor": pString, "limit": pInt,
-				"query": map[string]any{"type": "string", "description": csqlHelp}, "viewIds": pIntList, "tz": pString,
+				"cursor": pString, "limit": pInt,
+				"query": pQuery, "viewIds": pIntList, "tz": pString,
 			}),
 			Call: func(ctx context.Context, a core.Actor, args json.RawMessage) (any, error) {
 				var in struct {
@@ -599,6 +594,7 @@ const csqlHelp = "A CSQL query. Conditions are field, operator, value, joined by
 	"and parentheses: assignee in (marta, me) and (bucket = SOL-6 or label = roses) and not priority = 4. " +
 	"Fields: assignee, reporter (a username or me), label, bucket (an identifier such as SOL-6, or a " +
 	"title in quotes), priority (1-4; also < <= > >=), state (a state's name), team (short code), " +
+	"kind (ticket or bucket), " +
 	"created, started, completed, due (a day: 2026-09-01, today, -7d, +2w; also < <= > >=), " +
 	"text (~ or !~ and a phrase). Operators: = != in (...) not in (...). none is the value of an empty " +
 	"field: assignee = none, label = none, due = none. != is exactly not =. #12 names a thing by id. " +

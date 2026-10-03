@@ -3,6 +3,7 @@
   import Icon from "./Icon.svelte";
   import { NAV } from "../lib/icons.js";
   import { api } from "../lib/api.js";
+  import { quote } from "../lib/csql.js";
   import { navigate } from "../lib/router.svelte.js";
 
   // Search, with the items that match offered as you type.
@@ -38,8 +39,7 @@
 
   async function look(q) {
     const mine = ++issued;
-    const filter = { text: q };
-    if (teamId) filter.teamIds = [teamId];
+    const filter = { csql: `text ~ ${quote(q)}${teamId ? ` and team = #${teamId}` : ""}` };
     try {
       const page = await api.listItems(filter, "", 6);
       if (mine === issued) hits = page.items || [];

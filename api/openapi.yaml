@@ -334,19 +334,11 @@ paths:
       x-agent: true
       parameters:
         - { $ref: "#/components/parameters/Id" }
-        - { $ref: "#/components/parameters/Buckets" }
         - name: allDone
           in: query
           description: Show every item in the final state. Off by default, when items done for more than three days are hidden.
           schema: { type: boolean }
         - { $ref: "#/components/parameters/Limit" }
-        - { $ref: "#/components/parameters/FilterState" }
-        - { $ref: "#/components/parameters/FilterLabel" }
-        - { $ref: "#/components/parameters/FilterAssignee" }
-        - { $ref: "#/components/parameters/FilterReporter" }
-        - { $ref: "#/components/parameters/FilterBucket" }
-        - { $ref: "#/components/parameters/FilterPriority" }
-        - { $ref: "#/components/parameters/FilterText" }
         - { $ref: "#/components/parameters/FilterQuery" }
         - { $ref: "#/components/parameters/FilterView" }
         - { $ref: "#/components/parameters/FilterZone" }
@@ -356,18 +348,12 @@ paths:
   /api/teams/{id}/backlog:
     get:
       operationId: getBacklog
-      summary: A team's items in its default state
+      summary: A team's items in its default state, in rank order
       x-agent: true
       parameters:
         - { $ref: "#/components/parameters/Id" }
-        - { $ref: "#/components/parameters/Buckets" }
+        - { $ref: "#/components/parameters/Cursor" }
         - { $ref: "#/components/parameters/Limit" }
-        - { $ref: "#/components/parameters/FilterLabel" }
-        - { $ref: "#/components/parameters/FilterAssignee" }
-        - { $ref: "#/components/parameters/FilterReporter" }
-        - { $ref: "#/components/parameters/FilterBucket" }
-        - { $ref: "#/components/parameters/FilterPriority" }
-        - { $ref: "#/components/parameters/FilterText" }
         - { $ref: "#/components/parameters/FilterQuery" }
         - { $ref: "#/components/parameters/FilterView" }
         - { $ref: "#/components/parameters/FilterZone" }
@@ -425,19 +411,11 @@ paths:
   /api/items:
     get:
       operationId: listItems
-      summary: Items matching a CSQL query, a structured filter, or a saved view
+      summary: Items matching a CSQL query and the saved views given
       x-agent: true
       parameters:
         - { $ref: "#/components/parameters/Cursor" }
         - { $ref: "#/components/parameters/Limit" }
-        - { $ref: "#/components/parameters/FilterTeam" }
-        - { $ref: "#/components/parameters/FilterState" }
-        - { $ref: "#/components/parameters/FilterLabel" }
-        - { $ref: "#/components/parameters/FilterAssignee" }
-        - { $ref: "#/components/parameters/FilterReporter" }
-        - { $ref: "#/components/parameters/FilterBucket" }
-        - { $ref: "#/components/parameters/FilterPriority" }
-        - { $ref: "#/components/parameters/FilterText" }
         - { $ref: "#/components/parameters/FilterQuery" }
         - { $ref: "#/components/parameters/FilterView" }
         - { $ref: "#/components/parameters/FilterZone" }
@@ -733,19 +711,6 @@ components:
     After: { name: after, in: query, schema: { type: integer } }
     Limit: { name: limit, in: query, schema: { type: integer, maximum: 200 } }
     Cursor: { name: cursor, in: query, schema: { type: string } }
-    Buckets:
-      name: buckets
-      in: query
-      description: Show buckets in board columns. Off by default.
-      schema: { type: boolean }
-    FilterTeam: { name: team, in: query, schema: { type: array, items: { type: integer } } }
-    FilterState: { name: state, in: query, schema: { type: array, items: { type: integer } } }
-    FilterLabel: { name: label, in: query, schema: { type: array, items: { type: integer } } }
-    FilterAssignee: { name: assignee, in: query, schema: { type: array, items: { type: integer } } }
-    FilterReporter: { name: reporter, in: query, schema: { type: array, items: { type: integer } } }
-    FilterBucket: { name: bucket, in: query, schema: { type: array, items: { type: integer } } }
-    FilterPriority: { name: priority, in: query, schema: { type: array, items: { type: integer, minimum: 1, maximum: 4 } } }
-    FilterText: { name: q, in: query, description: Free text over title and description, schema: { type: string } }
     FilterZone:
       name: tz
       in: query
@@ -760,9 +725,9 @@ components:
       name: csql
       in: query
       description: >-
-        A CSQL query (SPEC.md §9.2), and-ed with any other filter given. For example
+        A CSQL query (SPEC.md §9.2), and-ed with the views given. For example
         `assignee in (marta, me) and (bucket = SOL-6 or label = roses) and not priority = 4`,
-        or `due < today and completed = none`.
+        `due < today and completed = none`, or `kind = bucket`.
         A query that does not read is refused with field `query` and the span it went wrong at.
       schema: { type: string }
 

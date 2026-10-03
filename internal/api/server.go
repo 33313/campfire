@@ -243,15 +243,3 @@ func queryBool(r *http.Request, name string) bool {
 	v := r.URL.Query().Get(name)
 	return v == "1" || v == "true"
 }
-
-func queryStrings(r *http.Request, name string) []string {
-	var out []string
-	for _, raw := range r.URL.Query()[name] {
-		for _, part := range strings.Split(raw, ",") {
-			if part = strings.TrimSpace(part); part != "" {
-				out = append(out, part)
-			}
-		}
-	}
-	return out
-}

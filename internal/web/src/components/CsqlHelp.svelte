@@ -36,10 +36,11 @@
     [["priority"], ["1 (highest) to 4"]],
     [["state"], ["a work state's name"]],
     [["team"], ["a team's short code"]],
+    [["kind"], ["ticket", "bucket"]],
     [["created", "started", "completed", "due"], ["2026-09-01", "today", "-7d", "+2w", "none"]],
     [["text"], ["a phrase, with ~ or !~"]],
   ];
-  const CODE = /^(me|none|today|-7d|\+2w|2026-09-01|1|4|~|!~)$/;
+  const CODE = /^(me|none|today|-7d|\+2w|2026-09-01|1|4|~|!~|ticket|bucket)$/;
 </script>
 
 <button class="btn quiet small" bind:this={anchor} aria-label="CSQL help" title="How to write a query"

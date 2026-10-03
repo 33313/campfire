@@ -166,23 +166,12 @@ func (s *Server) deleteState(w http.ResponseWriter, r *http.Request, a core.Acto
 }
 
 // filterFrom reads a filter out of the query string: a CSQL query in csql
-// (SPEC.md §9.2), and the structured dimensions, each its own repeatable
-// parameter. All of it is and-ed.
+// (SPEC.md §9.2), the saved views switched on, and the reader's time zone.
 func filterFrom(r *http.Request) core.Filter {
 	return core.Filter{
-		Query:       r.URL.Query().Get("csql"),
-		ViewIDs:     queryInts(r, "view"),
-		TZ:          r.URL.Query().Get("tz"),
-		StateIDs:    queryInts(r, "state"),
-		LabelIDs:    queryInts(r, "label"),
-		AssigneeIDs: queryInts(r, "assignee"),
-		Unassigned:  queryBool(r, "unassigned"),
-		ReporterIDs: queryInts(r, "reporter"),
-		BucketIDs:   queryInts(r, "bucket"),
-		Priorities:  queryInts(r, "priority"),
-		TeamIDs:     queryInts(r, "team"),
-		Kinds:       queryStrings(r, "kind"),
-		Text:        r.URL.Query().Get("q"),
+		Query:   r.URL.Query().Get("csql"),
+		ViewIDs: queryInts(r, "view"),
+		TZ:      r.URL.Query().Get("tz"),
 	}
 }
 
@@ -191,8 +180,7 @@ func (s *Server) board(w http.ResponseWriter, r *http.Request, a core.Actor) (an
 	if err != nil {
 		return nil, err
 	}
-	return s.svc.Board(r.Context(), a, id, filterFrom(r),
-		queryBool(r, "buckets"), queryBool(r, "allDone"), int(queryInt(r, "limit")))
+	return s.svc.Board(r.Context(), a, id, filterFrom(r), queryBool(r, "allDone"), int(queryInt(r, "limit")))
 }
 
 func (s *Server) backlog(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
@@ -200,8 +188,7 @@ func (s *Server) backlog(w http.ResponseWriter, r *http.Request, a core.Actor) (
 	if err != nil {
 		return nil, err
 	}
-	return s.svc.Backlog(r.Context(), a, id, filterFrom(r),
-		queryBool(r, "buckets"), int(queryInt(r, "limit")))
+	return s.svc.Backlog(r.Context(), a, id, filterFrom(r), r.URL.Query().Get("cursor"), int(queryInt(r, "limit")))
 }
 
 func (s *Server) listViews(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {

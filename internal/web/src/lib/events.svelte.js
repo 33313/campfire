@@ -11,7 +11,7 @@ const cache = $state({ buckets: new Map() });
 let loading = null;
 
 export function loadBuckets() {
-  loading ||= api.listItems({ kinds: ["bucket"] }, "", 200)
+  loading ||= api.listItems({ csql: "kind = bucket" }, "", 200)
     .then((page) => (cache.buckets = new Map((page.items || []).map((b) => [String(b.id), b]))))
     .catch(() => {});
   return loading;

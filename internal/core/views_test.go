@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/campfire/campfire/internal/store"
@@ -23,7 +24,7 @@ func TestBoardAndBacklogSplitTheStateModel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{}, false, false, 50)
+	board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{}, false, 50)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +47,7 @@ func TestBoardAndBacklogSplitTheStateModel(t *testing.T) {
 		t.Fatal("an accepted item is missing from the board")
 	}
 
-	backlog, err := w.Backlog(w.ctx, w.marta, w.sol.ID, Filter{}, false, 50)
+	backlog, err := w.Backlog(w.ctx, w.marta, w.sol.ID, Filter{}, "", 50)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,17 +56,17 @@ func TestBoardAndBacklogSplitTheStateModel(t *testing.T) {
 	}
 }
 
-// SPEC.md §6.2: buckets are hidden from board columns by default and shown by
-// a per-board toggle.
-func TestBucketsAreHiddenFromBoardsUnlessAskedFor(t *testing.T) {
+// SPEC.md §6.2: a board shows buckets beside tickets unless the query leaves
+// them out, which is what the client's toggle does.
+func TestKindNarrowsABoard(t *testing.T) {
 	w := newWorld(t)
 	bucket := w.bucket(w.sol, w.marta, "Release 1.0")
 	if _, err := w.MoveItem(w.ctx, w.marta, bucket.ID,
 		w.state(w.sol, store.RoleAccepted).ID, "", ""); err != nil {
 		t.Fatal(err)
 	}
-	count := func(showBuckets bool) int {
-		board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{}, showBuckets, false, 50)
+	count := func(q string) int {
+		board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{Query: q}, false, 50)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -75,11 +76,11 @@ func TestBucketsAreHiddenFromBoardsUnlessAskedFor(t *testing.T) {
 		}
 		return n
 	}
-	if count(false) != 0 {
-		t.Fatal("a bucket showed on the board with the toggle off")
+	if count("kind = ticket") != 0 {
+		t.Fatal("kind = ticket showed a bucket")
 	}
-	if count(true) != 1 {
-		t.Fatal("a bucket did not show on the board with the toggle on")
+	if count("") != 1 {
+		t.Fatal("a bucket did not show on an unfiltered board")
 	}
 }
 
@@ -92,7 +93,7 @@ func TestRankingOrdersAColumn(t *testing.T) {
 	c := w.ticket(w.sol, w.marta, "c")
 
 	order := func() []string {
-		col, err := w.Backlog(w.ctx, w.marta, w.sol.ID, Filter{}, false, 50)
+		col, err := w.Backlog(w.ctx, w.marta, w.sol.ID, Filter{}, "", 50)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -135,57 +136,6 @@ func TestRankingCanAlsoMoveBetweenColumns(t *testing.T) {
 	}
 	if moved.ActualStart == 0 {
 		t.Fatal("a drag out of the default state did not start the clock")
-	}
-}
-
-// SPEC.md §9.2: structured filters, composable across the dimensions.
-func TestFilteringAcrossDimensions(t *testing.T) {
-	w := newWorld(t)
-	bucket := w.bucket(w.sol, w.marta, "Release 1.0")
-	hit, err := w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindTicket, TeamID: w.sol.ID,
-		Title: "rate limiter for the api", Priority: 1, AssigneeID: w.marta.UserID,
-		BucketID: bucket.ID, Labels: []string{"api"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	w.ticket(w.sol, w.marta, "something else entirely")
-
-	labels, _ := w.ListLabels(w.ctx, w.marta)
-	var apiLabel int64
-	for _, l := range labels {
-		if l.Name == "api" {
-			apiLabel = l.ID
-		}
-	}
-	page, err := w.ListItems(w.ctx, w.marta, Filter{
-		TeamIDs: []int64{w.sol.ID}, LabelIDs: []int64{apiLabel},
-		AssigneeIDs: []int64{w.marta.UserID}, Priorities: []int64{1},
-		BucketIDs: []int64{bucket.ID}, Text: "rate limiter"}, "", 50)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(page.Items) != 1 || page.Items[0].Identifier != hit.Identifier {
-		t.Fatalf("composed filter returned %+v", page.Items)
-	}
-
-	// Free text searches title and description, and matches case-insensitively
-	// enough to be useful.
-	page, _ = w.ListItems(w.ctx, w.marta, Filter{Text: "RATE LIMITER"}, "", 50)
-	if len(page.Items) != 1 {
-		t.Fatalf("case-insensitive text search returned %d items", len(page.Items))
-	}
-	// Unassigned is its own dimension, not an assignee of nobody.
-	page, _ = w.ListItems(w.ctx, w.marta, Filter{TeamIDs: []int64{w.sol.ID}, Unassigned: true}, "", 50)
-	for _, it := range page.Items {
-		if it.AssigneeID != 0 {
-			t.Fatal("the unassigned filter returned an assigned item")
-		}
-	}
-	// Beside a person it is one more value, not a second condition.
-	both, _ := w.ListItems(w.ctx, w.marta, Filter{TeamIDs: []int64{w.sol.ID}, Unassigned: true,
-		AssigneeIDs: []int64{w.marta.UserID}}, "", 50)
-	if len(both.Items) <= len(page.Items) {
-		t.Fatalf("unassigned or marta returned %d items, unassigned alone %d", len(both.Items), len(page.Items))
 	}
 }
 
@@ -296,7 +246,7 @@ func TestRankRetriesWhenTheMidpointIsTaken(t *testing.T) {
 		t.Fatalf("retried rank %q is not between %q and %q", moved.Rank, first.Rank, second.Rank)
 	}
 
-	col, err := w.Backlog(w.ctx, w.marta, w.sol.ID, Filter{}, false, 50)
+	col, err := w.Backlog(w.ctx, w.marta, w.sol.ID, Filter{}, "", 50)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,7 +266,7 @@ func TestRankingWithNoNeighbourLandsAtTheEnd(t *testing.T) {
 	if _, err := w.RankItem(w.ctx, w.marta, a.ID, 0, 0, 0); err != nil {
 		t.Fatal(err)
 	}
-	col, err := w.Backlog(w.ctx, w.marta, w.sol.ID, Filter{}, false, 50)
+	col, err := w.Backlog(w.ctx, w.marta, w.sol.ID, Filter{}, "", 50)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -336,7 +286,7 @@ func TestBoardHonoursAStateClauseFromAView(t *testing.T) {
 	}
 	w.ticket(w.sol, w.marta, "stays")
 
-	board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{StateIDs: []int64{accepted.ID}}, false, false, 50)
+	board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{Query: fmt.Sprintf("state = #%d", accepted.ID)}, false, 50)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -419,7 +369,7 @@ func TestOldDoneItemsAreHiddenFromTheBoard(t *testing.T) {
 		t.Fatal(err)
 	}
 	final := func(allDone bool) Column {
-		board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{}, false, allDone, 50)
+		board, err := w.Board(w.ctx, w.marta, w.sol.ID, Filter{}, allDone, 50)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -442,5 +392,28 @@ func TestOldDoneItemsAreHiddenFromTheBoard(t *testing.T) {
 	}
 	if col := final(true); len(col.Items) != 1 || col.Count != 1 {
 		t.Fatalf("allDone: %d items, count %d", len(col.Items), col.Count)
+	}
+}
+
+// The backlog continues from its own cursor in rank order, which is what its
+// "load older" asks for.
+func TestBacklogPagesInRankOrder(t *testing.T) {
+	w := newWorld(t)
+	for _, title := range []string{"a", "b", "c"} {
+		w.ticket(w.sol, w.marta, title)
+	}
+	first, err := w.Backlog(w.ctx, w.marta, w.sol.ID, Filter{}, "", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first.Items) != 2 || first.Cursor == "" || first.Count != 3 {
+		t.Fatalf("first page: %d items, cursor %q, count %d", len(first.Items), first.Cursor, first.Count)
+	}
+	rest, err := w.Backlog(w.ctx, w.marta, w.sol.ID, Filter{}, first.Cursor, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rest.Items) != 1 || rest.Items[0].Title != "c" {
+		t.Fatalf("second page: %+v", rest.Items)
 	}
 }

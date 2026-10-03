@@ -1,0 +1,3 @@
+kind: Changed
+body: A filter is only CSQL. The API and agent tools drop their structured filter parameters and the board and backlog drop `buckets`; CSQL gains a `kind` field (`kind = ticket`, `kind = bucket`), which the Show buckets toggle now adds to the query. The backlog pages with its own `cursor`. Work state and bucket names in a query match case-insensitively beyond ASCII.
+time: 2026-10-03T02:21:35.045812341+02:00

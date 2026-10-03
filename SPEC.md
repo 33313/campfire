@@ -217,9 +217,10 @@ renderings, monochrome and coloured, and a team picks the one its own surfaces u
 per-team choice as its work states. Which rendering is in force is presentation and MUST NOT change
 which icon a bucket carries.
 
-Buckets use their owning team's work states. They WILL be hidden from board columns by default and
-shown by a per-board toggle, so that an engineering board is not diluted by milestones and a
-planning team's board can consist entirely of them.
+Buckets use their owning team's work states. The client WILL hide them from board columns by
+default and show them by a per-board toggle, so that an engineering board is not diluted by
+milestones and a planning team's board can consist entirely of them. The toggle is a CSQL clause,
+`kind = ticket`, and-ed with the reader's filter ([§9.2](#92-filtering)).
 
 A bucket WILL accept tickets from any team. This is how cross-team milestones work, and it is why
 the application WILL NOT have a separate organisation-wide "goals" layer.
@@ -348,8 +349,8 @@ Example: `Backlog` (default), `To Do` (accepted), `In Progress`, `In Review`, `D
 - The **backlog** shows items in the default state.
 - Rejected items WILL NOT appear on any board. They are reachable by filter and by permalink.
 - Items that have been in the final state for more than three days are hidden from the board
-  unless it asks for all of them, a per-board toggle like the one for buckets
-  ([§6.2](#62-buckets)). A Done column that only grows is history, not work.
+  unless it asks for all of them, by a per-board toggle. A Done column that only grows is
+  history, not work.
 
 Backlog is therefore a consequence of the state model, not a separate feature.
 
@@ -442,6 +443,7 @@ assignee in (marta, me) and (bucket = SOL-6 or label = roses) and not priority =
 | `priority` | `1` to `4`, or `P1` to `P4`. | `=` `!=` `in` `not in` `<` `<=` `>` `>=` |
 | `state` | A work state's name, matched in every team. | `=` `!=` `in` `not in` |
 | `team` | A short code or a team's name. | `=` `!=` `in` `not in` |
+| `kind` | `ticket` or `bucket`. | `=` `!=` `in` `not in` |
 | `created`, `started`, `completed` | A day: `2026-09-01`, `today`, or relative to today, `-7d`, `+2w`; `none` (started, completed). | `=` `!=` `<` `<=` `>` `>=` |
 | `due` | A day, as above; `none`. | `=` `!=` `<` `<=` `>` `>=` |
 | `text` | A phrase, searched in title and description. | `~` (contains) `!~` |

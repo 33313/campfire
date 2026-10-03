@@ -129,7 +129,7 @@ jobs:
           curl -sf -b "$jar" -c "$jar" -H 'Content-Type: application/json' \
             -d '{"username":"root","password":"correct horse battery"}' \
             http://127.0.0.1:8791/api/auth/signin
-          titles=$(curl -sf -b "$jar" 'http://127.0.0.1:8791/api/items?team=1')
+          titles=$(curl -sf -b "$jar" -G --data-urlencode 'csql=team = #1' http://127.0.0.1:8791/api/items)
           echo "$titles" | grep -q 'before the snapshot'
           if echo "$titles" | grep -q 'after the snapshot'; then
             echo "the restore did not roll the database back"; exit 1

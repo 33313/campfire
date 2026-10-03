@@ -12,7 +12,7 @@ const DAY_OPS = ["=", "!=", "<", "<=", ">", ">="];
 
 /** Fields, in the order they are offered, and what each takes. */
 export const FIELDS = ["assignee", "reporter", "label", "bucket", "priority", "state", "team",
-  "created", "started", "completed", "due", "text"];
+  "kind", "created", "started", "completed", "due", "text"];
 export const FIELD = {
   assignee: { ops: VALUE_OPS, nullable: true, named: true },
   reporter: { ops: VALUE_OPS, named: true },
@@ -21,6 +21,7 @@ export const FIELD = {
   priority: { ops: [...VALUE_OPS, "<", "<=", ">", ">="] },
   state: { ops: VALUE_OPS },
   team: { ops: VALUE_OPS, named: true },
+  kind: { ops: VALUE_OPS },
   created: { ops: DAY_OPS, day: true },
   started: { ops: DAY_OPS, nullable: true, day: true },
   completed: { ops: DAY_OPS, nullable: true, day: true },
@@ -200,6 +201,9 @@ function parser(toks) {
       const n = /^\d+$/.test(s) ? Number(s) : NaN;
       if (!(n >= 1 && n <= 4)) throw new CsqlError("priority is 1 to 4, or P1 to P4", t.pos, t.end);
       v.raw = String(n);
+    } else if (field === "kind") {
+      v.raw = v.raw.toLowerCase();
+      if (v.raw !== "ticket" && v.raw !== "bucket") throw new CsqlError("kind is ticket or bucket", t.pos, t.end);
     } else if (f.day) {
       v.raw = v.raw.toLowerCase();
       if (!isDate(v.raw) && v.raw !== "today" && !RELATIVE.test(v.raw)) {
@@ -354,6 +358,18 @@ export function fromBasic(basic) {
     }
   }
   return parts.join(" and ");
+}
+
+/**
+ * A reader's query and-ed with a screen's own clauses (its search, its
+ * buckets toggle), as one query. The reader's comes first, bracketed when
+ * there is more, so a span the server reports in it is `offset` too far.
+ */
+export function conjoin(query, ...clauses) {
+  const more = clauses.filter(Boolean);
+  if (!more.length) return { query, offset: 0 };
+  if (!query.trim()) return { query: more.join(" and "), offset: 0 };
+  return { query: `(${query}) and ${more.join(" and ")}`, offset: 1 };
 }
 
 /** A server's error span, in UTF-8 bytes, as indices into the string. */
