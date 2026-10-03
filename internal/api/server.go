@@ -37,6 +37,8 @@ type Server struct {
 	// to read from getInstance (SPEC.md §12.4).
 	HiddenTabGrace time.Duration
 	Snapshots      Snapshots
+	// MaxImage bounds a pasted picture, in bytes; 0 takes none (DEV-40).
+	MaxImage int64
 }
 
 func New(svc *core.Service, bus *stream.Bus) *Server {
@@ -88,12 +90,34 @@ func (s *Server) handle(pattern string, h handler) {
 			fail(w, err)
 			return
 		}
+		if f, ok := body.(file); ok {
+			sendFile(w, f)
+			return
+		}
 		if body == nil {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		reply(w, r, body)
 	})
+}
+
+// file is a body sent as it is rather than as JSON: a picture.
+type file struct {
+	contentType string
+	data        []byte
+}
+
+// sendFile sends a picture. One never changes under its id, so the browser
+// keeps it. nosniff and the sandbox keep a browser from taking one for
+// anything but a picture, even opened on its own.
+func sendFile(w http.ResponseWriter, f file) {
+	h := w.Header()
+	h.Set("Content-Type", f.contentType)
+	h.Set("Cache-Control", "private, max-age=31536000, immutable")
+	h.Set("X-Content-Type-Options", "nosniff")
+	h.Set("Content-Security-Policy", "default-src 'none'; sandbox")
+	w.Write(f.data)
 }
 
 // secure reports whether the request reached the instance over HTTPS, here or

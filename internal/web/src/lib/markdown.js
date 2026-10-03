@@ -9,7 +9,8 @@
 //   - a link off the instance opens in a new tab;
 //   - a picture from off the instance becomes a link to it. Drawing it would
 //     have every reader's browser fetch from a third party, which is why an
-//     avatar is never a URL either.
+//     avatar is never a URL either. One pasted here (DEV-40) is drawn, and
+//     opens at full size in a new tab.
 
 import { micromark } from "micromark";
 import { gfm, gfmHtml } from "micromark-extension-gfm";
@@ -26,10 +27,16 @@ export function markdown(text) {
   const page = t.content;
 
   for (const img of page.querySelectorAll("img")) {
-    if (!away(img.getAttribute("src"))) continue;
     const a = Object.assign(document.createElement("a"), { href: img.src });
-    a.textContent = img.alt || img.src;
-    img.replaceWith(a);
+    if (away(img.getAttribute("src"))) {
+      a.textContent = img.alt || img.src;
+      img.replaceWith(a);
+    } else if (!img.closest("a")) {
+      img.loading = "lazy";
+      Object.assign(a, { target: "_blank", title: img.alt });
+      img.replaceWith(a);
+      a.append(img);
+    }
   }
   for (const a of page.querySelectorAll("a[href]")) {
     if (away(a.getAttribute("href"))) Object.assign(a, { target: "_blank", rel: "noopener noreferrer" });

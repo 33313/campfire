@@ -18,6 +18,7 @@
   import { when, whenDay, plural } from "../lib/format.js";
   import { fieldName, eventChange } from "../lib/events.svelte.js";
   import { ensure } from "../lib/catalog.svelte.js";
+  import { pictures } from "../lib/pictures.js";
   import { NAV, PRIORITY, RELATION_LABELS, BUCKET_COLOURS } from "../lib/icons.js";
 
   import Icon from "../components/Icon.svelte";
@@ -241,7 +242,7 @@
   async function editComment(c) {
     const res = await openModal(FormDialog, {
       title: "Edit your comment",
-      fields: [{ name: "body", label: "Comment", type: "textarea", value: c.body }],
+      fields: [{ name: "body", label: "Comment", type: "textarea", value: c.body, pictures: true }],
     });
     if (res) guard(() => api.updateComment(c.id, res.body));
   }
@@ -330,7 +331,7 @@
         {#if editing}
           <textarea class="input" rows="10" aria-label="Description"
                     style="width:100%;font-family:var(--serif);font-size:15px"
-                    bind:value={draftDescription}></textarea>
+                    bind:value={draftDescription} use:pictures></textarea>
         {:else if item.description}
           <Markdown class="prose" text={item.description} />
         {:else}
@@ -613,7 +614,7 @@
               <Avatar name={app.user.username} size="comment" />
               <div style="flex:1">
                 <textarea class="input" rows="3" placeholder="Write a comment…"
-                          bind:value={newComment}></textarea>
+                          bind:value={newComment} use:pictures></textarea>
                 <button class="btn primary" style="margin-top:8px" onclick={addComment}>Comment</button>
               </div>
             </div>

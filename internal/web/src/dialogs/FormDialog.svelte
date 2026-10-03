@@ -1,6 +1,7 @@
 <script>
   import { untrack } from "svelte";
   import Dialog from "../components/Dialog.svelte";
+  import { pictures } from "../lib/pictures.js";
 
   /** A short form in a dialog. Closes with the field values, keyed by name. */
   let { title, fields, explain = null, action = "Save", consequence = null,
@@ -22,7 +23,7 @@
           <span class="field-label">{f.label}</span>
           {#if f.type === "textarea"}
             <textarea class="input" rows={f.rows || 5} placeholder={f.placeholder}
-                      bind:value={values[f.name]}></textarea>
+                      bind:value={values[f.name]} use:pictures={f.pictures}></textarea>
           {:else if f.type === "select"}
             <select class="input" bind:value={values[f.name]}>
               {#each f.options as o}<option value={o.value}>{o.label}</option>{/each}

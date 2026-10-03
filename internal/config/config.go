@@ -35,6 +35,8 @@ type Config struct {
 	MCP MCP `json:"mcp"`
 
 	LiveUpdates LiveUpdates `json:"liveUpdates"`
+
+	Images Images `json:"images"`
 }
 
 type Snapshots struct {
@@ -61,6 +63,13 @@ type LiveUpdates struct {
 	HiddenTabGrace string `json:"hiddenTabGrace"`
 }
 
+type Images struct {
+	// MaxMB bounds a picture pasted into a description or a comment. Pictures
+	// are kept in the database, so a backup is still one file; 0 turns
+	// pasting them off.
+	MaxMB int64 `json:"maxMB"`
+}
+
 // Default is what an instance runs with when nothing is configured.
 func Default() Config {
 	dir := DataDir()
@@ -74,6 +83,7 @@ func Default() Config {
 			Keep:     14,
 		},
 		LiveUpdates: LiveUpdates{HiddenTabGrace: "1m"},
+		Images:      Images{MaxMB: 10},
 	}
 }
 
@@ -139,6 +149,9 @@ func (c Config) Validate() error {
 	}
 	if _, err := c.HiddenTabGrace(); err != nil {
 		return err
+	}
+	if c.Images.MaxMB < 0 || c.Images.MaxMB > 100 {
+		return errors.New("images.maxMB must be between 0 and 100")
 	}
 	return nil
 }

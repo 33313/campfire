@@ -1,7 +1,9 @@
 package api
 
 import (
+	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/33313/campfire/internal/core"
 )
@@ -228,4 +230,31 @@ func (s *Server) deleteComment(w http.ResponseWriter, r *http.Request, a core.Ac
 		return nil, err
 	}
 	return nil, s.svc.DeleteComment(r.Context(), a, id)
+}
+
+// Pictures pasted into descriptions and comments (DEV-40). The body of an
+// upload is the picture itself, not JSON, and what comes back is the address
+// the Markdown names it by.
+func (s *Server) uploadImage(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	data, err := io.ReadAll(io.LimitReader(r.Body, s.MaxImage+1))
+	if err != nil {
+		return nil, &core.Error{Code: core.CodeInvalid, Message: "the picture did not arrive whole"}
+	}
+	id, err := s.svc.UploadImage(r.Context(), a, data, s.MaxImage)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"id": id, "url": "/api/images/" + strconv.FormatInt(id, 10)}, nil
+}
+
+func (s *Server) getImage(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	id, err := pathID(r, "id")
+	if err != nil {
+		return nil, err
+	}
+	img, err := s.svc.Image(r.Context(), a, id)
+	if err != nil {
+		return nil, err
+	}
+	return file{img.ContentType, img.Data}, nil
 }

@@ -24,6 +24,7 @@
   import { assigneeOptions, priorityOptions, bucketOptions } from "../lib/options.js";
   import { fieldName, eventChange } from "../lib/events.svelte.js";
   import { ensure } from "../lib/catalog.svelte.js";
+  import { pictures } from "../lib/pictures.js";
   import { when, plural } from "../lib/format.js";
   import { NAV, PRIORITY } from "../lib/icons.js";
   import PickDialog from "../dialogs/PickDialog.svelte";
@@ -142,7 +143,7 @@
     {:else}
       <textarea class="bare prose" rows="1" style="font-size:14px" aria-label="Description"
                 placeholder="No description. Write one here." bind:value={draft.description}
-                use:focusIf={writing} onblur={() => (writing = false)}
+                use:focusIf={writing} use:pictures onblur={() => (writing = false)}
                 onkeydown={(e) => e.key === "Escape" && (draft.description = it.description || "")}
       ></textarea>
     {/if}
@@ -257,7 +258,7 @@
     </div>
     <div>
       <textarea class="input" rows="2" placeholder="Write a comment…" aria-label="Comment"
-                style="width:100%" bind:value={newComment}></textarea>
+                style="width:100%" bind:value={newComment} use:pictures></textarea>
       <button class="btn primary" style="margin-top:6px" onclick={addComment}>Comment</button>
     </div>
   {:else}

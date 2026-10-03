@@ -92,10 +92,11 @@ The term "offline" WILL NOT appear in the product.
 
 Not built in v1, not designed here, and not to be re-argued during v1:
 
-Attachments · notifications · email delivery · watchers and subscriptions · sprints and iterations ·
-time tracking · custom fields · WIP limits · bulk editing of title, description, planned end and
-labels · external authentication (SSO, LDAP, OIDC) · public or anonymous access · imports from other
-trackers · audit log retention and archival policy.
+Attachments, beyond pictures in prose ([§6.1](#61-fields)) · notifications · email delivery ·
+watchers and subscriptions · sprints and iterations · time tracking · custom fields · WIP limits ·
+bulk editing of title, description, planned end and labels · external authentication (SSO, LDAP,
+OIDC) · public or anonymous access · imports from other trackers · audit log retention and archival
+policy.
 
 The data model MUST NOT preclude these. Scaffolding for them WILL NOT be built.
 
@@ -193,6 +194,19 @@ Every item, ticket or bucket, has:
 | Relations | Zero or more. See [§8.2](#82-relations). |
 | Comments | Markdown, flat, editable, by any user. |
 | Rank | Position within a board column. See [§9.3](#93-ordering). |
+
+**Pictures.** A description or a comment may show pictures pasted or dropped into it. Each is
+uploaded on its own and named in the Markdown by its address, `![name](/api/images/12)`, so the
+text stays the one thing that is edited, logged and copied. Pictures are kept in the database, so a
+backup is still one file, and readable by every authenticated user, like the text that shows them.
+
+- A picture MUST be PNG, JPEG, GIF or WebP, decided from its bytes, never from what the client
+  says it sent. SVG MUST NOT be accepted: it is a document that can run script.
+- One setting bounds a picture's size, `images.maxMB`, 10 by default; 0 turns pictures off.
+- An upload writes no event. A picture changes nothing until a description or a comment shows it,
+  and that edit is the event.
+- A picture named from off the instance is shown as a link, never fetched: drawing it would have
+  every reader's browser call a third party.
 
 An item WILL NOT have a planned start date. Accepting work starts its clock: actual start is set on
 the first move out of the default state, which includes acceptance.

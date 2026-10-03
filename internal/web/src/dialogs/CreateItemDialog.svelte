@@ -9,6 +9,7 @@
   import { app } from "../lib/state.svelte.js";
   import { buckets as allBuckets } from "../lib/catalog.svelte.js";
   import { BUCKET_ICONS, BUCKET_COLOURS, PRIORITY, NAV } from "../lib/icons.js";
+  import { pictures } from "../lib/pictures.js";
 
   /** Create a ticket or a bucket. A bucket carries an icon; a ticket does not. */
   let { team, states, kind = "ticket", close } = $props();
@@ -95,7 +96,8 @@
     </label>
     <label class="field">
       <span class="field-label">Description</span>
-      <textarea class="input" rows="4" placeholder="Markdown…" bind:value={description}></textarea>
+      <textarea class="input" rows="4" placeholder="Markdown… paste a picture to add one"
+                bind:value={description} use:pictures></textarea>
     </label>
     <div style="display:flex;gap:12px">
       <label class="field">

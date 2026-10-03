@@ -14,6 +14,7 @@ export const app = $state({
   labels: [],
   users: [],
   backlogCount: 0,
+  imageMaxSize: 0,    // the largest picture the instance takes, in bytes
 });
 
 export async function reloadContext(teamId) {

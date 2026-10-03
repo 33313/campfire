@@ -1751,3 +1751,44 @@ test("a description and a comment are read as Markdown, and nothing in them runs
   await expect(aside.getByRole("textbox", { name: "Description" })).toBeFocused();
   await expect(aside.getByRole("textbox", { name: "Description" })).toHaveValue(text);
 });
+
+// DEV-40: a picture pasted into a description or a comment is uploaded, and
+// the Markdown naming it goes in at the caret; read back, it is drawn.
+test("a picture pasted into a description or a comment is drawn", async ({ page }) => {
+  await signIn(page);
+  const item = await (await page.request.post("/api/items", {
+    data: { kind: "ticket", teamId: 1, title: "Pictured" },
+  })).json();
+  await page.goto(`/${item.identifier}`);
+
+  // A 2×2 PNG, pasted as a screenshot is: a file on the clipboard.
+  const paste = (box, size = 0) => box.evaluate((el, size) => {
+    const png = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGP8z8Dwn4GBgYkBBv" +
+      "5DGAAmYgML8Ck1FQAAAABJRU5ErkJggg=="), (c) => c.charCodeAt(0));
+    const data = new DataTransfer();
+    data.items.add(new File([size ? new Uint8Array(size) : png], "image.png", { type: "image/png" }));
+    el.focus();
+    el.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+  }, size);
+
+  await page.getByRole("banner").getByRole("button", { name: "Edit" }).click();
+  const description = page.getByLabel("Description");
+  await description.fill("Before. ");
+  await paste(description);
+  await expect(description).toHaveValue(/^Before\. !\[image\.png\]\(\/api\/images\/\d+\)$/);
+  await page.getByRole("banner").getByRole("button", { name: "Save" }).click();
+  const drawn = page.locator(".prose img");
+  await expect(drawn).toBeVisible();
+  expect(await drawn.evaluate((img) => img.complete && img.naturalWidth)).toBe(2);
+
+  const comment = page.getByPlaceholder("Write a comment…");
+  await paste(comment);
+  await expect(comment).toHaveValue(/^!\[image\.png\]\(\/api\/images\/\d+\)$/);
+  await page.getByRole("button", { name: "Comment", exact: true }).click();
+  await expect(page.locator(".comment-body img")).toBeVisible();
+
+  // Over the instance's limit, it is refused before it is sent.
+  await paste(comment, 11 * 2 ** 20);
+  await expect(page.locator(".toast").last()).toHaveText(/over 10MB/);
+  await expect(comment).toHaveValue("");
+});

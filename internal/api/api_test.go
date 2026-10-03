@@ -386,3 +386,64 @@ func mustURL(t *testing.T, raw string) *url.URL {
 	}
 	return u
 }
+
+// DEV-40: a pasted picture is uploaded as itself and read back by id, by a
+// signed-in user only. The bytes decide its type, so a page dressed as a
+// picture is refused, and a picture is served so that no browser takes it
+// for anything else.
+func TestPicturesUploadAndReadBack(t *testing.T) {
+	c, _, api := newTestServer(t)
+	api.MaxImage = 1 << 10
+	png := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89")
+	upload := func(body []byte, kind string) (int, map[string]any) {
+		req, _ := http.NewRequest("POST", c.base+"/api/images", bytes.NewReader(body))
+		req.Header.Set("Content-Type", kind)
+		res, err := c.http.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		out := map[string]any{}
+		json.NewDecoder(res.Body).Decode(&out)
+		return res.StatusCode, out
+	}
+
+	if code, _ := upload(png, "image/png"); code != http.StatusUnauthorized {
+		t.Fatalf("an upload without a session returned %d", code)
+	}
+	c.must("POST", "/api/instance/bootstrap", map[string]string{
+		"username": "root", "password": "correct horse battery"})
+	c.must("POST", "/api/auth/signin", map[string]string{
+		"username": "root", "password": "correct horse battery"})
+
+	code, out := upload(png, "image/png")
+	if code != http.StatusOK || out["url"] != fmt.Sprintf("/api/images/%d", id(out["id"])) {
+		t.Fatalf("upload: %d %v", code, out)
+	}
+	res, err := c.http.Get(c.base + out["url"].(string))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	if !bytes.Equal(got, png) || res.Header.Get("Content-Type") != "image/png" ||
+		res.Header.Get("X-Content-Type-Options") != "nosniff" {
+		t.Fatalf("read back %d bytes as %q, nosniff %q", len(got),
+			res.Header.Get("Content-Type"), res.Header.Get("X-Content-Type-Options"))
+	}
+
+	if code, out := upload([]byte("<html><script>alert(1)</script>"), "image/png"); code != http.StatusBadRequest {
+		t.Fatalf("a page sent as a picture returned %d %v", code, out)
+	}
+	if code, out := upload(append(png, make([]byte, 1<<10)...), "image/png"); code != http.StatusBadRequest ||
+		!strings.Contains(fmt.Sprint(out), "at most 1KB") {
+		t.Fatalf("a picture over the limit returned %d %v", code, out)
+	}
+	api.MaxImage = 0
+	if code, _ := upload(png, "image/png"); code != http.StatusBadRequest {
+		t.Fatalf("an instance that takes no pictures returned %d", code)
+	}
+	if code, _ := c.do("GET", "/api/images/999", nil); code != http.StatusNotFound {
+		t.Fatalf("a picture that does not exist returned %d", code)
+	}
+}

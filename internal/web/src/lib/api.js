@@ -25,13 +25,14 @@ let peeking = false;
 
 async function request(method, path, body, signal) {
   const kept = method === "GET" ? memo.get(path) : null;
-  const headers = body === undefined ? {} : { "Content-Type": "application/json" };
+  const raw = body instanceof Blob; // a picture goes as itself (DEV-40)
+  const headers = body === undefined ? {} : { "Content-Type": raw ? body.type : "application/json" };
   if (kept) headers["If-None-Match"] = kept.tag;
   const res = await fetch(path, {
     method,
     signal, // a superseded request is cancelled, not left to land late
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined || raw ? body : JSON.stringify(body),
     credentials: "same-origin",
   });
   if (res.status === 304 && kept) {
@@ -170,6 +171,7 @@ export const api = {
   addComment: (id, body) => post(`/api/items/${id}/comments`, { body }),
   updateComment: (id, body) => patch(`/api/comments/${id}`, { body }),
   deleteComment: (id) => del(`/api/comments/${id}`),
+  uploadImage: (file) => post("/api/images", file),
   lookupItem: (identifier) => get(`/api/lookup/${encodeURIComponent(identifier)}`),
   listLabels: () => get("/api/labels"),
 

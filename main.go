@@ -220,6 +220,7 @@ func serve(cfg config.Config) error {
 	mux := http.NewServeMux()
 	apiServer := api.New(svc, bus)
 	apiServer.HiddenTabGrace, _ = cfg.HiddenTabGrace() // validated on load
+	apiServer.MaxImage = cfg.Images.MaxMB << 20
 	apiServer.Snapshots = api.Snapshots{Snapshots: cfg.Snapshots,
 		Take: func(ctx context.Context) (backup.Snapshot, error) { return takeSnapshot(ctx, cfg, db) }}
 	mux.Handle("/api/", apiServer)

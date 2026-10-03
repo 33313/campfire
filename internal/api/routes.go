@@ -81,6 +81,8 @@ func (s *Server) routes() {
 	s.handle("POST /api/items/{id}/comments", s.addComment)
 	s.handle("PATCH /api/comments/{id}", s.updateComment)
 	s.handle("DELETE /api/comments/{id}", s.deleteComment)
+	s.handle("POST /api/images", s.uploadImage)
+	s.handle("GET /api/images/{id}", s.getImage)
 	s.handle("GET /api/lookup/{identifier}", s.lookup)
 	s.handle("GET /api/labels", s.listLabels)
 
@@ -108,6 +110,7 @@ func (s *Server) getInstance(w http.ResponseWriter, r *http.Request, a core.Acto
 		"bucketIcons":    store.BucketIcons,
 		"bucketColors":   store.BucketColours,
 		"hiddenTabGrace": s.HiddenTabGrace.Milliseconds(),
+		"imageMaxSize":   s.MaxImage,
 	}, nil
 }
 
