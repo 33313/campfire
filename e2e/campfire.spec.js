@@ -1510,3 +1510,30 @@ test("a laptop holds five columns without scrolling sideways", async ({ page }) 
   const widths = await columns.evaluateAll((cols) => cols.map((c) => c.getBoundingClientRect().width));
   expect(Math.min(...widths)).toBeGreaterThanOrEqual(200);
 });
+
+// DEV-74: the caret blinks half a second each way, whatever the desktop's own
+// setting, and a key starts the blink over lit, so typing never catches it
+// dark.
+test.describe("the caret", () => {
+  test.use({ contextOptions: { reducedMotion: "no-preference" } });
+
+  test("blinks every half second and starts over on a key", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/t/1/board");
+    const search = page.getByRole("banner").getByPlaceholder("Title and description");
+    await search.focus();
+    const blink = () => search.evaluate((el) => {
+      const a = el.getAnimations().find((x) => x.animationName === "caret");
+      return a && { duration: a.effect.getTiming().duration, at: a.currentTime,
+        manual: getComputedStyle(el).caretAnimation };
+    });
+    const was = await blink();
+    expect(was).toMatchObject({ duration: 1000, manual: "manual" });
+
+    await search.evaluate((el) => {
+      el.getAnimations().find((x) => x.animationName === "caret").currentTime = 700;
+    });
+    await page.keyboard.press("a");
+    expect((await blink()).at).toBeLessThan(300);
+  });
+});

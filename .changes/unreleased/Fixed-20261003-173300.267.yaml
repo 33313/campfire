@@ -1,0 +1,3 @@
+kind: Fixed
+body: The text caret blinks every half second, the browsers' own default, instead of the desktop's slower rate, and stays lit while you type.
+time: 2026-10-03T17:33:00.268370088+02:00
