@@ -2,7 +2,7 @@
   import { dismiss } from "../lib/dismiss.js";
 
   // The language on one screen, beside the box it is typed in (SPEC.md §9.2).
-  // The full reference is DEV-80's in-app documentation. The panel keeps to
+  // The full reference is the Docs page, which it links to (DEV-80). The panel keeps to
   // the window: never wider than it, and scrolling inside rather than past
   // its foot.
   let anchor = $state(null);
@@ -82,5 +82,7 @@
         <li><code>due &lt; today and completed = none</code></li>
       </ul>
     </section>
+
+    <p><a href="/docs#filtering" onclick={() => (open = false)}>The full reference, and how views combine</a></p>
   </div>
 {/if}

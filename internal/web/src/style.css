@@ -712,6 +712,16 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 .settings-rail button:hover { color: var(--text); }
 .settings-rail button.on { color: var(--accent); background: var(--accent-tint); border-left-color: var(--accent); }
 .settings-main { flex: 1; min-width: 0; }
+/* The docs: the rail stays beside whatever section is being read. */
+.settings-rail:has(+ .settings-main .docs) { position: sticky; top: 0; align-self: flex-start; }
+.docs { padding: 22px 28px 60vh; max-width: calc(72ch + 56px); }
+/* Written wrapped, in docs.md, not typed line by line: its breaks are not
+   the reader's. */
+.docs.markdown :is(p, li) { white-space: normal; }
+.docs h2 { scroll-margin-top: 16px; margin-top: 2em; padding-top: 1em; border-top: 1px solid var(--rule-faint); }
+.docs h2:first-of-type { margin-top: 1.4em; }
+.docs table { font-family: var(--sans); font-size: 12.5px; }
+.docs td code, .docs th code { white-space: nowrap; }
 
 .tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--border); margin: 24px 0 16px; }
 .tab {

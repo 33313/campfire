@@ -1792,3 +1792,33 @@ test("a picture pasted into a description or a comment is drawn", async ({ page 
   await expect(page.locator(".toast").last()).toHaveText(/over 10MB/);
   await expect(comment).toHaveValue("");
 });
+
+// DEV-80: the documentation is a page of the app, reached from the sidebar
+// and from the query box's cheat sheet, and it names every field CSQL has.
+test("the docs page is in the sidebar, the cheat sheet links into it, and it covers CSQL", async ({ page }) => {
+  const { FIELDS } = await import("../internal/web/src/lib/csql.js");
+  await signIn(page);
+  await page.goto("/t/1/board");
+  await page.locator(".sidebar").getByRole("link", { name: "Docs" }).click();
+  await expect(page).toHaveURL(/\/docs$/);
+  const docs = page.locator(".docs");
+  for (const field of FIELDS) {
+    await expect(docs.locator("td code", { hasText: new RegExp(`^${field}$`) }).first()).toBeVisible();
+  }
+
+  // The rail goes to a section and says which one is being read.
+  await page.locator(".settings-rail").getByRole("button", { name: "Saved views" }).click();
+  await expect(page).toHaveURL(/\/docs#saved-views$/);
+  await expect(page.locator(".settings-rail button.on")).toHaveText("Saved views");
+
+  // The cheat sheet beside the query box opens the full reference at Filtering.
+  await page.goto("/t/1/board");
+  const bar = page.locator(".filter-bar");
+  await bar.getByTitle("Write the filter in CSQL").click();
+  await bar.getByRole("button", { name: "CSQL help" }).click();
+  await page.getByRole("link", { name: /The full reference/ }).click();
+  await expect(page).toHaveURL(/\/docs#filtering$/);
+  const heading = page.locator(".docs h2#filtering");
+  await expect(heading).toBeInViewport();
+  await expect(page.locator(".settings-rail button.on")).toHaveText("Filtering");
+});
