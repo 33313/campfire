@@ -11,7 +11,7 @@ import SaveViewDialog from "../dialogs/SaveViewDialog.svelte";
 import ConfirmDialog from "../dialogs/ConfirmDialog.svelte";
 
 /** Where a view opens from elsewhere: the backlog if it is pinned only there, else the board. */
-export function viewPath(view) {
+function viewPath(view) {
   return `/t/${view.teamId}/${view.pinBacklog && !view.pinBoard ? "backlog" : "board"}`;
 }
 

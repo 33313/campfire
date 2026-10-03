@@ -1,3 +1,15 @@
+<script module>
+  import { api } from "../lib/api.js";
+
+  /** What the preview shows of an item: it, its comments and its recent history. */
+  export async function fetchPreview(id) {
+    const [item, comments, history] = await Promise.all([
+      api.getItem(id), api.listComments(id), api.getLog({ item: id, limit: 50 }),
+    ]);
+    return { item, comments: comments || [], history: history.events || [] };
+  }
+</script>
+
 <script>
   // The focused item in full, without leaving the board or the table
   // (DESIGN.md §6). Its identifier is the way through to the full view, and
@@ -7,10 +19,10 @@
   import Avatar from "./Avatar.svelte";
   import BucketIcon from "./BucketIcon.svelte";
   import PriorityGlyph from "./PriorityGlyph.svelte";
-  import { api } from "../lib/api.js";
   import { openModal, failure } from "../lib/ui.svelte.js";
   import { assigneeOptions, priorityOptions, bucketOptions } from "../lib/options.js";
-  import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
+  import { fieldName, eventChange } from "../lib/events.svelte.js";
+  import { ensure } from "../lib/catalog.svelte.js";
   import { when, plural } from "../lib/format.js";
   import { NAV, PRIORITY } from "../lib/icons.js";
   import PickDialog from "../dialogs/PickDialog.svelte";
@@ -23,7 +35,7 @@
   // saying what it was.
   let tab = $state("comments");
   let newComment = $state("");
-  loadBuckets(); // the bucket ids history carries resolve against this
+  ensure("bucket"); // the bucket ids history carries resolve against this
 
   async function addComment() {
     if (!newComment.trim()) return;

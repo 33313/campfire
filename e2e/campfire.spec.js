@@ -1021,6 +1021,48 @@ test("the preview carries the comments and the history, not just their counts", 
   await expect(preview.locator(".aside-activity")).toContainText("state");
 });
 
+test("a bucket made after the history was first read is named there, not numbered", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/board");
+  const card = page.locator(".card", { hasText: "Replace the boiler" });
+  await card.click();
+  const preview = page.locator(".detail-aside");
+  await expect(preview).toBeVisible(); // the bucket list is read now
+
+  await page.evaluate(async () => {
+    const json = { "Content-Type": "application/json" };
+    const icon = (await (await fetch("/api/instance")).json()).bucketIcons[0];
+    const bucket = await (await fetch("/api/items", { method: "POST", headers: json,
+      body: JSON.stringify({ kind: "bucket", teamId: 1, title: "Winter works", icon }) })).json();
+    const q = encodeURIComponent('text ~ "Replace the boiler"');
+    const [boiler] = (await (await fetch(`/api/items?csql=${q}`)).json()).items;
+    await fetch(`/api/items/${boiler.id}`, { method: "PATCH", headers: json,
+      body: JSON.stringify({ bucketId: bucket.id }) });
+  });
+
+  // Opened again, once the stream has said buckets changed.
+  await expect(async () => {
+    await preview.getByRole("button", { name: "Close" }).click();
+    await card.click();
+    await preview.getByRole("button", { name: /^History/ }).click();
+    await expect(preview.locator(".aside-activity")).toContainText("Winter works", { timeout: 500 });
+  }).toPass();
+});
+
+// Preferences are a convenience: with storage blocked, nothing is remembered
+// and the board still works.
+test("the board works where the browser stores nothing", async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(window, "localStorage", {
+    get() { throw new DOMException("blocked", "SecurityError"); },
+  }));
+  await signIn(page);
+  await page.goto("/t/1/board");
+  await expect(page.locator(".column").first()).toBeVisible();
+  const toggle = page.getByRole("button", { name: "Show buckets" });
+  await toggle.click();
+  await expect(toggle).toHaveClass(/on/);
+});
+
 test("a profile is a page at a name, and it is edited where it is read", async ({ page }) => {
   await signIn(page);
   await page.goto("/users/root");

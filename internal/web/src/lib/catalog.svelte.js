@@ -64,6 +64,13 @@ export function ensure(field) {
   inflight[list] = FETCH[list]().catch(() => stale.add(list)).finally(() => delete inflight[list]);
 }
 
+/** The buckets, fresh: what a pick dialog offers and the log's bucket ids name. */
+export async function buckets() {
+  ensure("bucket");
+  await inflight.buckets;
+  return lists.buckets || [];
+}
+
 /**
  * The values a field offers, as the tokens a query writes them with: a
  * label to show, and a note. Reads only; `ensure` is what fetches.

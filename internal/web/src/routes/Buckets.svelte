@@ -7,6 +7,7 @@
   // would show a team the buckets it created and hide the release it is
   // working toward (SPEC.md §9.1).
 
+  import { pref, setPref } from "../lib/prefs.js";
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
@@ -29,7 +30,7 @@
   let team = $derived(app.team);
   let page = $state(null);
   let error = $state(null);
-  let scope = $state(localStorage.getItem("bucketScope") || "participation");
+  let scope = $state(pref("bucketScope", "participation"));
 
   // State and owner narrow the scope's result. They are the ordinary filter
   // dimensions of SPEC.md §9.2, applied to the list the scope produced.
@@ -74,7 +75,7 @@
 
   function setScope(id) {
     scope = id;
-    localStorage.setItem("bucketScope", id);
+    setPref("bucketScope", id);
     load();
   }
 

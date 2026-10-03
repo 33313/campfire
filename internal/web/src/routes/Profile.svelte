@@ -15,7 +15,8 @@
   import { api } from "../lib/api.js";
   import { app, reloadContext } from "../lib/state.svelte.js";
   import { toast, failure } from "../lib/ui.svelte.js";
-  import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
+  import { fieldName, eventChange } from "../lib/events.svelte.js";
+  import { ensure } from "../lib/catalog.svelte.js";
   import { when, ago, initials, plural } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
   import { pickPicture, AVATAR } from "../lib/picture.js";
@@ -40,7 +41,7 @@
   }
 
   load();
-  loadBuckets(); // the bucket ids the activity carries resolve against this
+  ensure("bucket"); // the bucket ids the activity carries resolve against this
 
   let user = $derived(profile?.user);
   let isMe = $derived(user && user.id === app.user.id);

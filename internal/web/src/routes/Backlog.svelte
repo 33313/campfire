@@ -10,8 +10,9 @@
   import { onNotify, touches } from "../lib/stream.svelte.js";
   import { failure } from "../lib/ui.svelte.js";
   import { createItem } from "../lib/create.js";
+  import { pref, setPref } from "../lib/prefs.js";
   import { conjoin, quote } from "../lib/csql.js";
-    import { whenDay } from "../lib/format.js";
+  import { whenDay } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
 
   import Icon from "../components/Icon.svelte";
@@ -23,7 +24,7 @@
   import BucketIcon from "../components/BucketIcon.svelte";
   import Avatar from "../components/Avatar.svelte";
   import LoadOlder from "../components/LoadOlder.svelte";
-  import ItemPreview from "../components/ItemPreview.svelte";
+  import ItemPreview, { fetchPreview } from "../components/ItemPreview.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
 
   let { teamId } = $props();
@@ -40,7 +41,7 @@
   let paged = $state(false);
 
   let key = $derived(`buckets:${teamId}:backlog`);
-  let showBuckets = $state(untrack(() => localStorage.getItem(key) === "1"));
+  let showBuckets = $state(untrack(() => !!pref(key)));
 
   // What the backlog shows: the filter bar's query and the header's search, as
   // last accepted, and-ed with the views switched on in the sidebar (SPEC.md
@@ -105,7 +106,7 @@
     paged = false;
     stale = false;
     error = null;
-    if (focused) focused = await fetchFocus(focused.item.id).catch(() => null);
+    if (focused) focused = await fetchPreview(focused.item.id).catch(() => null);
     return { ok: true };
   }
 
@@ -116,16 +117,9 @@
   $effect(() => onNotify(() => (paged ? (stale = true) : refresh()),
     (n) => n.teamId === teamId || touches(n, onScreen, teamId) || (showBuckets && n.kind.startsWith("item."))));
 
-  async function fetchFocus(id) {
-    const [item, comments, history] = await Promise.all([
-      api.getItem(id), api.listComments(id), api.getLog({ item: id, limit: 50 }),
-    ]);
-    return { item, comments: comments || [], history: history.events || [] };
-  }
-
   async function focus(item) {
     if (focused?.item.id === item.id) { focused = null; return; }
-    try { focused = await fetchFocus(item.id); } catch (err) { failure(err); }
+    try { focused = await fetchPreview(item.id); } catch (err) { failure(err); }
   }
 
   // A change of yours in flight is not cancelled by a refresh from the
@@ -142,7 +136,7 @@
   const refresh = () => (trying ? (again = true) : load());
   function setShowBuckets(on) {
     showBuckets = on;
-    localStorage.setItem(key, on ? "1" : "0");
+    setPref(key, on);
   }
   function toggle(id) {
     const i = selected.indexOf(id);

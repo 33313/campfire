@@ -16,7 +16,8 @@
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
   import { assigneeOptions, bucketOptions, priorityOptions } from "../lib/options.js";
   import { when, whenDay, plural } from "../lib/format.js";
-  import { loadBuckets, fieldName, eventChange } from "../lib/events.svelte.js";
+  import { fieldName, eventChange } from "../lib/events.svelte.js";
+  import { ensure } from "../lib/catalog.svelte.js";
   import { NAV, PRIORITY, RELATION_LABELS, BUCKET_COLOURS } from "../lib/icons.js";
 
   import Icon from "../components/Icon.svelte";
@@ -80,7 +81,7 @@
   }
 
   load();
-  loadBuckets();
+  ensure("bucket");
   // What the page shows: the item, its bucket and the items it relates to,
   // and a bucket's contents, which come from any team, so for a bucket every
   // item event counts.

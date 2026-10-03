@@ -14,7 +14,8 @@
   import { onNotify, touches } from "../lib/stream.svelte.js";
   import { failure } from "../lib/ui.svelte.js";
   import { createItem } from "../lib/create.js";
-    import { NAV } from "../lib/icons.js";
+  import { pref, setPref } from "../lib/prefs.js";
+  import { NAV } from "../lib/icons.js";
   import { ms, easeOut, QUICK, GLIDE } from "../lib/motion.js";
   import { kindle } from "../lib/embers.js";
   import { conjoin, quote } from "../lib/csql.js";
@@ -28,7 +29,7 @@
   import StatePip from "../components/StatePip.svelte";
   import Card from "../components/Card.svelte";
   import CardMenu from "../components/CardMenu.svelte";
-  import ItemPreview from "../components/ItemPreview.svelte";
+  import ItemPreview, { fetchPreview } from "../components/ItemPreview.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
 
   let { teamId } = $props();
@@ -48,12 +49,12 @@
   // A view preference, private to this browser: it decides what is drawn,
   // never what is true.
   let key = $derived(`buckets:${teamId}:board`);
-  let showBuckets = $state(untrack(() => localStorage.getItem(key) === "1"));
+  let showBuckets = $state(untrack(() => !!pref(key)));
   // Items done for more than three days are hidden unless this is on
   // (SPEC.md §7.2); a long Done column is history, not work.
   let doneKey = $derived(`done:${teamId}:board`);
   const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  let allDone = $state(untrack(() => localStorage.getItem(doneKey) === "1"));
+  let allDone = $state(untrack(() => !!pref(doneKey)));
 
   // What the board shows: the filter bar's query and the header's search, as
   // last accepted, and-ed with the views switched on in the sidebar, which go
@@ -152,7 +153,7 @@
             i * 0.09)), ms(GLIDE));
         }
       }
-      if (focused) focused = await fetchFocus(focused.item.id).catch(() => null);
+      if (focused) focused = await fetchPreview(focused.item.id).catch(() => null);
       error = null;
     } catch (err) {
       error = err;
@@ -193,17 +194,10 @@
     return next;
   }
 
-  async function fetchFocus(id) {
-    const [item, comments, history] = await Promise.all([
-      api.getItem(id), api.listComments(id), api.getLog({ item: id, limit: 50 }),
-    ]);
-    return { item, comments: comments || [], history: history.events || [] };
-  }
-
   // A click previews the card beside the board rather than leaving it.
   async function preview(item) {
     if (focused?.item.id === item.id) { focused = null; return; }
-    try { focused = await fetchFocus(item.id); } catch (err) { failure(err); }
+    try { focused = await fetchPreview(item.id); } catch (err) { failure(err); }
   }
 
   // A change of yours in flight is not cancelled by a refresh from the
@@ -220,11 +214,11 @@
   const refresh = () => (trying ? (again = true) : load());
   function setShowBuckets(on) {
     showBuckets = on;
-    localStorage.setItem(key, on ? "1" : "0");
+    setPref(key, on);
   }
   function setAllDone(on) {
     allDone = on;
-    localStorage.setItem(doneKey, on ? "1" : "0");
+    setPref(doneKey, on);
   }
   // The previewed card is the anchor of a selection that starts from it: a
   // modifier-click on a second card takes it along. Without that, the card you

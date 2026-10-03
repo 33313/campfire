@@ -2,20 +2,8 @@
 // they render them through the same two helpers rather than each keeping a
 // copy that drifts.
 
-import { api } from "./api.js";
 import { app } from "./state.svelte.js";
-
-// Bucket references in the log are ids; this is the one lookup that turns them
-// into the identifier and title a reader recognises. Loaded once, shared.
-const cache = $state({ buckets: new Map() });
-let loading = null;
-
-export function loadBuckets() {
-  loading ||= api.listItems({ csql: "kind = bucket" }, "", 200)
-    .then((page) => (cache.buckets = new Map((page.items || []).map((b) => [String(b.id), b]))))
-    .catch(() => {});
-  return loading;
-}
+import { lists } from "./catalog.svelte.js";
 
 // The events that carry no before and no after: what happened is the fact,
 // and a dotted kind on screen is the log talking to itself.
@@ -35,14 +23,16 @@ export function fieldName(e) {
 
 // Identity-bearing fields are stored as the id they reference — a real column,
 // per SPEC.md §10 — so both screens resolve them for display.
-export function eventValue(e, raw) {
+function eventValue(e, raw) {
   if (e.field === "assignee" || e.field === "reporter") {
     if (raw === "0") return "unassigned";
     return app.users.find((u) => String(u.id) === raw)?.username || raw;
   }
   if (e.field === "bucket") {
     if (raw === "0") return "no bucket";
-    const b = cache.buckets.get(raw);
+    // Bucket references are ids, named from the catalog's list, which a
+    // screen showing them fetches with ensure("bucket").
+    const b = lists.buckets?.find((x) => String(x.id) === raw);
     return b ? `${b.identifier} ${b.title}` : raw;
   }
   return raw;

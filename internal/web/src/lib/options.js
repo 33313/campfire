@@ -1,6 +1,6 @@
 // The option lists the pick and bulk-edit dialogs are handed.
 
-import { api } from "./api.js";
+import { buckets } from "./catalog.svelte.js";
 import { app } from "./state.svelte.js";
 import { PRIORITY } from "./icons.js";
 
@@ -14,8 +14,7 @@ export function priorityOptions() {
 }
 
 export async function bucketOptions() {
-  const page = await api.listItems({ csql: "kind = bucket" }, "", 200);
-  return [{ value: 0, label: "No bucket" }].concat((page.items || []).map((b) => ({
+  return [{ value: 0, label: "No bucket" }].concat((await buckets()).map((b) => ({
     value: b.id, label: `${b.identifier}  ${b.title}`, icon: { bucket: b.icon },
   })));
 }
