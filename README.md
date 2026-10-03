@@ -259,9 +259,9 @@ supersedes them.
 ### Releases
 
 Every merge into main that carries a change file is a release; nobody bumps a version or pushes a
-tag by hand. A pull request adds one with `go tool changie new` (or, without prompts,
-`go tool changie new --kind Fixed --body "…"`). changie is pinned in `go.mod`, so there is nothing
-to install. The kind sets the bump:
+tag by hand. A pull request adds one with `npm run changie -- new` (or, without prompts,
+`npm run changie -- new --kind Fixed --body "…"`). changie is pinned in `package.json` and run
+with `go run`, so there is nothing to install and nothing of it in `go.mod`. The kind sets the bump:
 
 | Kind | Bump |
 |---|---|

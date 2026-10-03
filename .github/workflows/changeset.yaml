@@ -37,7 +37,7 @@ jobs:
             exit 0
           fi
           if [ -z "$added" ]; then
-            echo "::error title=No change file::Run \`go tool changie new\` and commit the file it writes. If this changes nothing for the people who run Campfire, add the skip-changeset label instead."
+            echo "::error title=No change file::Run \`npm run changie -- new\` and commit the file it writes. If this changes nothing for the people who run Campfire, add the skip-changeset label instead."
             exit 1
           fi
           echo "preview=1" >> "$GITHUB_OUTPUT"
@@ -53,9 +53,9 @@ jobs:
       - name: Preview the release
         if: steps.check.outputs.preview
         run: |
-          latest=$(go tool changie latest)
-          next=$(go tool changie next auto)
-          notes=$(go tool changie batch auto --dry-run)
+          latest=$(npm run -s changie -- latest)
+          next=$(npm run -s changie -- next auto)
+          notes=$(npm run -s changie -- batch auto --dry-run)
           echo "::notice title=Releases $next::Merging this releases $next (now $latest)."
           if [ "${next%%.*}" != "${latest%%.*}" ]; then
             echo "::warning title=Major release::$latest → $next."
