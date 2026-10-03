@@ -44,8 +44,9 @@ type Snapshots struct {
 	Dir      string `json:"dir"`
 	Interval string `json:"interval"`
 	Keep     int    `json:"keep"`
-	// ShipTo turns on continuous write-ahead log shipping to a directory,
-	// giving point-in-time recovery. Off by default; one setting to enable.
+	// ShipTo is a second directory each snapshot is copied to, for an
+	// off-host copy. The recovery point is the last snapshot, not the last
+	// commit (backup.Ship). Off by default.
 	ShipTo string `json:"shipTo"`
 }
 
