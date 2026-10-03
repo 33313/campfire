@@ -61,9 +61,12 @@
   let titleChanged = $derived(draft.id === it.id && draft.title !== it.title);
   let descriptionChanged = $derived(draft.id === it.id && draft.description !== (it.description || ""));
 
-  // A title emptied by accident is put back rather than saved as blank.
-  const saveTitle = () =>
+  // A title emptied by accident is put back rather than saved as blank. A
+  // pasted one loses its line breaks, as it did in a one-line input.
+  function saveTitle() {
+    draft.title = draft.title.replace(/\s*\n\s*/g, " ");
     draft.title.trim() ? patch({ title: draft.title }) : (draft.title = it.title);
+  }
 
   async function patch(body) {
     try {
@@ -101,14 +104,15 @@
     </button>
   </div>
   <div>
-    <!-- The title is the input: a heading wrapped round one is a heading with
-         no text in it. -->
-    <input class="bare" aria-label="Title" bind:value={draft.title}
-           style="font-size:17px;font-weight:600;letter-spacing:-0.008em;color:var(--bright)"
-           onkeydown={(e) => {
-             if (e.key === "Enter") saveTitle();
-             else if (e.key === "Escape") draft.title = it.title;
-           }} />
+    <!-- The title is the field: a heading wrapped round one is a heading with
+         no text in it. A textarea, so a long title wraps instead of being cut
+         off; Enter still saves rather than breaking the line. -->
+    <textarea class="bare" rows="1" aria-label="Title" bind:value={draft.title}
+              style="font-size:17px;font-weight:600;letter-spacing:-0.008em;color:var(--bright)"
+              onkeydown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); saveTitle(); }
+                else if (e.key === "Escape") draft.title = it.title;
+              }}></textarea>
     {#if titleChanged}
       <div class="field-actions">
         <button class="btn" title="Save title" aria-label="Save title" onclick={saveTitle}>

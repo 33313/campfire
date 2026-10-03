@@ -871,6 +871,17 @@ test("the detail page edits behind Edit; the preview edits in place", async ({ p
   await preview.getByRole("button", { name: "Discard title" }).click();
   await expect(preview.getByLabel("Title")).toHaveValue("Replace the boiler and its flue");
 
+  // A long title wraps rather than being cut off, and Enter saves it.
+  const long = "Replace the boiler and its flue, bleed every radiator, and lag the pipes in the loft";
+  const title = preview.getByLabel("Title", { exact: true });
+  await title.fill(long);
+  const lines = await title.evaluate((el) =>
+    el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).fontSize));
+  expect(lines).toBeGreaterThan(2);
+  await title.press("Enter");
+  await expect(save).toHaveCount(0);
+  await expect(title).toHaveValue(long);
+
   await preview.getByLabel("Title").fill("Replace the boiler");
   await save.click();
   await expect(save).toHaveCount(0);
