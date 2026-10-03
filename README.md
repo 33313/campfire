@@ -49,6 +49,14 @@ docker run -p 8080:8080 -v campfire-data:/data ghcr.io/33313/campfire
 The image binds `0.0.0.0:8080`, since loopback inside a container reaches nobody, and keeps the
 database and snapshots in `/data`. Otherwise it is the same application, configured the same way.
 
+Or, with Go installed, build it from a release:
+
+```
+go install github.com/33313/campfire@latest
+```
+
+A release tag carries the built client; any other commit needs `./build.sh` from a clone.
+
 **Upgrading** is replacing the binary, or pulling the image, and restarting. Versions follow
 [Semantic Versioning](https://semver.org); image tags are the version (`1.4.2`), its minor (`1.4`),
 its major (`1`), and `latest`. [`CHANGELOG.md`](CHANGELOG.md) lists what each release changes.

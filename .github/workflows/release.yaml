@@ -65,7 +65,7 @@ jobs:
           node-version: "22"
           cache: npm
 
-      # Committed and tagged here, pushed only once the binaries have built: a
+      # Committed here, tagged and pushed only once the binaries have built: a
       # build that fails leaves main as it was, and a rerun starts over.
       - name: Version and changelog
         if: steps.plan.outputs.cut
@@ -77,19 +77,28 @@ jobs:
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
           git add -A .changes CHANGELOG.md
           git commit -m "Release $v"
-          git tag -a "$v" -m "Release $v"
           echo "VERSION=$v" >> "$GITHUB_ENV"
 
       - name: Build the binaries
         if: steps.plan.outputs.go
         run: ./build.sh release "$VERSION"
 
+      # The tag is the release commit plus the client the build just made, so
+      # `go install …@latest` embeds it. Only the tag holds that commit: main
+      # stays source, and its build output stays ignored.
+      - name: Tag the release with its client
+        if: steps.plan.outputs.cut
+        run: |
+          git add -f internal/web/app
+          git commit -m "Client for $VERSION"
+          git tag -a "$VERSION" -m "Release $VERSION"
+
       # The commit and its tag land together or not at all. If main moved
       # while this ran, the push is refused, and the run the move queued
       # releases these change files along with its own.
       - name: Push the release commit
         if: steps.plan.outputs.cut
-        run: git push --atomic origin HEAD:main "refs/tags/$VERSION"
+        run: git push --atomic origin HEAD^:main "refs/tags/$VERSION"
 
       # The image goes before the GitHub release: a published release is what
       # marks the whole thing done.
