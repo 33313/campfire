@@ -92,7 +92,7 @@ jobs:
       # The client's own tests drive the real binary in a browser.
       - name: End to end
         run: |
-          npx playwright install ${{ steps.pw-cache.outputs.cache-hit == 'true' && 'chromium' || '--with-deps chromium' }}
+          npx playwright install ${{ steps.pw-cache.outputs.cache-hit == 'true' && 'chromium firefox' || '--with-deps chromium firefox' }}
           npx playwright test
 
   # The image is a packaging concern: it only changes when the things that go

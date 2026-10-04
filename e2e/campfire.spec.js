@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, firefox } from "@playwright/test";
 
 // One instance, driven from an empty database through the flows the client
 // exists for. The tests run in order and share the state they build, because
@@ -1536,4 +1536,54 @@ test.describe("the caret", () => {
     await page.keyboard.press("a");
     expect((await blink()).at).toBeLessThan(300);
   });
+});
+
+// DEV-74: Firefox and Safari blink at the desktop's pace and cannot be told
+// otherwise, so there the caret is drawn: a bar where the caret is, on the
+// same half-second beat, moving with the text and gone under a selection.
+test("Firefox draws the caret at the caret, blinking every half second", async ({ baseURL }) => {
+  const browser = await firefox.launch();
+  try {
+    const page = await browser.newPage({ baseURL, reducedMotion: "no-preference" });
+    await signIn(page);
+    await page.goto("/t/1/board");
+    const search = page.getByRole("banner").getByPlaceholder("Title and description");
+    await search.focus();
+    const bar = page.locator(".drawn-caret");
+    await expect(bar).toBeVisible();
+    expect(await search.evaluate((el) => getComputedStyle(el).caretColor)).toBe("rgba(0, 0, 0, 0)");
+    expect(await bar.evaluate((el) => el.getAnimations()[0].effect.getTiming().duration)).toBe(1000);
+
+    // It stands where the text typed so far ends, and inside the box once the
+    // text runs past its edge.
+    const caretAt = () => search.evaluate((el) => {
+      const ctx = document.createElement("canvas").getContext("2d");
+      const cs = getComputedStyle(el);
+      ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const box = el.getBoundingClientRect();
+      return { want: box.left + parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft)
+        + ctx.measureText(el.value.slice(0, el.selectionStart)).width - el.scrollLeft, right: box.right,
+        got: document.querySelector(".drawn-caret").getBoundingClientRect().left };
+    });
+    await page.keyboard.type("campfire");
+    await expect.poll(async () => { const { want, got } = await caretAt(); return got - want; }).toBeCloseTo(0, 0);
+    await page.keyboard.press("ArrowLeft");
+    await expect.poll(async () => { const { want, got } = await caretAt(); return got - want; }).toBeCloseTo(0, 0);
+    await page.keyboard.press("End");
+    await page.keyboard.type(" and a fire that has burned for a long while yet".repeat(2));
+    await expect.poll(async () => { const { want, got } = await caretAt(); return got - want; }).toBeCloseTo(0, 0);
+    const { got, right } = await caretAt();
+    expect(got).toBeLessThan(right);
+    await search.fill("");
+
+    await page.keyboard.type("campfire");
+    await page.keyboard.press("Shift+Home");
+    await expect(bar).toBeHidden();
+    await page.keyboard.press("End");
+    await expect(bar).toBeVisible();
+    await search.blur();
+    await expect(bar).toBeHidden();
+  } finally {
+    await browser.close();
+  }
 });

@@ -377,7 +377,7 @@ is nothing else to look at.
 | Toast | rises into the stack; the ones above make room; it fades on the way out |
 | Button | gives by 1px while pressed |
 | Focus | `:focus-visible` is a 1px `accent` outline; a focused input also carries a 3px `accent-tint-weak` halo |
-| Caret | blinks 500ms on, 500ms off, whatever the desktop's setting, and starts over lit on every key and click. Steady under reduced motion |
+| Caret | blinks 500ms on, 500ms off, whatever the desktop's setting, and starts over lit on every key and click. Steady under reduced motion. Where the browser cannot take the beat (Firefox, Safari), a 1px bar in the caret's colour is drawn in its place |
 
 Exits are instant or `quick`, never `glide`: nobody waits for a dismissed thing to finish going.
 
