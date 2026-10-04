@@ -1802,6 +1802,11 @@ test("the docs page is in the sidebar, the cheat sheet links into it, and it cov
   await page.locator(".sidebar").getByRole("link", { name: "Docs" }).click();
   await expect(page).toHaveURL(/\/docs$/);
   const docs = page.locator(".docs");
+  // From first steps to everyday use to connecting other tools, in that order.
+  const rail = page.locator(".settings-rail button");
+  await expect(rail.first()).toHaveText("Overview");
+  await expect(rail.nth(1)).toHaveText("Getting started");
+  await expect(rail.last()).toHaveText("HTTP API");
   for (const field of FIELDS) {
     await expect(docs.locator("td code", { hasText: new RegExp(`^${field}$`) }).first()).toBeVisible();
   }

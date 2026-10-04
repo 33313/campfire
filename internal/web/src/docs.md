@@ -1,87 +1,175 @@
-Campfire is a kanban board for your team's work. This page covers everything you can do on
-screen. The API is described in `api/openapi.yaml` in the source.
+## Overview
 
-## The board and the backlog
+Campfire tracks a team's work on a kanban board. This page covers the basics first, then everyday
+use, then connecting your own tools.
 
-Each team has its own **work states**, the columns of its board. Four have a special role:
-
-| Role | Meaning |
+| Term | Meaning |
 |---|---|
-| default | New work lands here. These items are the **backlog**. |
-| accepted | Agreed to, not started. |
-| final | Done. Hidden after three days unless **Show old done** is on. |
-| rejected | Won't be done. Not on the board; find it with a filter or its identifier. |
+| Team | A group of people with its own board, backlog, work states and saved views. You can be in several. |
+| Ticket | One piece of work: a title, a description, an assignee, a priority and a state. |
+| Bucket | A milestone that groups tickets from any team, such as *Release 1.0*. |
+| Item | A ticket or a bucket. Both have an identifier and move through work states. |
+| Work state | A stage of work, such as *To Do* or *In Review*. Each team sets its own. |
+| Board | The team's work in progress, one column per work state. |
+| Backlog | New work, not yet accepted. |
+| Identifier | An item's permanent ID, such as `SOL-42`: the team's short code and a number. |
 
-The **board** shows the other states as columns. The **backlog** shows the default state as a table.
+## Getting started
 
-- Move any item to any state, at any time. The log records who moved what.
-- Rejecting asks for a reason, *cancelled* or *duplicate*, and an optional note.
-- **Actual start** is set when an item first leaves the backlog. **Actual end** is set when it
-  reaches done or rejected, and cleared if it leaves again.
+1. **Sign in.** An administrator creates your account or sends you an invitation link. There is no
+   public sign-up.
+2. **Pick a team.** Click the team name at the top of the sidebar to switch teams. An administrator
+   adds you to them.
+3. **Create a ticket.** Click **Create** in the header, type a title and click **Create**. The
+   ticket goes to the backlog.
+4. **Start work on it.** Open the ticket and click **State** to pick a column, or tick **Mark as
+   accepted** when creating it to skip the backlog.
+5. **Move it along.** Drag the card from column to column on the board until it reaches *Done*.
 
-## Tickets and buckets
+## Tickets
 
-A **ticket** is a piece of work. A **bucket** is a milestone that groups tickets, such as *Release
-1.0*. It has an icon and an optional colour, which its tickets show on the board.
+### Creating
 
-- Every item has a permanent **identifier** such as `SOL-42`. `/SOL-42` opens it.
-- A bucket takes tickets from any team. Its page groups them by team and counts done or rejected
-  ones as progress.
-- Buckets stay off the board unless **Show buckets** is on.
-- **Buckets** in the sidebar lists the ones your team is in, the ones it owns, or all of them.
+**Create** in the header opens the form. Only the title is required.
 
-## Creating
+| Field | Notes |
+|---|---|
+| Title | Up to 300 characters. |
+| Description | Markdown and pictures. See [Text formatting](#text-formatting). |
+| Priority | `P1` (highest) to `P4`. Default `P3`. |
+| Planned end | Optional due date. |
+| Assignee | One person, or nobody. **(Me!)** assigns it to you. |
+| Bucket | Optional. |
+| Labels | Free text. Enter adds a label; Backspace in the empty box removes the last one. |
+| Mark as accepted | Puts the ticket on the board instead of in the backlog. |
 
-**Create** opens a form with every field, so you can fill it all in at once.
+### Editing
 
-- **(Me!)** assigns it to you.
-- **(Several)** makes one item per line of the title, sharing the rest of the form. Pasting a list
-  into the title does the same. If one fails, the ones before it are made and the rest stay in the
-  box.
-- **Mark as accepted** skips the backlog.
-- Type a label and press Enter to add it. Backspace in the empty box removes the last one.
+- **Click a card** to open it in the preview beside the board, and edit any field there.
+- **Click the identifier** in the preview to open the full page. `/SOL-42` opens it directly.
+- **Actual start** is set when an item first leaves the backlog. **Actual end** is set when it is
+  done or rejected, and cleared if it moves back.
 
-## Working with cards
+### Comments, history and relations
 
-- **Click** a card to open it in the preview and edit it there. Click its identifier for the full
-  page.
-- **Drag** a card to move it; the amber line shows where it will land. Hold it near the edge of the
-  screen to scroll. Escape, or dropping outside a column, cancels.
-- **Ctrl-click** (**⌘-click** on a Mac) selects several cards, and dragging one moves them all. In
-  the backlog, use the checkboxes.
-- With cards selected, the **selection bar** replaces the filter bar. *Move to…*, *Reject…*,
-  *Assignee*, *Priority* and *Bucket* change them all at once.
+- **Comments** use Markdown. Anyone signed in can comment on any item.
+- **History** lists every change to the item: who, when, and the old and new value.
+- **Relations** link two items: *blocks*, *follows up*, *duplicates* or *relates to*. Each shows on
+  both items. They are for reference and don't block any move.
 
-### The card menu
+### Clone and split
+
+- **Clone** copies a ticket's title, description, priority, assignee, bucket and labels into a new
+  ticket in the backlog, related to the original.
+- **Split** creates one ticket per title you enter, each marked as a follow-up of the original. It
+  can also reject the original.
+
+## Buckets
+
+A bucket is a milestone. Create one with **Create** → **Bucket**. It has an icon and an optional
+colour, and its tickets show both on their cards.
+
+- **Add a ticket** by setting the ticket's *Bucket* field. A bucket takes tickets from any team.
+- **The bucket's page** lists its tickets by team, with progress as finished over total (`37 / 50`).
+  Done and rejected tickets count as finished.
+- **Buckets** in the sidebar lists the buckets your team takes part in, the ones it owns, or every
+  bucket.
+- A bucket has its own state. It doesn't complete when its tickets do.
+- Buckets are hidden on the board unless **Show buckets** is on.
+- Buckets can't be deleted. Reject one as *cancelled* instead.
+
+## Board and backlog
+
+Each team defines its work states in **Team settings**. Four of them have a role:
+
+| Role | Example | Meaning |
+|---|---|---|
+| default | Backlog | New items land here. These make up the backlog. |
+| accepted | To Do | Agreed, not started. |
+| final | Done | Finished. |
+| rejected | Rejected | Won't be done. Needs a reason: *cancelled* or *duplicate*. |
+
+The **board** shows every state except default and rejected. The **backlog** lists the default state
+as a table. Rejected items appear in neither; find them with a filter or by identifier.
+
+### Moving cards
+
+- **Drag** a card to another column, or within one to reorder it. A line shows where it will land.
+  Hold it near the edge of the screen to scroll. Escape cancels.
+- Any item can move to any state at any time. The log records every move.
+- Items done for more than three days are hidden unless **Show old done** is on.
+
+### Selecting cards
+
+- **Ctrl-click** (**⌘-click** on a Mac) selects cards; dragging one moves them all. In the backlog,
+  use the checkboxes.
+- The **selection bar** replaces the filter bar and changes every selected item at once: *Move to…*,
+  *Reject…*, *Assignee*, *Priority* and *Bucket*.
+
+### Card menu
 
 **Right-click** a card for the same actions. A card outside the selection is selected first.
 
-- **Move to**, **Assignee**, **Priority** and **Bucket** open a sub-menu; click a value to apply
-  it. For a single card, its current value is marked.
-- **Reject…** asks for a reason.
-- On one ticket: **Clone** copies it as a related ticket, **Split…** makes a follow-up ticket per
-  title and can reject the original, and **Open** opens it.
+| Action | Does |
+|---|---|
+| Move to, Assignee, Priority, Bucket | Opens a list of values; a click applies one. For one card, its current value is marked. |
+| Reject… | Asks for a reason, then rejects. |
+| Clone, Split… | See *Clone and split* under [Tickets](#tickets). One ticket only. |
+| Open | Opens the full page. One ticket only. |
 
-## Writing: Markdown and pictures
+## Text formatting
 
-Descriptions and comments use Markdown, as on GitHub: `**bold**`, `*italic*`, `` `code` ``,
-`~~struck~~`, `# headings`, lists, `- [ ] tasks`, `> quotes`, tables, code blocks and links. Line
-breaks are kept, and identifiers such as `SOL-42` become links.
+Descriptions and comments are written in Markdown ([CommonMark](https://commonmark.org) with
+GitHub's extensions) and can include pictures. Click a description in the preview to edit it;
+Escape discards the edit.
 
-**Paste** or **drop** a picture to upload it at the cursor. The instance sets the size limit.
-Pictures from other sites show as links.
+### Inline
 
-In the preview, click the description to edit it. Escape discards the edit.
+| Type | Result |
+|---|---|
+| `**bold**` | **bold** |
+| `*italic*` | *italic* |
+| `~~strikethrough~~` | ~~strikethrough~~ |
+| `` `code` `` | `code` |
+| `[text](https://example.com)` | [text](https://example.com) |
+| `https://example.com` | https://example.com |
+| An identifier, such as `SOL-42` | A link to that item |
+
+### Blocks
+
+| Type | Result |
+|---|---|
+| `# Title`, `## Title`, `### Title` | Headings, three levels |
+| `- item` or `1. item` | Bulleted or numbered list |
+| `- [ ] to do` and `- [x] done` | Task list |
+| `> text` | Quote |
+| ```` ``` ```` on the lines before and after | Code block |
+| `\| a \| b \|` rows, with `\|---\|---\|` under the first | Table |
+
+- A line break you type is kept.
+- HTML is shown as plain text.
+- Identifiers inside code are not linked.
+
+### Pictures
+
+- **Paste** or **drop** an image into a description or a comment. It uploads and goes in at the
+  cursor as `![name](/api/images/12)`.
+- PNG, JPEG, GIF and WebP are accepted. The size limit is set by the instance, 10 MB by default.
+- Click a picture to open it full size.
+- Pictures from other sites are shown as links and never loaded.
 
 ## Filtering
 
-Filters are queries in **CSQL**, the Campfire Simple Query Language, but you rarely need to type
-one. The filter bar builds it from **chips**: *Assignee*, *State*, *Label*, *Bucket*, *Priority*,
-and more under *+ More*. Click a value to cycle it through `[+]` (must match), `[−]` (must not)
-and off. The filter applies when the list closes; Escape cancels.
+The filter bar narrows the board and the backlog. Each **chip** filters one field: *Assignee*,
+*State*, *Label*, *Bucket*, *Priority*, and more under *+ More*. Click a value to cycle it through
+`[+]` (must match), `[−]` (must not match) and off. The filter applies when the list closes; Escape
+cancels.
 
-The `</>` switch shows the query to read or type. Tab takes a suggestion, Enter runs the query,
-and mistakes are underlined. The `?` beside the box is a quick summary.
+Chips write a query in **CSQL**, Campfire's query language. **`</>`** shows the query, where you can
+also type one: Tab takes a suggestion, Enter runs it, and errors are underlined. **?** beside the box
+shows a summary.
+
+The search box in the header is a shortcut for `text ~`, with matches shown as you type.
 
 ### Fields
 
@@ -97,68 +185,205 @@ and mistakes are underlined. The `?` beside the box is a quick summary.
 | `created`, `started`, `completed`, `due` | a day: `2026-09-01`, `today`, `-7d`, `+2w`; `none` (not `created`) | `=` `!=` `<` `<=` `>` `>=` |
 | `text` | a phrase, searched in titles and descriptions | `~` contains, `!~` does not |
 
-### Combining conditions
+### Syntax
 
-- Use `and`, `or`, `not` and parentheses. `and` binds tighter than `or`.
-- `in (a, b)` matches any of them; `not in (a, b)` matches none.
+- Combine conditions with `and`, `or`, `not` and parentheses. `and` binds tighter than `or`.
+- `in (a, b)` matches any of the values; `not in (a, b)` matches none of them.
 - `!=` means `not =`, so `assignee != marta` includes unassigned items.
 - `label = a and label = b` needs both labels.
-- Quote values with spaces: `state = "In Review"`. Fields and keywords ignore case.
+- Quote values with spaces: `state = "In Review"`. Field names and keywords ignore case.
 - Days are whole days in your time zone. `created >= -7d` is the last seven days and today. A
   relative day stays relative in a saved view.
-- `#12` refers to a label, user, bucket, team or state by its id.
+- `#12` refers to a label, user, bucket, team or state by its ID.
 
 ### Examples
 
 | Query | Finds |
 |---|---|
-| `assignee in (marta, me) and state != Done` | open work of yours and Marta's |
-| `label = api or label = none` | labelled api, or not labelled at all |
-| `due < today and completed = none` | late work |
-| `bucket = SOL-6 and not priority = 4` | the milestone's work, less the lowest priority |
-| `created >= -7d and kind = ticket` | tickets from the last week |
-| `text ~ "boiler"` | anything that mentions the boiler |
-
-The search box in the header is a shortcut for `text ~`, showing matches as you type.
+| `assignee in (marta, me) and state != Done` | Open work of yours and Marta's |
+| `label = api or label = none` | Labelled *api*, or not labelled |
+| `due < today and completed = none` | Overdue work |
+| `bucket = SOL-6 and not priority = 4` | The milestone's work, except P4 |
+| `created >= -7d and kind = ticket` | Tickets from the last week |
+| `text ~ "boiler"` | Anything that mentions the boiler |
 
 ## Saved views
 
-A **view** is a saved query, listed under *Views* in the sidebar of the team that owns it. Click a
-view to turn it on or off. Several can be on at once.
+A **view** is a saved filter. Views are listed under *Views* in the sidebar of the team that owns
+them. Click a view to turn it on or off.
 
-Every view that is on and the filter bar are joined with `and`, so each narrows the results
-further. *All off* turns them all off.
+- Every view that is on, and the filter bar, are combined with `and`. *All off* turns them all off.
+- **Save as view** saves the current filter. **+** beside *Views* starts an empty one.
+- **Pin** a view to the board, the backlog, or both. Turning it on elsewhere opens the board, or
+  the backlog if pinned only there.
+- **Right-click** a view to edit or delete it. Anyone in the team can, and the change applies to
+  everyone.
+- A view marked **!** refers to something since deleted. That condition matches nothing until the
+  view is edited.
 
-- **Save as view** saves the current filter. **+** beside *Views* starts from scratch.
-- **Right-click** a view to edit or delete it. Anyone in the team can, and the change is everyone's.
-- **Pin** a view to the board, the backlog, or both. Turned on from elsewhere, it opens the board,
-  or the backlog if pinned only there.
-- A view marked **!** names something since deleted. That condition matches nothing until you edit
-  the view.
+## Keyboard and mouse
 
-## Keys and menus
-
-| Where | Key | Does |
+| Where | Input | Does |
 |---|---|---|
-| Anywhere | Escape | closes the top dialog, menu or list; cancels a drag |
-| A card | Ctrl-click / ⌘-click | adds it to or removes it from the selection |
-| A card | right-click | opens the card menu |
-| The card menu | → / ← | opens a sub-menu / goes back |
-| A view | right-click, or the menu key | *Edit…* and *Delete…* |
-| The search box | ↑ ↓, Enter | picks a match and opens it; Enter with none picked searches |
-| The query box | Tab, ↑ ↓, Enter | takes a suggestion, moves between them, runs the query |
-| A filter chip's list | ↑ ↓, Space, Enter | moves, cycles a value, applies |
-| Labels | Enter, Backspace, ↑ ↓ | adds a label, removes the last, picks a suggestion |
-| The preview's title | Enter, Escape | saves, discards |
-| The preview's description | Enter, then Escape | edits, discards |
-| A backlog row | double-click | opens the item |
+| Anywhere | Escape | Closes the top dialog, menu or list; cancels a drag |
+| A card | Click | Opens it in the preview |
+| A card | Ctrl-click / ⌘-click | Adds it to or removes it from the selection |
+| A card | Right-click | Opens the card menu |
+| The card menu | → / ← | Opens a submenu / goes back |
+| A backlog row | Double-click | Opens the item |
+| A view | Right-click, or the menu key | *Edit…* and *Delete…* |
+| The search box | ↑ ↓, Enter | Picks a match and opens it; Enter with none picked searches |
+| The query box | Tab, ↑ ↓, Enter | Takes a suggestion, moves between them, runs the query |
+| A filter chip's list | ↑ ↓, Space, Enter | Moves, cycles a value, applies |
+| Labels | Enter, Backspace, ↑ ↓ | Adds a label, removes the last, picks a suggestion |
+| The preview's title | Enter, Escape | Saves, discards |
+| The preview's description | Click, then Escape | Edits, discards |
 
-## The log and live updates
+## Activity log
 
-**Log** lists every change, newest first: who changed what, from what to what. Changes by an agent
-carry the agent mark, and the *Agent* chip shows only those. *Field* and *Item* narrow it further.
-An item's own history is its *History* tab.
+**Log** in the sidebar lists every change in your team, newest first: who changed which field, from
+what to what. The *Agent*, *Field* and *Item* chips narrow it. An item's own changes are on its
+*History* tab.
 
-Boards update live as others work. The campfire at the top of the sidebar is lit while connected,
-flares with each change, and burns down while disconnected. Nothing is lost: it catches up when it
-reconnects.
+The board updates live as others work. The flame at the top of the sidebar shows the connection: lit
+while connected, dimming while disconnected. After a disconnect the board catches up on its own.
+
+## Teams and accounts
+
+### Roles
+
+| Role | Can |
+|---|---|
+| Member | Create and edit items in their teams; comment on any item. |
+| Team administrator | Also manage the team: members, work states, name, picture and description. |
+| Instance administrator | Also create accounts and teams, send invitations and password resets, manage backups, and read the log of every team. |
+
+Your role can differ from team to team.
+
+### Your account
+
+Click your name at the foot of the sidebar to open your profile: picture, email and bio. Its
+**Settings** has your password, a second factor (an authenticator app code at sign-in) and agent
+tokens.
+
+### Team settings
+
+Team administrators find **Team settings** in the sidebar: *Work states*, *Members*, *Identity* (name,
+picture, description and bucket icon style) and *Archive*.
+
+## Agents (MCP)
+
+Campfire has a built-in [MCP](https://modelcontextprotocol.io) server, so an AI agent such as Claude
+Code can read and update your tickets. The agent acts as you, with your permissions.
+
+### Connect an agent
+
+1. **Enable it.** An instance administrator sets `"mcp": { "enabled": true }` in `campfire.json`
+   and restarts Campfire. The server is then at `/mcp` on the same address as the app.
+2. **Issue a token.** Open your profile, then **Settings** → **Agent tokens** → **Issue a token**.
+   Name it after where it will be used, such as *laptop*. The token is shown once.
+3. **Add it to the agent.** The token dialog shows the command for Claude Code:
+
+```sh
+claude mcp add --scope user --transport http campfire \
+  https://campfire.example.com/mcp --header "Authorization: Bearer <token>"
+```
+
+Other clients take the same address and header as JSON:
+
+```json
+{
+  "mcpServers": {
+    "campfire": {
+      "type": "http",
+      "url": "https://campfire.example.com/mcp",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+A client that only supports stdio can connect through a bridge:
+
+```sh
+npx -y mcp-remote https://campfire.example.com/mcp --header "Authorization: Bearer <token>"
+```
+
+### What an agent can do
+
+| Area | Tools |
+|---|---|
+| Items | `create_item`, `update_item`, `move_item`, `rank_item`, `clone_item`, `split_item`, `bulk_edit_items` |
+| Reading | `get_board`, `get_backlog`, `list_items`, `get_item`, `lookup_item`, `list_buckets`, `get_bucket_contents`, `get_item_impact` |
+| Labels and relations | `add_label`, `remove_label`, `list_labels`, `add_relation`, `remove_relation` |
+| Comments | `add_comment`, `update_comment`, `list_comments` |
+| Saved views | `list_saved_views`, `create_saved_view`, `update_saved_view`, `delete_saved_view` |
+| Teams and people | `list_teams`, `get_team`, `list_work_states`, `list_team_members`, `list_users` |
+| Changes | `get_log` |
+
+An agent can't create accounts, change teams or membership, delete items, manage backups or issue
+tokens.
+
+### Tracking agent changes
+
+Every change an agent makes is logged under your name and the token's, as *marta (agent: laptop)*.
+The *Agent* chip in **Log** shows only agent changes. Revoke a token in **Settings** at any time; an
+instance administrator can revoke any token.
+
+## HTTP API
+
+The app itself runs on a JSON API under `/api`, and your own scripts and services can use it too.
+The full definition is [`api/openapi.yaml`](https://github.com/33313/campfire/blob/main/api/openapi.yaml)
+(OpenAPI 3.1).
+
+### Authentication
+
+Sign in with `POST /api/auth/signin` and send the `campfire_session` cookie it sets with every later
+request. Add `"code"` to the body if the account has a second factor. Agent tokens work only for
+MCP, not for this API.
+
+```sh
+curl -c session.txt https://campfire.example.com/api/auth/signin \
+  -H 'Content-Type: application/json' \
+  -d '{"username": "marta", "password": "…"}'
+```
+
+### Examples
+
+Create a ticket in team 1:
+
+```sh
+curl -b session.txt https://campfire.example.com/api/items \
+  -H 'Content-Type: application/json' \
+  -d '{"kind": "ticket", "teamId": 1, "title": "Renew the certificate", "priority": 2}'
+```
+
+List unfinished P1 items with a CSQL query:
+
+```sh
+curl -b session.txt -G https://campfire.example.com/api/items \
+  --data-urlencode 'csql=priority = 1 and completed = none'
+```
+
+### Common endpoints
+
+| Request | Does |
+|---|---|
+| `GET /api/teams` | Lists teams |
+| `GET /api/teams/{id}/board` | A team's board |
+| `GET /api/teams/{id}/backlog` | A team's backlog |
+| `GET /api/items?csql=…` | Items matching a query |
+| `GET /api/lookup/{identifier}` | An item by identifier, such as `SOL-42` |
+| `POST /api/items` | Creates a ticket or a bucket |
+| `PATCH /api/items/{id}` | Edits an item's fields |
+| `POST /api/items/{id}/move` | Moves an item to a work state: `{"stateId": 4}` |
+| `POST /api/items/{id}/comments` | Adds a comment |
+| `GET /api/log` | The activity log, newest first |
+| `GET /api/stream` | Live changes, as server-sent events |
+
+A refused request returns a 4xx or 5xx status and an error body. `code` is for programs, such as
+`invalid`, `forbidden`, `not_found` or `conflict`; `message` is for people.
+
+```json
+{ "error": { "code": "forbidden", "message": "…" } }
+```
