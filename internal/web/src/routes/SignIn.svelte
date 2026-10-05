@@ -1,6 +1,7 @@
 <script>
   import { api } from "../lib/api.js";
   import Mark from "../components/Mark.svelte";
+  import { SOURCE } from "../lib/source.js";
 
   // Sign in, the first-run account, and redeeming a link.
   //
@@ -92,4 +93,8 @@
       {mode === "signin" ? "Sign in" : mode === "bootstrap" ? "Create account" : "Continue"}
     </button>
   </form>
+  <p class="explain">
+    Campfire is free software under the AGPL-3.0.
+    <a href={SOURCE} target="_blank" rel="noopener">Source code</a>
+  </p>
 </div>

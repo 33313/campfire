@@ -201,7 +201,7 @@
     {/if}
     <a class="nav-item" class:on={route.path === "/docs"} href="/docs">
       <Icon body={NAV.docs} size={15} />
-      <span class="label">Docs</span>
+      <span class="label">Documentation</span>
     </a>
     {#if app.user.isAdmin}
       <a class="nav-item" class:on={route.path === "/admin"} href="/admin">
