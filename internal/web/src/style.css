@@ -1055,6 +1055,13 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
   background: var(--surface); border: 1px solid var(--border-strong);
   animation: drop var(--quick) var(--ease-out);
 }
+.bucket-offers { max-height: 280px; overflow-y: auto; }
+.bucket-offers .search-suggestion { align-items: center; }
+.bucket-picker { position: relative; }
+.bucket-picker-icon { position: absolute; left: 8px; top: 50%; translate: 0 -50%; display: flex;
+  pointer-events: none; }
+.bucket-picker .input { width: 100%; }
+.bucket-picker .input.iconed { padding-left: 28px; }
 .query-offers .ident { font-family: var(--mono); font-size: 12px; color: var(--text); }
 .query-error { padding: 6px; font-size: 12px; color: var(--alert); }
 

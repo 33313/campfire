@@ -205,7 +205,13 @@ test("a bucket carries an icon and its tickets", async ({ page }) => {
   // Put the ticket in it from the ticket's own aside.
   await page.goto("/SOL-1");
   await page.getByRole("button", { name: "Change bucket" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: /SOL-2\s+Winter readiness/ }).click();
+  // The buckets are offered at once, and typing narrows them (DEV-92).
+  const picker = page.getByRole("dialog").getByRole("combobox", { name: "Bucket" });
+  await expect(page.getByRole("listbox").getByRole("option", { name: /Winter readiness/ })).toBeVisible();
+  await picker.fill("wint");
+  await expect(page.getByRole("listbox").getByRole("option")).toHaveCount(1);
+  await picker.press("Enter");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.locator(".aside-control").last()).toContainText("Winter readiness");
 
   // The bucket on a ticket follows through to the bucket.
@@ -227,6 +233,43 @@ test("a bucket carries an icon and its tickets", async ({ page }) => {
   await page.goto("/SOL-2");
   await expect(page.getByRole("link", { name: "SOL-1" })).toBeVisible();
   await expect(page.locator(".progress-block .big")).toHaveText("0");
+});
+
+// DEV-92: the create form's bucket is a box to type in, with the buckets under
+// it from the first click.
+test("the create form's bucket is picked by typing, or from the list under it", async ({ page }) => {
+  await signIn(page);
+  const bucket = await (await page.request.post("/api/items", { data: {
+    kind: "bucket", teamId: 1, title: "Kindling store",
+  } })).json();
+  await page.goto("/t/1/board");
+  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+  const form = page.getByRole("dialog");
+  await form.getByLabel("Title").fill("Check the stove pipe");
+  const picker = form.getByRole("combobox", { name: "Bucket" });
+  await picker.click();
+  const offers = page.getByRole("listbox");
+  const options = offers.getByRole("option");
+  await expect(options.first()).toHaveText("No bucket");
+  await expect(offers.getByRole("option", { name: /Kindling store/ })).toBeVisible();
+
+  // Typing narrows by identifier or title; nothing matching says so.
+  await picker.fill("no such bucket");
+  await expect(options).toHaveCount(0);
+  await expect(offers).toContainText("No bucket matches.");
+  // Escape puts the box back and leaves the form up.
+  await picker.press("Escape");
+  await expect(offers).toHaveCount(0);
+  await expect(form).toBeVisible();
+  await expect(picker).toHaveValue("");
+
+  await picker.fill(bucket.identifier.toLowerCase());
+  await picker.press("Enter");
+  await expect(picker).toHaveValue(`${bucket.identifier}  Kindling store`);
+  await form.getByRole("button", { name: "Create" }).click();
+  await expect(form).toHaveCount(0);
+  await page.goto("/t/1/backlog");
+  await expect(page.locator("tbody tr", { hasText: "Check the stove pipe" })).toContainText("Kindling store");
 });
 
 test("the log records what happened, newest first", async ({ page }) => {
