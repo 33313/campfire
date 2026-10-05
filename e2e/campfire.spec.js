@@ -1954,3 +1954,35 @@ test("the docs page is in the sidebar, the cheat sheet links into it, and it cov
   await expect(heading).toBeInViewport();
   await expect(page.locator(".settings-rail button.on")).toHaveText("Filtering");
 });
+
+// DEV-94: relations are made on the create form, in any of the seven kinds,
+// and read in the preview as well as on the ticket.
+test("a ticket is created with its relations, and its preview lists them", async ({ page }) => {
+  await signIn(page);
+  const first = await (await page.request.post("/api/items", { data: {
+    kind: "ticket", teamId: 1, title: "Lay the fire",
+  } })).json();
+  await page.goto("/t/1/backlog");
+  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+  const form = page.getByRole("dialog");
+  await form.getByLabel("Title").fill("Strike the match");
+  await form.getByLabel("Relation kind").selectOption({ label: "blocked by" });
+  const other = form.getByLabel("Related item");
+  // A mistyped identifier is caught as it is added, not on Create.
+  await other.fill("SOL-9999");
+  await other.press("Enter");
+  await expect(form.locator(".field-error")).toHaveText("Nothing is called SOL-9999.");
+  await other.fill(first.identifier);
+  await other.press("Enter");
+  await expect(form.locator(".relation-row")).toContainText(`blocked by ${first.identifier} Lay the fire`);
+  await form.getByRole("button", { name: "Create" }).click();
+  await expect(form).toHaveCount(0);
+
+  // The preview lists it, as seen from the new ticket.
+  await page.locator("tbody tr", { hasText: "Strike the match" }).click();
+  const aside = page.locator(".detail-aside");
+  await expect(aside.locator(".relation-row")).toContainText(`blocked by ${first.identifier}`);
+  // And the far end sees the one edge the other way.
+  await page.goto(`/${first.identifier}`);
+  await expect(page.locator(".relation-row", { hasText: "Strike the match" })).toContainText("blocks");
+});

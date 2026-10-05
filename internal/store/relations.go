@@ -28,6 +28,21 @@ func ValidRelationKind(kind string) bool {
 	return ok
 }
 
+// StoredRelation is the edge a kind names, seen from the item it is added
+// from: blocked_by is a blocks edge pointing the other way, so it comes back
+// as blocks, reversed.
+func StoredRelation(kind string) (stored string, reversed, ok bool) {
+	if ValidRelationKind(kind) {
+		return kind, false, true
+	}
+	for stored, inverse := range inverseLabel {
+		if kind == inverse {
+			return stored, true, true
+		}
+	}
+	return "", false, false
+}
+
 // Relation is one edge as shown on one item's detail view. Kind is already
 // resolved to the direction the viewer is looking from: an item that is
 // blocked reports "blocked_by".

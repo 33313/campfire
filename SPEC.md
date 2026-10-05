@@ -295,7 +295,7 @@ because a relation is already stored, already displayed from both ends, and alre
 
 **Split.** One ticket becomes several. The actor gives a title per new ticket; each new ticket is
 created the way a clone is, and carries a *follows up* relation to the source instead of *relates
-to*. The source keeps its state unless the actor also rejects it in the same action, in which case
+to*, and a *relates to* relation to each of the other tickets the same split made. The source keeps its state unless the actor also rejects it in the same action, in which case
 the reason is `cancelled`. A split WILL NOT delete or absorb the source: deletion is not a state, and
 the tickets that replaced it are reachable from it.
 
@@ -325,7 +325,8 @@ Requirements:
 - Each item created by a clone or a split MUST allocate its identifier atomically
   ([§13.2](#132-implementation-rules) rule 2), one item at a time. A batch MUST NOT reserve a range.
 - A clone or a split MUST NOT copy the source's comments, history, relations, actual start or
-  actual end. The edge back to the source is the only relation a new item is created with.
+  actual end. The edge back to the source, and a split's edges between its new tickets, are the only
+  relations a new item is created with.
 - Every created item and every item touched by a bulk edit MUST write its own event
   ([§10](#10-audit-log)). A bulk operation WILL NOT write one summary event; a log that summarises is
   a log that cannot answer what happened to one ticket.
@@ -407,7 +408,9 @@ directed edge and displayed from both ends.
 | duplicates | duplicated by |
 | relates to | relates to |
 
-Relations may cross teams and may link a ticket to a bucket.
+Relations may cross teams and may link a ticket to a bucket. A relation is added from either end, in
+either column: *A blocked by B* is the one edge *B blocks A*. An item MAY be created with relations,
+made in the same write.
 
 A relation WILL NOT carry lifecycle meaning. A *blocked by* edge is information; it MUST NOT prevent
 any transition.

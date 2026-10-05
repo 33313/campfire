@@ -67,7 +67,8 @@ func TestCloneCopiesTheRightFieldsAndNothingElse(t *testing.T) {
 }
 
 // SPEC.md §6.5: a split gives a title per new ticket, each carrying a "follows
-// up" relation to the source, and never deletes or absorbs the source.
+// up" relation to the source and a "relates to" to its siblings (DEV-94), and
+// never deletes or absorbs the source.
 func TestSplitLeavesTheSourceReachable(t *testing.T) {
 	w := newWorld(t)
 	src := w.ticket(w.sol, w.marta, "too big")
@@ -78,9 +79,14 @@ func TestSplitLeavesTheSourceReachable(t *testing.T) {
 	if len(res.New) != 2 {
 		t.Fatalf("%d new tickets", len(res.New))
 	}
-	for _, n := range res.New {
-		if len(n.Relations) != 1 || n.Relations[0].Kind != store.RelFollowsUp ||
-			n.Relations[0].ItemID != src.ID {
+	for i, n := range res.New {
+		sibling := res.New[1-i]
+		kinds := map[int64]string{}
+		for _, r := range n.Relations {
+			kinds[r.ItemID] = r.Kind
+		}
+		if len(n.Relations) != 2 || kinds[src.ID] != store.RelFollowsUp ||
+			kinds[sibling.ID] != store.RelRelatesTo {
 			t.Fatalf("new ticket %s relations %+v", n.Identifier, n.Relations)
 		}
 	}

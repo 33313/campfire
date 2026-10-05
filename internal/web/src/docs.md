@@ -39,6 +39,7 @@ use, then connecting your own tools.
 | Assignee | One person, or nobody. **(Me!)** assigns it to you. |
 | Bucket | (Optional) The [Bucket](#buckets) it belongs to. Click the box for the list; type to narrow it by identifier or title. The ones you pick most come first. |
 | Labels | Free text. Enter adds a label; Backspace in the empty box removes the last one. |
+| Relations | (Optional) Pick a kind, type the other item's identifier, and press Enter. See *Comments, history and relations* below. |
 | Mark as accepted | Puts the ticket on the board instead of in the backlog. |
 
 ### Editing
@@ -54,8 +55,9 @@ use, then connecting your own tools.
 
 - **Comments** use Markdown. Anyone signed in can comment on any item.
 - **History** lists every change to the item: who, when, and the old and new value.
-- **Relations** link two items: *blocks*, *follows up*, *duplicates* or *relates to*. Each shows on
-  both items. They are for reference and don't block any move.
+- **Relations** link two items: *blocks* or *blocked by*, *follows up* or *followed up by*,
+  *duplicates* or *duplicated by*, and *relates to*. Each shows on both items, the right way round,
+  and in the preview. They are for reference and don't block any move.
 
 ### Clone and split
 

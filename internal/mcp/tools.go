@@ -34,7 +34,10 @@ var (
 	pIntList = map[string]any{"type": "array", "items": map[string]any{"type": "integer"}}
 	pStrList = map[string]any{"type": "array", "items": map[string]any{"type": "string"}}
 	pEmpty   = map[string]any{"type": "object", "properties": map[string]any{}}
-	pQuery   = map[string]any{"type": "string", "description": csqlHelp}
+	// A relation's kind as seen from the item it is added from.
+	pRelationKind = map[string]any{"type": "string", "enum": []string{"blocks", "blocked_by",
+		"follows_up", "followed_up_by", "duplicates", "duplicated_by", "relates_to"}}
+	pQuery = map[string]any{"type": "string", "description": csqlHelp}
 )
 
 // call is a tool's Call for arguments of type T. They are decoded strictly, so
@@ -253,7 +256,8 @@ func (s *Server) toolset() []tool {
 			Description: "Create a ticket or a bucket in a team you belong to. It enters the " +
 				"default state, or the accepted state if accepted is true. A bucket carries " +
 				"an icon and optionally a colour from the fixed sets; a ticket has neither " +
-				"and may sit in a bucket.",
+				"and may sit in a bucket. Relations, each a kind as add_relation takes it " +
+				"and a toId, are made with it.",
 			Schema: obj(map[string]any{
 				"kind":   map[string]any{"type": "string", "enum": []string{"ticket", "bucket"}},
 				"teamId": pInt, "title": pString, "description": pString,
@@ -261,6 +265,8 @@ func (s *Server) toolset() []tool {
 				"icon":       map[string]any{"type": "string", "enum": store.BucketIcons},
 				"color":      map[string]any{"type": "string", "enum": store.BucketColours},
 				"plannedEnd": pString, "labels": pStrList, "accepted": pBool,
+				"relations": map[string]any{"type": "array",
+					"items": obj(map[string]any{"kind": pRelationKind, "toId": pInt}, "kind", "toId")},
 			}, "kind", "teamId", "title"),
 			Call: call(func(ctx context.Context, a core.Actor, in core.NewItem) (any, error) {
 				return svc.CreateItem(ctx, a, in)
@@ -376,13 +382,12 @@ func (s *Server) toolset() []tool {
 		},
 		{
 			Name: "add_relation", Operation: "addRelation",
-			Description: "Link two items. Kinds are blocks, follows_up, duplicates and " +
+			Description: "Link two items. The kind is as seen from itemId: blocks or " +
+				"blocked_by, follows_up or followed_up_by, duplicates or duplicated_by, " +
 				"relates_to. Relations may cross teams and may link a ticket to a bucket. A " +
 				"relation is information only: a blocks edge never prevents a move.",
 			Schema: obj(map[string]any{
-				"itemId": pInt, "toId": pInt,
-				"kind": map[string]any{"type": "string",
-					"enum": []string{"blocks", "follows_up", "duplicates", "relates_to"}},
+				"itemId": pInt, "toId": pInt, "kind": pRelationKind,
 			}, "itemId", "toId", "kind"),
 			Call: call(func(ctx context.Context, a core.Actor, in struct {
 				ItemID, ToID int64

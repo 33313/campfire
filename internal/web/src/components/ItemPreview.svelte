@@ -25,10 +25,11 @@
   import { fieldName, eventChange } from "../lib/events.svelte.js";
   import { ensure } from "../lib/catalog.svelte.js";
   import { pictures } from "../lib/pictures.js";
-  import { when, plural } from "../lib/format.js";
+  import { when } from "../lib/format.js";
   import { NAV, PRIORITY } from "../lib/icons.js";
   import PickDialog from "../dialogs/PickDialog.svelte";
   import BucketDialog from "../dialogs/BucketDialog.svelte";
+  import RelationList from "./RelationList.svelte";
   import MoveDialog from "../dialogs/MoveDialog.svelte";
 
   let { item: it, comments = [], history = [], rendering = "mono", onclose, onchange } = $props();
@@ -234,7 +235,15 @@
       <span class="dash">—</span>
     {/each}
   </div>
-  <span class="ident">{plural((it.relations || []).length, "relation")}</span>
+  <!-- What it blocks, follows up or duplicates, without opening it (DEV-94). -->
+  <div class="aside-field">
+    <span class="field-label">Relations</span>
+    {#if it.relations?.length}
+      <div><RelationList relations={it.relations} compact /></div>
+    {:else}
+      <span class="dash">—</span>
+    {/if}
+  </div>
 
   <div class="tabs aside-tabs">
     <button class="tab" class:on={tab === "comments"} onclick={() => (tab = "comments")}>
