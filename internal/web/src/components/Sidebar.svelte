@@ -11,6 +11,7 @@
   import { useView, saveNewView, canEditView } from "../lib/views.js";
   import ViewMenu from "./ViewMenu.svelte";
   import { newTeam } from "../lib/teams.js";
+  import { SOURCE } from "../lib/source.js";
 
   let team = $derived(app.team || app.teams[0]);
   let teamId = $derived(team ? team.teamId || team.id : null);
@@ -202,6 +203,10 @@
     <a class="nav-item" class:on={route.path === "/docs"} href="/docs">
       <Icon body={NAV.docs} size={15} />
       <span class="label">Docs</span>
+    </a>
+    <a class="nav-item" href={SOURCE} target="_blank" rel="noopener">
+      <Icon body={NAV.source} size={15} />
+      <span class="label">Source code</span>
     </a>
     {#if app.user.isAdmin}
       <a class="nav-item" class:on={route.path === "/admin"} href="/admin">

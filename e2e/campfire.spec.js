@@ -676,6 +676,17 @@ test("signing out from the sidebar returns to the sign-in card", async ({ page }
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
+// DEV-95: AGPL-3.0 §13 offers the source to everyone using it over the
+// network, signed in or not, from the one address in lib/source.js.
+test("the source is linked from the sign-in card and the sidebar", async ({ page }) => {
+  const source = "https://github.com/33313/campfire";
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "Source code" })).toHaveAttribute("href", source);
+  await signIn(page);
+  await expect(page.locator(".sidebar").getByRole("link", { name: "Source code" }))
+    .toHaveAttribute("href", source);
+});
+
 test("the previewed card joins the selection a modifier-click starts", async ({ page }) => {
   await signIn(page);
   await page.goto("/t/1/board");
