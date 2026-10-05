@@ -13,7 +13,9 @@ export function lift(card, x, y, count = 1) {
   const grip = { x: x - box.left, y: y - box.top };
 
   const el = card.cloneNode(true);
-  el.classList.remove("selected", "focused", "dragging");
+  // Kindling too: its `position: relative` outranks the ghost's `fixed`, and a
+  // card grabbed while it burns was dropped into the page as a blank card.
+  el.classList.remove("selected", "focused", "dragging", "kindled");
   el.classList.add("ghost");
   el.removeAttribute("href");
   el.style.width = `${box.width}px`;

@@ -1424,6 +1424,38 @@ test.describe(() => {
     await expect(page.locator(".card", { hasText: "Sweep the hearth" })).toHaveCount(0);
   });
 
+  test("a card grabbed while it kindles is held in the hand, not dropped into the page", async ({ page }) => {
+    await signIn(page);
+    const item = await (await page.request.post("/api/items", { data: {
+      kind: "ticket", teamId: 1, title: "Bank the coals", accepted: true,
+    } })).json();
+    await page.goto("/t/1/board");
+    await expect(page.locator(".card", { hasText: "Bank the coals" })).toBeVisible();
+    const done = (await (await page.request.get("/api/teams/1/states")).json())
+      .find((s) => s.role === "final");
+    await page.request.post(`/api/items/${item.id}/move`, { data: { stateId: done.id } });
+    const card = page.locator(".column-body .card.kindled", { hasText: "Bank the coals" });
+    await expect(card).toBeAttached();
+
+    // Picked up mid-kindle (DEV-75): the copy follows the pointer, fixed over
+    // the page, and no preview opens.
+    const box = await card.boundingBox();
+    await page.mouse.move(box.x + 20, box.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 60, box.y + 40, { steps: 4 });
+    const ghost = page.locator(".card.ghost");
+    await expect(ghost).toHaveCSS("position", "fixed");
+    await expect(ghost).not.toHaveClass(/kindled/);
+    // Called off with Escape and let go over the card: the release is not a
+    // click on it.
+    await page.keyboard.press("Escape");
+    await expect(ghost).toHaveCount(0);
+    const home = await card.boundingBox();
+    await page.mouse.move(home.x + 20, home.y + 10);
+    await page.mouse.up();
+    await expect(page.locator(".detail-aside")).toHaveCount(0);
+  });
+
   test("on a large panel a card glides from where it was, not a quarter further", async ({ page }) => {
     await signIn(page);
     // 2560 wide at 1x, where the interface once zoomed itself (DESIGN.md §1).
