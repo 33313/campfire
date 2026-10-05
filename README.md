@@ -292,8 +292,9 @@ Affero General Public License, version 3 or (at your option) any later version. 
 warranty. If you run a modified Campfire for others over a network, offer them its source. See
 [`LICENSE`](LICENSE).
 
-The sidebar and the sign-in page link to the source. A modified Campfire run for others complies by
-pointing [`internal/web/src/lib/source.js`](internal/web/src/lib/source.js) at its own.
+The sign-in page and the last section of the documentation link to the source. A modified Campfire
+run for others complies by pointing [`internal/web/src/lib/source.js`](internal/web/src/lib/source.js)
+and the *Source code* section of [`internal/web/src/docs.md`](internal/web/src/docs.md) at its own.
 
 The bundled IBM Plex and Source Serif 4 fonts are under the SIL Open Font License 1.1; see
 [`internal/web/static/fonts/OFL.txt`](internal/web/static/fonts/OFL.txt).

@@ -19,7 +19,6 @@ export const NAV = {
   settings: '<path d="M2 5h12"/><circle cx="6" cy="5" r="1.9"/><path d="M2 11h12"/><circle cx="10.5" cy="11" r="1.9"/>',
   team: '<circle cx="6" cy="5.6" r="2.3"/><path d="M1.9 13.4c.4-2.4 2-3.9 4.1-3.9s3.7 1.5 4.1 3.9"/><path d="M10.4 3.5a2.3 2.3 0 0 1 0 4.2M12 9.9c1.2.6 1.9 1.8 2.1 3.5"/>',
   admin: '<path d="M8 1.9 13.4 4.1v4.2c0 3-2.3 5.2-5.4 5.9-3.1-.7-5.4-2.9-5.4-5.9V4.1L8 1.9Z"/>',
-  source: '<path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5"/>',
   docs: '<path d="M1.8 3h4.4L8 4.4 9.8 3h4.4v9.8H9.8L8 14.2l-1.8-1.4H1.8Z"/><path d="M8 4.4v9.8"/>',
   view: '<path d="M2.5 3.5h11l-4.3 5v4.3l-2.4-1.4V8.5Z"/>',
   // Distinct from the `lens` bucket icon, so search never reads as a bucket.

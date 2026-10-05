@@ -388,3 +388,8 @@ A refused request returns a 4xx or 5xx status and an error body. `code` is for p
 ```json
 { "error": { "code": "forbidden", "message": "…" } }
 ```
+
+## Source code
+
+Campfire is free software under the GNU Affero General Public License, version 3. Its source is at
+[github.com/33313/campfire](https://github.com/33313/campfire).
