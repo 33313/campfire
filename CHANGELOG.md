@@ -5,6 +5,23 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v0.11.0 - 2026-10-05
+
+### Added
+
+- The sign-in card and a new last section of the documentation link to Campfire's source, as the AGPL-3.0 asks; a host running a modified copy points them at its own. Docs in the sidebar is now Documentation
+- Relations are set on the create form and listed in the preview, in all seven kinds, blocked by and the other inverses included, and the other item is found by searching its title or identifier; the tickets a split makes relate to each other
+
+### Changed
+
+- A selection of several items stays selected after a change, so the next change can follow
+- The backlog's columns sit beside the title instead of across the screen, Assignee shows the username, and right-clicking a row opens the card menu
+- The bucket field is a box to type in: the buckets show under it on the first click, most-picked first, and narrow as you type
+
+### Fixed
+
+- A card picked up while it kindles in Done is held in the hand, not dropped into the page as a blank card
+
 ## v0.10.0 - 2026-10-05
 
 ### Added
