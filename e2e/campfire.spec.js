@@ -1968,12 +1968,15 @@ test("a ticket is created with its relations, and its preview lists them", async
   await form.getByLabel("Title").fill("Strike the match");
   await form.getByLabel("Relation kind").selectOption({ label: "blocked by" });
   const other = form.getByLabel("Related item");
-  // A mistyped identifier is caught as it is added, not on Create.
-  await other.fill("SOL-9999");
-  await other.press("Enter");
-  await expect(form.locator(".field-error")).toHaveText("Nothing is called SOL-9999.");
-  await other.fill(first.identifier);
-  await other.press("Enter");
+  // Text that was never picked names nothing, and Create says so.
+  await other.fill("no such thing");
+  await form.getByRole("button", { name: "Create" }).click();
+  await expect(form.locator(".field-error")).toHaveText("Pick the related item from the list, or clear the box.");
+  // Part of a title offers the items that match; a click picks one.
+  await other.fill("lay the f");
+  const offers = page.getByRole("listbox");
+  await offers.getByRole("option", { name: new RegExp(`${first.identifier}\\s*Lay the fire`) }).click();
+  await expect(other).toHaveValue("");
   await expect(form.locator(".relation-row")).toContainText(`blocked by ${first.identifier} Lay the fire`);
   await form.getByRole("button", { name: "Create" }).click();
   await expect(form).toHaveCount(0);
@@ -1985,4 +1988,29 @@ test("a ticket is created with its relations, and its preview lists them", async
   // And the far end sees the one edge the other way.
   await page.goto(`/${first.identifier}`);
   await expect(page.locator(".relation-row", { hasText: "Strike the match" })).toContainText("blocks");
+});
+
+// DEV-94: the ticket page's Add a relation finds the other item by search, by
+// title or by identifier, as the create form does.
+test("a relation is added from the ticket page by searching for the other item", async ({ page }) => {
+  await signIn(page);
+  const [a, b] = await Promise.all(["Fetch the kindling", "Dry the kindling"].map(async (title) =>
+    (await page.request.post("/api/items", { data: { kind: "ticket", teamId: 1, title } })).json()));
+  await page.goto(`/${a.identifier}`);
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Kind").selectOption({ label: "follows up" });
+  // The item itself is never offered.
+  const to = dialog.getByRole("combobox", { name: "To" });
+  await to.fill("the kindling");
+  const offers = page.getByRole("listbox");
+  await expect(offers.getByRole("option", { name: /Dry the kindling/ })).toBeVisible();
+  await expect(offers.getByRole("option", { name: /Fetch the kindling/ })).toHaveCount(0);
+  // An identifier is looked up as one: typed and entered at once, it is picked.
+  await to.fill(b.identifier);
+  await to.press("Enter");
+  await expect(dialog.locator(".relation-row")).toContainText(`follows up ${b.identifier} Dry the kindling`);
+  await dialog.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(".relation-row", { hasText: "Dry the kindling" })).toContainText("follows up");
 });

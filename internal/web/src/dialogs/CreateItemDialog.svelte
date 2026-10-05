@@ -7,6 +7,7 @@
   import LabelEditor from "../components/LabelEditor.svelte";
   import BucketPicker from "../components/BucketPicker.svelte";
   import RelationList from "../components/RelationList.svelte";
+  import ItemSearch from "../components/ItemSearch.svelte";
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
   import { BUCKET_ICONS, BUCKET_COLOURS, PRIORITY, NAV, RELATION_LABELS } from "../lib/icons.js";
@@ -27,7 +28,7 @@
   let labels = $state([]);
   let labelDraft = $state("");
   let accepted = $state(false);
-  let relations = $state([]); // the other ends, looked up: { kind, id, identifier, title }
+  let relations = $state([]); // the other ends, as found: { kind, id, identifier, title }
   let relationKind = $state("blocks");
   let relationDraft = $state("");
   let acceptedState = $derived(states.find((s) => s.role === "accepted"));
@@ -50,28 +51,23 @@
     if (invalid?.field === field) invalid = null;
   };
 
-  // A relation is made with the item (DEV-94). The other end is looked up as
-  // it is added, so a mistyped identifier is caught here, not on Create.
-  async function addRelation() {
-    const name = relationDraft.trim();
-    if (!name) return true;
-    try {
-      const other = await api.lookupItem(name);
-      if (!relations.some((r) => r.id === other.id && r.kind === relationKind)) {
-        relations.push({ kind: relationKind, id: other.id, identifier: other.identifier, title: other.title });
-      }
-      relationDraft = "";
-      return true;
-    } catch {
-      invalid = { field: "relations", message: `Nothing is called ${name}.` };
-      return false;
+  // A relation is made with the item (DEV-94). The other end is picked from
+  // what the search finds, so it always names an item that exists.
+  function addRelation(other) {
+    invalid = null;
+    if (!relations.some((r) => r.id === other.id && r.kind === relationKind)) {
+      relations.push({ kind: relationKind, id: other.id, identifier: other.identifier, title: other.title });
     }
   }
 
   async function create() {
     addLabel(); // whatever is still in the box was meant to be one
     invalid = null;
-    if (!(await addRelation())) return; // and so was an identifier
+    // Text left in the search was meant to be a relation, but names nothing yet.
+    if (relationDraft.trim()) {
+      invalid = { field: "relations", message: "Pick the related item from the list, or clear the box." };
+      return;
+    }
     if (!title.trim()) {
       invalid = { field: "title", message: "An item needs a title." };
       return;
@@ -202,12 +198,8 @@
         <select class="input" aria-label="Relation kind" bind:value={relationKind}>
           {#each Object.entries(RELATION_LABELS) as [value, label]}<option {value}>{label}</option>{/each}
         </select>
-        <input class="input" style="flex:1;min-width:0" aria-label="Related item"
-               placeholder="{team.shortCode}-42"
-               class:error={invalid?.field === "relations"} bind:value={relationDraft}
-               oninput={clearIf("relations")}
-               onkeydown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRelation(); } }} />
-        <button class="btn" onclick={addRelation}>Add</button>
+        <ItemSearch bind:text={relationDraft} placeholder="A title, or {team.shortCode}-42"
+                    invalid={invalid?.field === "relations"} onpick={addRelation} />
       </div>
       {@render complaint("relations")}
     </div>

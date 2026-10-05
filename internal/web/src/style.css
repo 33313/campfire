@@ -1060,6 +1060,8 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
   animation: drop var(--quick) var(--ease-out);
 }
 .bucket-offers { max-height: 280px; overflow-y: auto; }
+.item-search { flex: 1; min-width: 0; }
+.item-search .input { width: 100%; }
 .bucket-offers .search-suggestion { align-items: center; }
 .bucket-picker { position: relative; }
 .bucket-picker-icon { position: absolute; left: 8px; top: 50%; translate: 0 -50%; display: flex;
