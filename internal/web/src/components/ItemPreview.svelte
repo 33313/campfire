@@ -21,13 +21,14 @@
   import PriorityGlyph from "./PriorityGlyph.svelte";
   import Markdown from "./Markdown.svelte";
   import { openModal, failure } from "../lib/ui.svelte.js";
-  import { assigneeOptions, priorityOptions, bucketOptions } from "../lib/options.js";
+  import { assigneeOptions, priorityOptions } from "../lib/options.js";
   import { fieldName, eventChange } from "../lib/events.svelte.js";
   import { ensure } from "../lib/catalog.svelte.js";
   import { pictures } from "../lib/pictures.js";
   import { when, plural } from "../lib/format.js";
   import { NAV, PRIORITY } from "../lib/icons.js";
   import PickDialog from "../dialogs/PickDialog.svelte";
+  import BucketDialog from "../dialogs/BucketDialog.svelte";
   import MoveDialog from "../dialogs/MoveDialog.svelte";
 
   let { item: it, comments = [], history = [], rendering = "mono", onclose, onchange } = $props();
@@ -87,7 +88,10 @@
     if (picked !== undefined) patch(then(picked));
   }
 
-  const pickBucket = () => pick("Bucket", bucketOptions(), (v) => ({ bucketId: v }));
+  async function pickBucket() {
+    const picked = await openModal(BucketDialog, { value: it.bucketId || 0, rendering });
+    if (picked !== undefined) patch({ bucketId: picked });
+  }
 
   // A state change is a move, with its reason and note, exactly as it is on
   // the detail view (SPEC.md §7.1).

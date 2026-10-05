@@ -14,7 +14,7 @@
   import { navigate } from "../lib/router.svelte.js";
   import { onNotify, touches } from "../lib/stream.svelte.js";
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
-  import { assigneeOptions, bucketOptions, priorityOptions } from "../lib/options.js";
+  import { assigneeOptions, priorityOptions } from "../lib/options.js";
   import { when, whenDay, plural } from "../lib/format.js";
   import { fieldName, eventChange } from "../lib/events.svelte.js";
   import { ensure } from "../lib/catalog.svelte.js";
@@ -33,6 +33,7 @@
   import MoveDialog from "../dialogs/MoveDialog.svelte";
   import SplitDialog from "../dialogs/SplitDialog.svelte";
   import PickDialog from "../dialogs/PickDialog.svelte";
+  import BucketDialog from "../dialogs/BucketDialog.svelte";
   import FormDialog from "../dialogs/FormDialog.svelte";
   import ConfirmDialog from "../dialogs/ConfirmDialog.svelte";
   import IconPickDialog from "../dialogs/IconPickDialog.svelte";
@@ -223,7 +224,7 @@
   }
 
   async function pickBucket() {
-    const picked = await openModal(PickDialog, { title: "Bucket", options: await bucketOptions() });
+    const picked = await openModal(BucketDialog, { value: item.bucketId || 0, rendering: team?.iconRendering });
     if (picked !== undefined) patch({ bucketId: picked });
   }
 

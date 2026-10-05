@@ -5,12 +5,14 @@
 // rather than each keeping a copy that drifts.
 
 import { api } from "./api.js";
+import { usedBucket } from "./options.js";
 import { openModal, toast, failure } from "./ui.svelte.js";
 import MoveDialog from "../dialogs/MoveDialog.svelte";
 import BulkEditDialog from "../dialogs/BulkEditDialog.svelte";
 
 /** Applies one field to every id. Resolves true when something was written. */
 export async function applyToAll(ids, field, value, reason, note) {
+  if (field === "bucket" && value) usedBucket(value);
   try {
     const res = await api.bulkEditItems({ itemIds: ids, field, value, reason, note });
     // An item the actor may not edit is refused on its own; the rest go

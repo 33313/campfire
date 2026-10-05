@@ -5,9 +5,9 @@
   import BucketIcon from "../components/BucketIcon.svelte";
   import Icon from "../components/Icon.svelte";
   import LabelEditor from "../components/LabelEditor.svelte";
+  import BucketPicker from "../components/BucketPicker.svelte";
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
-  import { buckets as allBuckets } from "../lib/catalog.svelte.js";
   import { BUCKET_ICONS, BUCKET_COLOURS, PRIORITY, NAV } from "../lib/icons.js";
   import { pictures } from "../lib/pictures.js";
 
@@ -21,15 +21,12 @@
   let description = $state("");
   let priority = $state(3);
   let assigneeId = $state("");
-  let bucketId = $state("");
+  let bucketId = $state(0);
   let plannedEnd = $state("");
   let labels = $state([]);
   let labelDraft = $state("");
   let accepted = $state(false);
-  let buckets = $state([]);
   let acceptedState = $derived(states.find((s) => s.role === "accepted"));
-
-  allBuckets().then((list) => (buckets = list));
 
   // Labels are created by typing them: there is no separate label registry to
   // pick from first (SPEC.md §8.1). The editor is the ticket page's, so the two
@@ -62,7 +59,7 @@
       assigneeId: +assigneeId || 0, labels,
     };
     if (chosen === "bucket") { body.icon = icon; body.color = color; }
-    else if (bucketId) body.bucketId = +bucketId;
+    else if (bucketId) body.bucketId = bucketId;
     try {
       close(await api.createItem(body));
     } catch (err) {
@@ -157,15 +154,12 @@
         {@render complaint("color")}
       </div>
     {:else}
-      <label class="field">
+      <div class="field">
         <span class="field-label">Bucket</span>
-        <select class="input" class:error={invalid?.field === "bucketId"} bind:value={bucketId}
-                onchange={clearIf("bucketId")}>
-          <option value="">None</option>
-          {#each buckets as b}<option value={b.id}>{b.identifier}  {b.title}</option>{/each}
-        </select>
+        <BucketPicker value={bucketId} rendering={team.iconRendering} invalid={invalid?.field === "bucketId"}
+                      onpick={(id) => { bucketId = id; clearIf("bucketId")(); }} />
         {@render complaint("bucketId")}
-      </label>
+      </div>
     {/if}
     <div class="field">
       <span class="field-label">Labels</span>
