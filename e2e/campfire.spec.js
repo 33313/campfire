@@ -1446,9 +1446,13 @@ test.describe(() => {
     const ghost = page.locator(".card.ghost");
     await expect(ghost).toHaveCSS("position", "fixed");
     await expect(ghost).not.toHaveClass(/kindled/);
+    // Called off with Escape and let go over the card: the release is not a
+    // click on it.
     await page.keyboard.press("Escape");
-    await page.mouse.up();
     await expect(ghost).toHaveCount(0);
+    const home = await card.boundingBox();
+    await page.mouse.move(home.x + 20, home.y + 10);
+    await page.mouse.up();
     await expect(page.locator(".detail-aside")).toHaveCount(0);
   });
 

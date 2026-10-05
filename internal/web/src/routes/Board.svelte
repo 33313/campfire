@@ -346,11 +346,15 @@
     const { live, target, ids } = drag;
     stop();
     if (!live) return;
-    // The click that ends a drag is not a click on the card.
+    swallowClick();
+    drop(target, ids);
+  }
+
+  // The click that ends a drag is not a click on the card.
+  function swallowClick() {
     const eat = (e) => { e.preventDefault(); e.stopPropagation(); };
     addEventListener("click", eat, { capture: true, once: true });
     setTimeout(() => removeEventListener("click", eat, { capture: true }));
-    drop(target, ids);
   }
 
   // Let go anywhere but a column, or Escape, and the card goes back home.
@@ -367,7 +371,13 @@
     removeEventListener("pointercancel", cancel);
     removeEventListener("keydown", escape);
   }
-  const escape = (e) => e.key === "Escape" && cancel();
+  // Escape calls the drag off with the button still down: the click its
+  // release makes later is not a click on the card either.
+  function escape(e) {
+    if (e.key !== "Escape") return;
+    if (drag?.live) addEventListener("pointerup", swallowClick, { capture: true, once: true });
+    cancel();
+  }
 
   // One call per card, each ranked after the one before it and before the
   // card under the line, so the run keeps its order and lands where the line
