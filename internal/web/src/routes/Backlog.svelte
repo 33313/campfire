@@ -21,6 +21,7 @@
   import SearchBox from "../components/SearchBox.svelte";
   import FilterBar from "../components/FilterBar.svelte";
   import SelectionBar from "../components/SelectionBar.svelte";
+  import CardMenu from "../components/CardMenu.svelte";
   import PriorityGlyph from "../components/PriorityGlyph.svelte";
   import BucketIcon from "../components/BucketIcon.svelte";
   import Avatar from "../components/Avatar.svelte";
@@ -36,6 +37,7 @@
   let error = $state(null);
   let selected = $state([]);
   let focused = $state(null); // { item, comments } for the detail aside
+  let menu = $state(null); // { item, ids, x, y } while the card menu is up
   // Set when live activity arrived while older pages were on screen: reloading
   // would throw them away, so the refresh is offered rather than taken.
   let stale = $state(false);
@@ -169,6 +171,14 @@
     await load();
     selected = keepAfter(selected, new Set(items.map((i) => i.id)));
   }
+
+  // A row's right-click is a card's (DEV-93): a row outside the selection
+  // becomes the selection, so the menu acts on what it names.
+  function openMenu(item, e) {
+    e.preventDefault();
+    if (!selected.includes(item.id)) selected = [item.id];
+    menu = { item, ids: [...selected], x: e.clientX, y: e.clientY };
+  }
 </script>
 
 {#if error}
@@ -204,7 +214,10 @@
         {#if stale}
           <LoadOlder label="New activity — refresh" onclick={() => load()} />
         {/if}
-        <table class="table">
+        <!-- The title and the bucket wrap rather than widen, and the filler
+             column at the end takes what is left, so the columns after the
+             title sit beside it rather than across the screen (DEV-93). -->
+        <table class="table backlog-table">
           <thead>
             <tr>
               <th style="width:34px">
@@ -212,19 +225,22 @@
                        checked={allSelected} indeterminate={someSelected && !allSelected}
                        onchange={toggleAll} />
               </th>
-              <th style="width:26px">Pr</th>
+              <!-- Unlabelled: the glyphs say it, and name themselves on hover. -->
+              <th style="width:26px" aria-label="Priority"></th>
               <th style="width:84px">Key</th>
-              <th>Title</th>
-              <th style="width:180px">Bucket</th>
-              <th style="width:44px">As</th>
+              <th style="width:560px">Title</th>
+              <th style="width:200px">Bucket</th>
+              <th style="width:150px">Assignee</th>
               <th style="width:90px">Planned</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {#each items as item (item.id)}
               <!-- A click focuses the row into the aside; the identifier opens the item. -->
               <tr class:selected={selected.includes(item.id)} class:focused={focused?.item.id === item.id}
-                  onclick={() => focus(item)} ondblclick={() => navigate(`/${item.identifier}`)}>
+                  onclick={() => focus(item)} ondblclick={() => navigate(`/${item.identifier}`)}
+                  oncontextmenu={(e) => openMenu(item, e)}>
                 <td>
                   <input class="check" type="checkbox" aria-label="Select {item.identifier}"
                          checked={selected.includes(item.id)}
@@ -252,13 +268,19 @@
                     <span class="dash">—</span>
                   {/if}
                 </td>
-                <td><Avatar name={item.assigneeName} /></td>
+                <td>
+                  <span class="cell-assignee">
+                    <Avatar name={item.assigneeName} />
+                    {#if item.assigneeName}<span>{item.assigneeName}</span>{/if}
+                  </span>
+                </td>
                 <td class="num">
                   {#if item.plannedEnd}{whenDay(item.plannedEnd)}{:else}<span class="dash">—</span>{/if}
                 </td>
+                <td></td>
               </tr>
             {:else}
-              <tr><td colspan="7"><div class="empty-note">Nothing in the backlog.</div></td></tr>
+              <tr><td colspan="8"><div class="empty-note">Nothing in the backlog.</div></td></tr>
             {/each}
           </tbody>
         </table>
@@ -274,4 +296,9 @@
       {/if}
     </div>
   </div>
+
+  {#if menu}
+    <CardMenu ids={menu.ids} item={menu.item} {states} x={menu.x} y={menu.y}
+              onclose={() => (menu = null)} onapplied={afterChange} />
+  {/if}
 {/if}

@@ -1326,6 +1326,35 @@ test("the board hides old done items behind a toggle the backlog does not have",
   await expect(page.getByRole("button", { name: "Show old done" })).toHaveCount(0);
 });
 
+// DEV-93: the backlog's columns say what they are, sit beside the title, and
+// a row's right-click is a card's.
+test("the backlog names its assignees, and a row's right-click is the card menu", async ({ page }) => {
+  await signIn(page);
+  const item = await (await page.request.post("/api/items", { data: {
+    kind: "ticket", teamId: 1, title: "Rake the ashes", assigneeId: 1,
+  } })).json();
+  await page.goto("/t/1/backlog");
+  const heads = page.locator("thead th");
+  await expect(heads).toContainText(["", "", "Key", "Title", "Bucket", "Assignee", "Planned", ""]);
+  const row = page.locator("tbody tr", { hasText: "Rake the ashes" });
+  await expect(row.locator(".cell-assignee")).toHaveText(/\sroot$/); // after the avatar's initials
+  // The title column stops short of the screen's width: what follows it is
+  // read along the row, not across the screen.
+  await page.setViewportSize({ width: 2200, height: 900 });
+  const title = await heads.nth(3).boundingBox();
+  expect(title.width).toBeLessThan(600);
+
+  await row.click({ button: "right" });
+  const menu = page.locator(".card-menu");
+  await expect(menu.locator(".menu-head")).toHaveText(item.identifier);
+  await expect(row).toHaveClass(/selected/);
+  await menu.getByRole("button", { name: "Priority" }).hover();
+  await page.getByRole("menu", { name: "Priority" }).getByRole("menuitem", { name: "P1 · Highest" }).click();
+  await expect.poll(async () =>
+    (await (await page.request.get(`/api/items/${item.id}`)).json()).priority).toBe(1);
+  await expect(page.locator(".selection-bar")).toHaveCount(0);
+});
+
 test("a card dropped between two others lands between them, where the line said", async ({ page }) => {
   await signIn(page);
   await page.goto("/t/1/board");
