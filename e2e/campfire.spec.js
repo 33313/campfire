@@ -1692,3 +1692,62 @@ test("a held card scrolls the screen at its edge, and the board at its side", as
   await page.mouse.up();
   await expect(last.locator(`.card[data-id="${id}"]`)).toBeVisible();
 });
+
+// DEV-76: descriptions and comments are read as Markdown, GitHub's dialect,
+// and nothing in them runs.
+test("a description and a comment are read as Markdown, and nothing in them runs", async ({ page }) => {
+  await signIn(page);
+  const text = [
+    "Some **bold**, some `code`, and ~~gone~~.",
+    "A second line, kept.",
+    "",
+    "- [x] done",
+    "- [ ] not yet",
+    "",
+    "| a | b |",
+    "|---|---|",
+    "| 1 | 2 |",
+    "",
+    "See SOL-1 and [elsewhere](https://example.com), not `SOL-2`.",
+    "",
+    "![far](https://example.com/x.png) <script>window.ran = 1</script>",
+    "<img src=x onerror=\"window.ran = 1\"> [click](javascript:window.ran=1)",
+  ].join("\n");
+  const item = await (await page.request.post("/api/items", {
+    data: { kind: "ticket", teamId: 1, title: "Read as Markdown", description: text },
+  })).json();
+  await page.request.post(`/api/items/${item.id}/comments`, { data: { body: "A comment with *emphasis*." } });
+
+  await page.goto(`/${item.identifier}`);
+  const prose = page.locator(".prose.markdown");
+  await expect(prose.locator("strong")).toHaveText("bold");
+  await expect(prose.locator("code").first()).toHaveText("code");
+  await expect(prose.locator("del")).toHaveText("gone");
+  await expect(prose.locator("input[type=checkbox]:checked")).toHaveCount(1);
+  await expect(prose.locator("td")).toHaveText(["1", "2"]);
+  // A typed line break inside a paragraph is drawn.
+  expect(await prose.locator("p").first().evaluate((p) =>
+    p.getBoundingClientRect().height / parseFloat(getComputedStyle(p).lineHeight))).toBeGreaterThan(1.5);
+  // An identifier links to its item, except in code; a link away opens apart.
+  await expect(prose.getByRole("link", { name: "SOL-1", exact: true })).toHaveAttribute("href", "/SOL-1");
+  await expect(prose.getByRole("link", { name: "SOL-2" })).toHaveCount(0);
+  await expect(prose.getByRole("link", { name: "elsewhere" })).toHaveAttribute("target", "_blank");
+  // A picture from elsewhere is a link, not a fetch; HTML is text; a script
+  // address is no link at all.
+  await expect(prose.locator("img")).toHaveCount(0);
+  await expect(prose.getByRole("link", { name: "far" })).toHaveAttribute("href", "https://example.com/x.png");
+  await expect(prose).toContainText("<script>");
+  await expect(prose.locator("a[href^='javascript']")).toHaveCount(0);
+  expect(await page.evaluate(() => window.ran)).toBeUndefined();
+
+  await expect(page.locator(".comment-body em")).toHaveText("emphasis");
+
+  // The preview reads it rendered, and a click opens the Markdown to write.
+  await page.goto("/t/1/backlog");
+  await page.locator("td.cell-title", { hasText: "Read as Markdown" }).click();
+  const aside = page.locator(".detail-aside");
+  await expect(aside.locator(".markdown strong")).toHaveText("bold");
+  await aside.locator(".bare-read").click({ position: { x: 5, y: 5 } });
+  await expect(aside.getByRole("textbox", { name: "Description" })).toBeFocused();
+  await expect(aside.getByRole("textbox", { name: "Description" })).toHaveValue(text);
+});

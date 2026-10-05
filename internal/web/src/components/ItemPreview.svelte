@@ -19,6 +19,7 @@
   import Avatar from "./Avatar.svelte";
   import BucketIcon from "./BucketIcon.svelte";
   import PriorityGlyph from "./PriorityGlyph.svelte";
+  import Markdown from "./Markdown.svelte";
   import { openModal, failure } from "../lib/ui.svelte.js";
   import { assigneeOptions, priorityOptions, bucketOptions } from "../lib/options.js";
   import { fieldName, eventChange } from "../lib/events.svelte.js";
@@ -58,6 +59,11 @@
   $effect(() => {
     if (draft.id !== it.id) draft = { id: it.id, title: it.title, description: it.description || "" };
   });
+  // Whether the description is open for writing rather than read rendered.
+  let writing = $state(false);
+  function focusIf(el, on) {
+    if (on) { el.focus(); el.selectionStart = el.value.length; }
+  }
   let titleChanged = $derived(draft.id === it.id && draft.title !== it.title);
   let descriptionChanged = $derived(draft.id === it.id && draft.description !== (it.description || ""));
 
@@ -126,10 +132,20 @@
     {/if}
   </div>
   <div>
-    <textarea class="bare prose" rows="1" style="font-size:14px" aria-label="Description"
-              placeholder="No description. Write one here." bind:value={draft.description}
-              onkeydown={(e) => e.key === "Escape" && (draft.description = it.description || "")}
-    ></textarea>
+    {#if it.description && !writing && !descriptionChanged}
+      <!-- Read rendered. A click on it, but not on a link in it, opens the
+           Markdown it was written in, where it was. -->
+      <Markdown class="prose bare-read" style="font-size:14px" text={it.description}
+                tabindex="0" aria-label="Description" title="Click to edit"
+                onclick={(e) => !e.target.closest("a") && (writing = true)}
+                onkeydown={(e) => e.key === "Enter" && (e.preventDefault(), (writing = true))} />
+    {:else}
+      <textarea class="bare prose" rows="1" style="font-size:14px" aria-label="Description"
+                placeholder="No description. Write one here." bind:value={draft.description}
+                use:focusIf={writing} onblur={() => (writing = false)}
+                onkeydown={(e) => e.key === "Escape" && (draft.description = it.description || "")}
+      ></textarea>
+    {/if}
     {#if descriptionChanged}
       <div class="field-actions">
         <button class="btn" title="Save description" aria-label="Save description"
@@ -233,7 +249,7 @@
             <b><a href="/users/{c.authorName}">{c.authorName}</a></b>
             <time>{when(c.createdAt)}</time>
           </div>
-          <div class="comment-body">{c.body}</div>
+          <Markdown class="comment-body" text={c.body} />
         </div>
       {:else}
         <div class="explain">No comments yet.</div>

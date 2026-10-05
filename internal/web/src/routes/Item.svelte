@@ -27,6 +27,7 @@
   import StatePip from "../components/StatePip.svelte";
   import StateBadge from "../components/StateBadge.svelte";
   import LabelEditor from "../components/LabelEditor.svelte";
+  import Markdown from "../components/Markdown.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
   import MoveDialog from "../dialogs/MoveDialog.svelte";
   import SplitDialog from "../dialogs/SplitDialog.svelte";
@@ -331,7 +332,7 @@
                     style="width:100%;font-family:var(--serif);font-size:15px"
                     bind:value={draftDescription}></textarea>
         {:else if item.description}
-          <div class="prose">{item.description}</div>
+          <Markdown class="prose" text={item.description} />
         {:else}
           <div class="explain">No description.</div>
         {/if}
@@ -602,7 +603,7 @@
                               onclick={() => editComment(c)}>Edit</button>
                     {/if}
                   </div>
-                  <div class="comment-body">{c.body}</div>
+                  <Markdown class="comment-body" text={c.body} />
                 </div>
               </div>
             {:else}

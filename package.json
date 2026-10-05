@@ -12,6 +12,8 @@
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "micromark": "^4.0.3",
+    "micromark-extension-gfm": "^3.0.0",
     "svelte": "^5.57.0",
     "vite": "^8.2.2"
   }
