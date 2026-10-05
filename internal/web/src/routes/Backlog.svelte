@@ -10,6 +10,7 @@
   import { onNotify, touches } from "../lib/stream.svelte.js";
   import { failure } from "../lib/ui.svelte.js";
   import { createItem } from "../lib/create.js";
+  import { keepAfter } from "../lib/bulk.js";
   import { pref, setPref } from "../lib/prefs.js";
   import { conjoin, quote } from "../lib/csql.js";
   import { whenDay } from "../lib/format.js";
@@ -163,6 +164,11 @@
   }
 
   const create = () => createItem({ team, states, reload: () => load() });
+
+  async function afterChange() {
+    await load();
+    selected = keepAfter(selected, new Set(items.map((i) => i.id)));
+  }
 </script>
 
 {#if error}
@@ -187,7 +193,7 @@
     </div>
     {#if selected.length}
       <SelectionBar ids={selected} {states}
-                    onapplied={async () => { selected = []; await load(); }}
+                    onapplied={afterChange}
                     onclear={() => (selected = [])} />
     {/if}
   </div>

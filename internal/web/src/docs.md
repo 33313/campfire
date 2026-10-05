@@ -104,7 +104,8 @@ as a table. Rejected items appear in neither; find them with a filter or by iden
 - **Ctrl-click** (**⌘-click** on a Mac) selects cards; dragging one moves them all. In the backlog,
   use the checkboxes.
 - The **selection bar** replaces the filter bar and changes every selected item at once: *Move to…*,
-  *Reject…*, *Assignee*, *Priority* and *Bucket*.
+  *Reject…*, *Assignee*, *Priority* and *Bucket*. The selection stays once a change goes through,
+  less anything that left the screen, so the next change can follow. *Clear* ends it.
 
 ### Card menu
 

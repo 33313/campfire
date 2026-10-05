@@ -1665,12 +1665,23 @@ test("the card menu's sub-menus set a field on the selection in one click", asyn
 
   await expect.poll(async () => Promise.all(ids.map(async (id) =>
     (await (await page.request.get(`/api/items/${id}`)).json()).priority))).toEqual([1, 1]);
+  // The selection outlives the change, so the next one can follow (DEV-89).
+  const bar = page.locator(".selection-bar");
+  await expect(bar.locator(".count")).toContainText("2");
+  await bar.getByRole("button", { name: "Priority" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "P3 · Medium" }).click();
+  await dialog.getByRole("button", { name: "Apply" }).click();
+  await expect.poll(async () => Promise.all(ids.map(async (id) =>
+    (await (await page.request.get(`/api/items/${id}`)).json()).priority))).toEqual([3, 3]);
+  await expect(bar.locator(".count")).toContainText("2");
+  await bar.getByRole("button", { name: "Clear" }).click();
 
   // One card: its value now is marked, and a click on Assignee opens the
   // sub-menu too.
   await cards.nth(0).click({ button: "right" });
   await menu.getByRole("button", { name: "Priority" }).click();
-  await expect(page.getByRole("menu", { name: "Priority" }).locator(".team-option.on")).toContainText("P1 · Highest");
+  await expect(page.getByRole("menu", { name: "Priority" }).locator(".team-option.on")).toContainText("P3 · Medium");
   await menu.getByRole("button", { name: "Assignee" }).click();
   await page.getByRole("menu", { name: "Assignee" }).getByRole("menuitem", { name: "Unassigned" }).click();
   await expect.poll(async () =>

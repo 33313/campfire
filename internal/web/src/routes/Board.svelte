@@ -14,6 +14,7 @@
   import { onNotify, touches } from "../lib/stream.svelte.js";
   import { failure } from "../lib/ui.svelte.js";
   import { createItem } from "../lib/create.js";
+  import { keepAfter } from "../lib/bulk.js";
   import { pref, setPref } from "../lib/prefs.js";
   import { NAV } from "../lib/icons.js";
   import { ms, easeOut, QUICK, GLIDE } from "../lib/motion.js";
@@ -232,6 +233,11 @@
 
   const create = () => createItem({ team, states, reload: () => load() });
 
+  async function afterChange() {
+    await load();
+    selected = keepAfter(selected, new Set(board.columns.flatMap((c) => (c.items || []).map((i) => i.id))));
+  }
+
   // Right-clicking a card outside the selection makes that card the selection:
   // a menu that names one ticket and edits five others is a trap.
   function openMenu(item, x, y) {
@@ -441,7 +447,7 @@
     </div>
     {#if selected.length}
       <SelectionBar ids={selected} {states}
-                    onapplied={async () => { selected = []; await load(); }}
+                    onapplied={afterChange}
                     onclear={() => (selected = [])} />
     {/if}
   </div>
@@ -497,6 +503,6 @@
   {#if menu}
     <CardMenu ids={menu.ids} item={menu.item} {states} x={menu.x} y={menu.y}
               onclose={() => (menu = null)}
-              onapplied={async () => { selected = []; await load(); }} />
+              onapplied={afterChange} />
   {/if}
 {/if}
