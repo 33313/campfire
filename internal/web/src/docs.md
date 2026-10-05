@@ -16,21 +16,19 @@ use, then connecting your own tools.
 
 ## Getting started
 
-1. **Sign in.** An administrator creates your account or sends you an invitation link. There is no
-   public sign-up.
-2. **Pick a team.** Click the team name at the top of the sidebar to switch teams. An administrator
-   adds you to them.
-3. **Create a ticket.** Click **Create** in the header, type a title and click **Create**. The
-   ticket goes to the backlog.
-4. **Start work on it.** Open the ticket and click **State** to pick a column, or tick **Mark as
-   accepted** when creating it to skip the backlog.
-5. **Move it along.** Drag the card from column to column on the board until it reaches *Done*.
+1. **Pick or create a team.** Click the team name at the top of the sidebar to switch teams. An
+   instance administrator can create one with **New team** in the same menu; otherwise, an
+   administrator adds you to teams.
+2. **Create a ticket.** Click **Create** in the top right corner of the page, type a title and click
+   **Create**. Tick **Mark as accepted** to put it straight on the board. Otherwise it lands in the
+   backlog, and you accept it later: open it and click **State** to pick a column.
+3. **Move it along.** Drag the card from column to column on the board until it reaches *Done*.
 
 ## Tickets
 
 ### Creating
 
-**Create** in the header opens the form. Only the title is required.
+**Create**, in the top right corner of the page, opens the form. Only the title is required.
 
 | Field | Notes |
 |---|---|
@@ -39,14 +37,16 @@ use, then connecting your own tools.
 | Priority | `P1` (highest) to `P4`. Default `P3`. |
 | Planned end | Optional due date. |
 | Assignee | One person, or nobody. **(Me!)** assigns it to you. |
-| Bucket | Optional. |
+| Bucket | (Optional) The [Bucket](#buckets) it belongs to. |
 | Labels | Free text. Enter adds a label; Backspace in the empty box removes the last one. |
 | Mark as accepted | Puts the ticket on the board instead of in the backlog. |
 
 ### Editing
 
 - **Click a card** to open it in the preview beside the board, and edit any field there.
-- **Click the identifier** in the preview to open the full page. `/SOL-42` opens it directly.
+- **Click the identifier** in the preview to open the full page. Each item also has its own
+  link: Campfire's address, a slash and the identifier, such as
+  `https://campfire.example.com/SOL-42`. Open or share it to go straight to the item.
 - **Actual start** is set when an item first leaves the backlog. **Actual end** is set when it is
   done or rejected, and cleared if it moves back.
 
