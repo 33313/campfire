@@ -22,6 +22,7 @@
   import Admin from "./routes/Admin.svelte";
   import Account from "./routes/Account.svelte";
   import Profile from "./routes/Profile.svelte";
+  import Docs from "./routes/Docs.svelte";
 
   const IDENTIFIER = /^\/([A-Za-z][A-Za-z0-9]*-\d+)$/;
 
@@ -104,6 +105,7 @@
     if (path === "/log") return { c: Log, p: {} };
     if (path === "/admin") return { c: Admin, p: {} };
     if (path === "/account") return { c: Account, p: {} };
+    if (path === "/docs") return { c: Docs, p: {} };
     // A profile is addressed by name: /users/marta is the link a person hands over.
     if ((m = path.match(/^\/users\/([^/]+)$/))) {
       return { c: Profile, p: { username: decodeURIComponent(m[1]) } };

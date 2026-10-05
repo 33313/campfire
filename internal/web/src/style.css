@@ -712,6 +712,29 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 .settings-rail button:hover { color: var(--text); }
 .settings-rail button.on { color: var(--accent); background: var(--accent-tint); border-left-color: var(--accent); }
 .settings-main { flex: 1; min-width: 0; }
+/* The docs: the rail stays beside whatever section is being read. */
+.settings-rail:has(+ .settings-main .docs) { position: sticky; top: 0; align-self: flex-start; }
+/* A reference, not a description: set in the interface's sans, with tables
+   across the column. Centred on the screen, not beside the rail: 414px is the
+   sidebar and the rail. Too narrow for that, it keeps to the left. */
+.docs {
+  padding: 28px 32px 60vh; max-width: 784px; margin-left: max(0px, (100vw - 784px) / 2 - 414px);
+  font-family: var(--sans); font-size: 14px; line-height: 1.65;
+}
+/* Written wrapped, in docs.md, not typed line by line: its breaks are not
+   the reader's. */
+.docs.markdown :is(p, li) { white-space: normal; }
+.docs h2 {
+  font-size: 20px; margin: 2.2em 0 0.6em; padding-top: 1.1em;
+  border-top: 1px solid var(--rule-faint); scroll-margin-top: 16px;
+}
+.docs h2:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.docs h3 { font-size: 15px; margin: 1.7em 0 0.5em; }
+.docs h2 + h3 { margin-top: 0.9em; }
+.docs table { width: 100%; font-size: 13px; margin-bottom: 1em; }
+.docs :is(th, td) { padding: 6px 10px; vertical-align: top; }
+.docs pre { font-size: 12.5px; padding: 12px 14px; }
+.docs td code, .docs th code { white-space: nowrap; }
 
 .tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--border); margin: 24px 0 16px; }
 .tab {

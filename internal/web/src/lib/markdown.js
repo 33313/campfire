@@ -20,11 +20,16 @@ const OPTIONS = { extensions: [gfm()], htmlExtensions: [gfmHtml()] };
 
 const away = (url) => new URL(url, location.href).origin !== location.origin;
 
-/** The HTML for a Markdown text. */
-export function markdown(text) {
+export const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+/** The HTML for a Markdown text. `anchors` gives each section heading an id
+    to link to: only for a text of ours, as one in a description could take an
+    id the page already has. */
+export function markdown(text, anchors = false) {
   const t = document.createElement("template"); // inert: nothing in it loads
   t.innerHTML = micromark(text || "", OPTIONS);
   const page = t.content;
+  if (anchors) for (const h of page.querySelectorAll("h2")) h.id = slug(h.textContent);
 
   for (const img of page.querySelectorAll("img")) {
     const a = Object.assign(document.createElement("a"), { href: img.src });

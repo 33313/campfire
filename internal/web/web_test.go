@@ -148,10 +148,11 @@ func TestBoardCardsCarryNoLabels(t *testing.T) {
 }
 
 // DESIGN.md §2 rule 3: there is no ticket type. No type field, no per-team
-// type list, no type filter, no type column, no type on a card.
+// type list, no type filter, no type column, no type on a card. The docs are
+// prose, and quote an MCP client's configuration, whose "type" is a transport.
 func TestTheClientHasNoTicketType(t *testing.T) {
 	for name, source := range sources(t) {
-		if strings.HasSuffix(name, ".css") {
+		if strings.HasSuffix(name, ".css") || strings.HasSuffix(name, ".md") {
 			continue
 		}
 		for _, forbidden := range []string{"ticketType", "itemType", "typeId", "\"type\":"} {

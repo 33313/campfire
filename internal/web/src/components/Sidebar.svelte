@@ -199,6 +199,10 @@
         <span class="label">Team settings</span>
       </a>
     {/if}
+    <a class="nav-item" class:on={route.path === "/docs"} href="/docs">
+      <Icon body={NAV.docs} size={15} />
+      <span class="label">Docs</span>
+    </a>
     {#if app.user.isAdmin}
       <a class="nav-item" class:on={route.path === "/admin"} href="/admin">
         <Icon body={NAV.admin} size={15} />
