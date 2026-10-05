@@ -109,7 +109,8 @@ as a table. Rejected items appear in neither; find them with a filter or by iden
 
 ### Card menu
 
-**Right-click** a card for the same actions. A card outside the selection is selected first.
+**Right-click** a card, or a row in the backlog, for the same actions. One outside the selection is
+selected first.
 
 | Action | Does |
 |---|---|

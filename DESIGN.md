@@ -273,7 +273,7 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 |---|---|---|
 | `SignIn.dc.html` | Sign in | Username + password, optional TOTP step (`Dialogs.dc.html`). |
 | `Main.dc.html` | Board | One column per work state, less the default and rejected ones; the header says "4 of 6 states". Search box in the header, show-buckets toggle and filter chips in the filter bar. A plain click on a card previews it in the aside; the identifier in the preview opens it. |
-| `Backlog.dc.html` | Backlog | Table + preview aside, same preview as the board. Carries the selection bar and the checkbox column. |
+| `Backlog.dc.html` | Backlog | Table + preview aside, same preview as the board. Carries the selection bar and the checkbox column. The priority column has no header; Assignee shows the avatar and the username. Title and bucket wrap at a set width and a filler column takes the rest, so the columns sit beside the title. A row's right-click is the card menu. |
 | `ItemDetail.dc.html` | Item detail | Header actions: Copy link · **Clone** · **Split** · Reject · Edit (Save · Cancel while open). Relations, comments/history tabs. The fields are a grid in the one column: the artboard's field aside is drawn beside the board's sidebar, and two asides on one screen read as neither. |
 | `BucketIndex.dc.html` | Bucket index | Cards with progress bar, per-bucket icon, scope switch (participation / owned / instance). |
 | `BucketDetail.dc.html` | Bucket detail | Contents grouped by owning team, per-row remove ×. `Icon` and `Colour` are fields here. The screen is the item detail screen — a bucket and a ticket are one namespace. |
