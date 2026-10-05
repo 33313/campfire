@@ -269,6 +269,65 @@ func TestRelationsAreShownFromBothEnds(t *testing.T) {
 	}
 }
 
+// DEV-94: a relation is added from either end, in the kind as seen from there.
+// "A blocked by B" is the one edge "B blocks A", not a second kind.
+func TestARelationIsAddedFromEitherEnd(t *testing.T) {
+	w := newWorld(t)
+	blocked := w.ticket(w.sol, w.marta, "blocked")
+	blocker := w.ticket(w.sol, w.marta, "blocker")
+	it, err := w.AddRelation(w.ctx, w.marta, blocked.ID, blocker.ID, "blocked_by")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(it.Relations) != 1 || it.Relations[0].Kind != "blocked_by" || it.Relations[0].Outgoing {
+		t.Fatalf("the item it was added from shows %+v", it.Relations)
+	}
+	other, _ := w.GetItem(w.ctx, w.marta, blocker.ID)
+	if len(other.Relations) != 1 || other.Relations[0].Kind != store.RelBlocks {
+		t.Fatalf("the far end shows %+v", other.Relations)
+	}
+	// The same edge from the other end is not a second one.
+	if _, err := w.AddRelation(w.ctx, w.marta, blocker.ID, blocked.ID, store.RelBlocks); err != nil {
+		t.Fatal(err)
+	}
+	if other, _ = w.GetItem(w.ctx, w.marta, blocker.ID); len(other.Relations) != 1 {
+		t.Fatalf("the edge was stored twice: %+v", other.Relations)
+	}
+	_, err = w.AddRelation(w.ctx, w.marta, blocked.ID, blocker.ID, "blocked")
+	requireCode(t, err, CodeInvalid)
+}
+
+// DEV-94: relations are made with the item, in the same write: one that names
+// an item that does not exist leaves nothing behind.
+func TestAnItemIsCreatedWithItsRelations(t *testing.T) {
+	w := newWorld(t)
+	dup := w.ticket(w.sol, w.marta, "the first report")
+	follow := w.ticket(w.sol, w.marta, "earlier work")
+	it, err := w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindTicket, TeamID: w.sol.ID,
+		Title: "the second report", Relations: []NewRelation{
+			{Kind: store.RelDuplicates, ToID: dup.ID}, {Kind: "followed_up_by", ToID: follow.ID}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kinds := map[int64]string{}
+	for _, r := range it.Relations {
+		kinds[r.ItemID] = r.Kind
+	}
+	if kinds[dup.ID] != store.RelDuplicates || kinds[follow.ID] != "followed_up_by" {
+		t.Fatalf("created with %+v", it.Relations)
+	}
+
+	_, err = w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindTicket, TeamID: w.sol.ID,
+		Title: "orphan", Relations: []NewRelation{{Kind: store.RelRelatesTo, ToID: 9999}}})
+	requireCode(t, err, CodeInvalid)
+	_, err = w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindTicket, TeamID: w.sol.ID,
+		Title: "odd", Relations: []NewRelation{{Kind: "mentions", ToID: dup.ID}}})
+	requireCode(t, err, CodeInvalid)
+	if page, err := w.ListItems(w.ctx, w.marta, Filter{Query: "text ~ orphan"}, "", 10); err != nil || len(page.Items) != 0 {
+		t.Fatal("a refused create left its item behind")
+	}
+}
+
 // SPEC.md §6.4: bucket membership is a field on the ticket, governed by
 // ordinary ticket-edit permission.
 func TestBucketMembershipFollowsTicketEditPermission(t *testing.T) {

@@ -823,6 +823,20 @@ components:
         plannedEnd: { type: string, format: date }
         labels: { type: array, items: { type: string } }
         accepted: { type: boolean, description: Enter the accepted state rather than the default one }
+        relations:
+          type: array
+          description: Made with the item, in the same write
+          items:
+            type: object
+            required: [kind, toId]
+            properties:
+              kind: { $ref: "#/components/schemas/RelationKind" }
+              toId: { type: integer }
+
+    RelationKind:
+      type: string
+      description: As seen from the item it is added from; blocked_by is a blocks edge the other way
+      enum: [blocks, blocked_by, follows_up, followed_up_by, duplicates, duplicated_by, relates_to]
 
     ItemPatch:
       type: object

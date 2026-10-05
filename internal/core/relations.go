@@ -12,35 +12,47 @@ import (
 // A relation carries no lifecycle meaning: a "blocked by" edge is information
 // and MUST NOT prevent any transition. Nothing in this file consults one.
 
-func (s *Service) AddRelation(ctx context.Context, a Actor, fromID, toID int64, kind string) (*Item, error) {
-	if !store.ValidRelationKind(kind) {
+// AddRelation links an item to another, in any of the seven kinds as seen
+// from it: blocks or blocked_by, follows_up or followed_up_by, duplicates or
+// duplicated_by, relates_to (DEV-94).
+func (s *Service) AddRelation(ctx context.Context, a Actor, itemID, toID int64, kind string) (*Item, error) {
+	if _, _, ok := store.StoredRelation(kind); !ok {
 		return nil, invalidField("kind", "that is not one of the relation types")
 	}
-	if fromID == toID {
+	if itemID == toID {
 		return nil, invalidField("toId", "an item cannot relate to itself")
 	}
 	var out *Item
 	err := s.write(ctx, a, func(t *wtx) error {
-		from, err := store.ItemByID(ctx, t.Tx, fromID)
+		it, err := store.ItemByID(ctx, t.Tx, itemID)
 		if err != nil {
 			return err
 		}
-		to, err := store.ItemByID(ctx, t.Tx, toID)
+		other, err := store.ItemByID(ctx, t.Tx, toID)
 		if err != nil {
 			return err
 		}
-		// The edge is written on the "from" item, so that is the item whose
-		// edit permission governs it.
-		if err := s.requireItemEdit(ctx, t.Tx, a, from); err != nil {
+		// The item it is added from governs it, whichever way it is stored.
+		if err := s.requireItemEdit(ctx, t.Tx, a, it); err != nil {
 			return err
 		}
-		if err := s.addRelation(ctx, t, from, to, kind); err != nil {
+		if err := s.relate(ctx, t, it, other, kind); err != nil {
 			return err
 		}
-		out, err = s.loadItem(ctx, t.Tx, fromID)
+		out, err = s.loadItem(ctx, t.Tx, itemID)
 		return err
 	})
 	return out, err
+}
+
+// relate adds the edge a kind names from `it` to `other`, stored the way
+// round its stored kind points.
+func (s *Service) relate(ctx context.Context, t *wtx, it, other store.Item, kind string) error {
+	stored, reversed, _ := store.StoredRelation(kind)
+	if reversed {
+		it, other = other, it
+	}
+	return s.addRelation(ctx, t, it, other, stored)
 }
 
 func (s *Service) addRelation(ctx context.Context, t *wtx, from, to store.Item, kind string) error {

@@ -6,9 +6,11 @@
   import Icon from "../components/Icon.svelte";
   import LabelEditor from "../components/LabelEditor.svelte";
   import BucketPicker from "../components/BucketPicker.svelte";
+  import RelationList from "../components/RelationList.svelte";
+  import ItemSearch from "../components/ItemSearch.svelte";
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
-  import { BUCKET_ICONS, BUCKET_COLOURS, PRIORITY, NAV } from "../lib/icons.js";
+  import { BUCKET_ICONS, BUCKET_COLOURS, PRIORITY, NAV, RELATION_LABELS } from "../lib/icons.js";
   import { pictures } from "../lib/pictures.js";
 
   /** Create a ticket or a bucket. A bucket carries an icon; a ticket does not. */
@@ -26,6 +28,9 @@
   let labels = $state([]);
   let labelDraft = $state("");
   let accepted = $state(false);
+  let relations = $state([]); // the other ends, as found: { kind, id, identifier, title }
+  let relationKind = $state("blocks");
+  let relationDraft = $state("");
   let acceptedState = $derived(states.find((s) => s.role === "accepted"));
 
   // Labels are created by typing them: there is no separate label registry to
@@ -46,9 +51,23 @@
     if (invalid?.field === field) invalid = null;
   };
 
+  // A relation is made with the item (DEV-94). The other end is picked from
+  // what the search finds, so it always names an item that exists.
+  function addRelation(other) {
+    invalid = null;
+    if (!relations.some((r) => r.id === other.id && r.kind === relationKind)) {
+      relations.push({ kind: relationKind, id: other.id, identifier: other.identifier, title: other.title });
+    }
+  }
+
   async function create() {
     addLabel(); // whatever is still in the box was meant to be one
     invalid = null;
+    // Text left in the search was meant to be a relation, but names nothing yet.
+    if (relationDraft.trim()) {
+      invalid = { field: "relations", message: "Pick the related item from the list, or clear the box." };
+      return;
+    }
     if (!title.trim()) {
       invalid = { field: "title", message: "An item needs a title." };
       return;
@@ -57,6 +76,7 @@
       kind: chosen, teamId: team.id, title, description,
       priority: +priority, plannedEnd: plannedEnd || "", accepted,
       assigneeId: +assigneeId || 0, labels,
+      relations: relations.map((r) => ({ kind: r.kind, toId: r.id })),
     };
     if (chosen === "bucket") { body.icon = icon; body.color = color; }
     else if (bucketId) body.bucketId = bucketId;
@@ -165,6 +185,23 @@
       <span class="field-label">Labels</span>
       <LabelEditor {labels} bind:draft={labelDraft} onadd={addLabel}
                    onremove={(name) => labels.splice(labels.indexOf(name), 1)} />
+    </div>
+    <div class="field">
+      <span class="field-label">Relations</span>
+      {#if relations.length}
+        <div>
+          <RelationList {relations} compact links={false}
+                        onremove={(r) => relations.splice(relations.indexOf(r), 1)} />
+        </div>
+      {/if}
+      <div style="display:flex;gap:6px">
+        <select class="input" aria-label="Relation kind" bind:value={relationKind}>
+          {#each Object.entries(RELATION_LABELS) as [value, label]}<option {value}>{label}</option>{/each}
+        </select>
+        <ItemSearch bind:text={relationDraft} placeholder="A title, or {team.shortCode}-42"
+                    invalid={invalid?.field === "relations"} onpick={addRelation} />
+      </div>
+      {@render complaint("relations")}
     </div>
     <label style="display:flex;gap:8px;align-items:center">
       <input class="check" type="checkbox" bind:checked={accepted} />

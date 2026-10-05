@@ -185,7 +185,8 @@ type SplitResult struct {
 // Split turns one ticket into several.
 //
 // Each new ticket is created the way a clone is but carries a "follows up"
-// relation to the source. The source keeps its state unless the actor also
+// relation to the source, and a "relates to" to each of the others the split
+// made (DEV-94). The source keeps its state unless the actor also
 // rejects it in the same action, in which case the reason is `cancelled`.
 //
 // A split never deletes or absorbs the source: deletion is not a state, and
@@ -207,6 +208,7 @@ func (s *Service) Split(ctx context.Context, a Actor, itemID int64, titles []str
 			return err
 		}
 		res := &SplitResult{}
+		var made []store.Item
 		for _, title := range titles {
 			title, err := validateTitle(title)
 			if err != nil {
@@ -218,6 +220,14 @@ func (s *Service) Split(ctx context.Context, a Actor, itemID int64, titles []str
 			if err != nil {
 				return err
 			}
+			for _, sibling := range made {
+				if err := s.addRelation(ctx, t, sibling, created, store.RelRelatesTo); err != nil {
+					return err
+				}
+			}
+			made = append(made, created)
+		}
+		for _, created := range made {
 			full, err := s.loadItem(ctx, t.Tx, created.ID)
 			if err != nil {
 				return err
@@ -247,7 +257,7 @@ func (s *Service) Split(ctx context.Context, a Actor, itemID int64, titles []str
 //
 // A derived item MUST NOT copy the source's comments, history, relations,
 // actual start or actual end: the edge back to the source is the only relation
-// it is created with (SPEC.md §6.5).
+// it is created with (SPEC.md §6.5), besides a split's edges to its siblings.
 func (s *Service) derive(ctx context.Context, t *wtx, src store.Item, title, relation string) (store.Item, error) {
 	def, err := store.WorkStateByRole(ctx, t.Tx, src.TeamID, store.RoleDefault)
 	if err != nil {

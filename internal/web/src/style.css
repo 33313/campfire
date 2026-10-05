@@ -757,6 +757,10 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
   font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--faint); width: 110px; flex: 0 0 110px;
 }
+.relation-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12.5px; }
+.relation-row.compact { gap: 8px; padding: 6px 0; }
+.relation-row.compact .relation-kind { width: 92px; flex-basis: 92px; }
 /* Comments and history in the preview aside. The detail view has a column to
    spend on them; 288px has not, so the meta sits above the text rather than
    beside it, and the list scrolls rather than pushing the fields off screen. */
@@ -1056,6 +1060,8 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
   animation: drop var(--quick) var(--ease-out);
 }
 .bucket-offers { max-height: 280px; overflow-y: auto; }
+.item-search { flex: 1; min-width: 0; }
+.item-search .input { width: 100%; }
 .bucket-offers .search-suggestion { align-items: center; }
 .bucket-picker { position: relative; }
 .bucket-picker-icon { position: absolute; left: 8px; top: 50%; translate: 0 -50%; display: flex;

@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 
@@ -24,6 +25,14 @@ type NewItem struct {
 	// Accepted ticks "Mark as accepted": the item enters the accepted state
 	// rather than the default one, and its clock starts (SPEC.md §7.3).
 	Accepted bool `json:"accepted,omitempty"`
+	// Relations are made with the item, in the same write (DEV-94).
+	Relations []NewRelation `json:"relations,omitempty"`
+}
+
+// NewRelation is an edge from a new item, in any kind AddRelation takes.
+type NewRelation struct {
+	Kind string `json:"kind"`
+	ToID int64  `json:"toId"`
 }
 
 // ItemPatch edits an existing item. A nil field is left alone; a zero value is
@@ -125,6 +134,11 @@ func (s *Service) CreateItem(ctx context.Context, a Actor, in NewItem) (*Item, e
 	} else if in.Color != "" {
 		return nil, invalidField("color", "a ticket has no colour")
 	}
+	for _, r := range in.Relations {
+		if _, _, ok := store.StoredRelation(r.Kind); !ok {
+			return nil, invalidField("relations", "that is not one of the relation types")
+		}
+	}
 
 	var out *Item
 	err = s.write(ctx, a, func(t *wtx) error {
@@ -172,6 +186,17 @@ func (s *Service) CreateItem(ctx context.Context, a Actor, in NewItem) (*Item, e
 		}
 		for _, name := range in.Labels {
 			if err := s.attachLabel(ctx, t, created, name); err != nil {
+				return err
+			}
+		}
+		for _, r := range in.Relations {
+			other, err := store.ItemByID(ctx, t.Tx, r.ToID)
+			if errors.Is(err, store.ErrNotFound) {
+				return invalidField("relations", "a related item does not exist")
+			} else if err != nil {
+				return err
+			}
+			if err := s.relate(ctx, t, created, other, r.Kind); err != nil {
 				return err
 			}
 		}

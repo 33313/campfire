@@ -19,7 +19,7 @@
   import { fieldName, eventChange } from "../lib/events.svelte.js";
   import { ensure } from "../lib/catalog.svelte.js";
   import { pictures } from "../lib/pictures.js";
-  import { NAV, PRIORITY, RELATION_LABELS, BUCKET_COLOURS } from "../lib/icons.js";
+  import { NAV, PRIORITY, BUCKET_COLOURS } from "../lib/icons.js";
 
   import Icon from "../components/Icon.svelte";
   import Avatar from "../components/Avatar.svelte";
@@ -34,6 +34,8 @@
   import SplitDialog from "../dialogs/SplitDialog.svelte";
   import PickDialog from "../dialogs/PickDialog.svelte";
   import BucketDialog from "../dialogs/BucketDialog.svelte";
+  import RelationList from "../components/RelationList.svelte";
+  import RelationDialog from "../dialogs/RelationDialog.svelte";
   import FormDialog from "../dialogs/FormDialog.svelte";
   import ConfirmDialog from "../dialogs/ConfirmDialog.svelte";
   import IconPickDialog from "../dialogs/IconPickDialog.svelte";
@@ -198,22 +200,8 @@
   }
 
   async function addRelation() {
-    const res = await openModal(FormDialog, {
-      title: "Add a relation",
-      action: "Add",
-      fields: [
-        { name: "kind", label: "Kind", type: "select", value: "blocks",
-          options: ["blocks", "follows_up", "duplicates", "relates_to"]
-            .map((k) => ({ value: k, label: RELATION_LABELS[k] })) },
-        { name: "to", label: "To", placeholder: "SOL-42" },
-      ],
-      explain: "Relations may cross teams and may link a ticket to a bucket.",
-    });
-    if (!res?.to.trim()) return;
-    guard(async () => {
-      const other = await api.lookupItem(res.to.trim());
-      await api.addRelation(item.id, other.id, res.kind);
-    });
+    const res = await openModal(RelationDialog, { item });
+    if (res) guard(() => api.addRelation(item.id, res.other.id, res.kind));
   }
 
   async function pickAssignee() {
@@ -561,24 +549,12 @@
               <Icon body={NAV.plus} size={11} /><span>Add</span>
             </button>
           </div>
-          {#each item.relations || [] as r}
-            <div class="relation-row">
-              <span class="relation-kind">{RELATION_LABELS[r.kind] || r.kind}</span>
-              <a class="ident" style="color:var(--accent)" href="/{r.identifier}">{r.identifier}</a>
-              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-                {r.title}
-              </span>
-              <StateBadge name={r.stateName} role={r.stateRole} />
-              <button class="btn quiet small" title="Remove"
-                      onclick={() => guard(() => api.removeRelation(r.id))}>
-                <Icon body={NAV.close} size={11} />
-              </button>
-            </div>
-          {:else}
+          <RelationList relations={item.relations} onremove={(r) => guard(() => api.removeRelation(r.id))} />
+          {#if !item.relations?.length}
             <div class="explain">
               No relations. A relation is information: a blocked-by edge never prevents a move.
             </div>
-          {/each}
+          {/if}
         </section>
 
         <section>
