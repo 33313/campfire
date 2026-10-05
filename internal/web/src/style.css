@@ -577,6 +577,12 @@ body.grabbing, body.grabbing * { cursor: grabbing !important; user-select: none;
 }
 .card-menu .team-option { font-size: 12.5px; padding: 6px; }
 .card-menu .menu-rule { height: 1px; margin: 3px 0; background: var(--border); }
+/* A row that opens a sub-menu: a chevron pointing where it opens, and the
+   row stays marked while its sub-menu is up. */
+.card-menu .sub-chevron { margin-left: auto; display: flex; rotate: -90deg; color: var(--faint); }
+.card-menu .team-option.open { background: var(--sunk); color: var(--text); }
+.card-menu.sub-menu { width: 220px; max-height: 340px; overflow-y: auto; }
+.card-menu .sub-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Item detail ----------------------------------------------------------- */
 
