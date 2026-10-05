@@ -351,8 +351,8 @@ Behaviour is in `SPEC.md` §6.5. What the design fixes:
 ## 8. Motion
 
 Things arrive; they do not appear. Motion says where something came from and where it went, and is
-over before anyone could wait for it. Nothing loops except the fire (§9), and only where there is
-nothing else to look at.
+over before anyone could wait for it. Nothing loops but the caret, and the fire (§9) only where there
+is nothing else to look at.
 
 | Token | Value | Used for |
 |---|---|---|
@@ -377,6 +377,7 @@ nothing else to look at.
 | Toast | rises into the stack; the ones above make room; it fades on the way out |
 | Button | gives by 1px while pressed |
 | Focus | `:focus-visible` is a 1px `accent` outline; a focused input also carries a 3px `accent-tint-weak` halo |
+| Caret | blinks 500ms on, 500ms off, whatever the desktop's setting, and starts over lit on every key and click. Steady under reduced motion. Where the browser cannot take the beat (Firefox, Safari), a 1px bar in the caret's colour is drawn in its place |
 
 Exits are instant or `quick`, never `glide`: nobody waits for a dismissed thing to finish going.
 
