@@ -1,0 +1,3 @@
+kind: Added
+body: "Paste or drop a picture into a description or a comment: it is uploaded, kept in the database, and shown inline. images.maxMB in the configuration bounds its size (10 by default; 0 turns pictures off). An existing database needs the images table from schema.sql."
+time: 2026-10-03T17:55:48.444606331+02:00

@@ -235,6 +235,19 @@ CREATE TABLE comments (
 
 CREATE INDEX comments_item ON comments (item_id, id);
 
+-- A picture pasted into a description or a comment (DEV-40). It is kept in
+-- the database like everything else, so a backup is still one file, and the
+-- Markdown that shows it names it by id: ![name](/api/images/12). Raster
+-- types only: an SVG is a document that can run script.
+CREATE TABLE images (
+    id           INTEGER PRIMARY KEY,
+    uploader_id  INTEGER NOT NULL REFERENCES users (id),
+    content_type TEXT    NOT NULL
+                 CHECK (content_type IN ('image/png', 'image/jpeg', 'image/gif', 'image/webp')),
+    data         BLOB    NOT NULL,
+    created_at   INTEGER NOT NULL
+) STRICT;
+
 -- A named CSQL query, owned by one team (SPEC.md §9.4). The query is stored in
 -- its canonical form, naming what it references by #id, so a rename changes
 -- nothing and a deleted referent matches nothing.

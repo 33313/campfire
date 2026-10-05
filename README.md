@@ -94,7 +94,8 @@ One JSON file, in the operating system's data directory:
     "replica": ""
   },
   "mcp": { "enabled": false },
-  "liveUpdates": { "hiddenTabGrace": "1m" }
+  "liveUpdates": { "hiddenTabGrace": "1m" },
+  "images": { "maxMB": 10 }
 }
 ```
 
@@ -109,6 +110,9 @@ Three defaults are worth knowing:
 
 `liveUpdates.hiddenTabGrace` is how long a browser tab nobody is looking at keeps its live-update
 connection. Past it the connection closes, and the tab catches up when it is shown again.
+
+`images.maxMB` bounds a picture pasted into a description or a comment. Pictures are kept in the
+database, so a backup is still one file; `0` turns them off.
 
 **The database must be on local disk.** Network filesystems (NFS, SMB) and cloud-synchronised
 folders (Dropbox, iCloud Drive, OneDrive, Google Drive) are **unsupported**: SQLite's locking is not

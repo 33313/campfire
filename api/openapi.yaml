@@ -32,7 +32,7 @@ paths:
   /api/instance:
     get:
       operationId: getInstance
-      summary: Whether the instance needs its first account, the fixed icon and colour sets, and how long a hidden tab keeps its stream
+      summary: Whether the instance needs its first account, the fixed icon and colour sets, how long a hidden tab keeps its stream, and the largest picture it takes
       x-agent: false
       security: []
       responses:
@@ -618,6 +618,35 @@ paths:
       parameters: [{ $ref: "#/components/parameters/Id" }]
       responses:
         "204": { description: Deleted }
+
+  /api/images:
+    post:
+      operationId: uploadImage
+      summary: Upload a picture to paste into a description or a comment. The body is the picture itself; the reply is its id and the address Markdown names it by
+      x-agent: false
+      requestBody:
+        required: true
+        content:
+          image/png: { schema: { type: string, format: binary } }
+          image/jpeg: { schema: { type: string, format: binary } }
+          image/gif: { schema: { type: string, format: binary } }
+          image/webp: { schema: { type: string, format: binary } }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/images/{id}:
+    get:
+      operationId: getImage
+      summary: A pasted picture, as it was uploaded
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: The picture
+          content:
+            image/*: { schema: { type: string, format: binary } }
+        "404": { $ref: "#/components/responses/Error" }
 
   /api/lookup/{identifier}:
     get:
