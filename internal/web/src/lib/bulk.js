@@ -32,3 +32,10 @@ export async function editMany(ids, field, options) {
   const res = await openModal(BulkEditDialog, { field, count: ids.length, options });
   return res ? applyToAll(ids, field.toLowerCase(), res.value) : false;
 }
+
+/** What a selection keeps once a change has gone through (DEV-89). Several
+    items stay selected, so the next change can follow without picking them
+    again, less any the change took off the screen. One item is done with: a
+    card right-clicked on its own is selected only for its menu. */
+export const keepAfter = (selected, onScreen) =>
+  selected.length > 1 ? selected.filter((id) => onScreen.has(id)) : [];
