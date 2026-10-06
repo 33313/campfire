@@ -8,6 +8,7 @@ Backup is copying that file; recovery is putting it back.
 - [Commands](#commands)
 - [Configuration](#configuration)
 - [Agents (MCP)](#agents-mcp)
+- [GitHub](#github)
 - [Behind a proxy](#behind-a-proxy)
 - [Backup and recovery](#backup-and-recovery)
 - [Scale](#scale)
@@ -168,6 +169,32 @@ agents did.
 
 An instance bound to loopback is reachable only from its own machine, by an agent as much as by a
 browser.
+
+## GitHub
+
+A pull request whose title starts or ends with an item's identifier (`DEV-12: fix it`,
+`[DEV-12] fix it`, `fix it DEV-12`) is listed on that item, with its state. Private repositories
+work: Campfire reads them through GitHub Apps of its own, one per organisation or account.
+
+1. **Create an app.** *Administration → GitHub*: name the organisation (or leave it blank for your
+   own account) and press *Create on GitHub*. GitHub shows the app it is about to create (read
+   access to pull requests, nothing else) and asks you to confirm; creating one under an
+   organisation needs its owner. Do this from the address GitHub should deliver to: the app's
+   webhook and return addresses are the ones your browser used.
+2. **Install it.** You go straight on to installing it, where you pick all repositories or some, and
+   come back linked. A newly linked account is read back 90 days at once; *Sync* does it again.
+3. **Repeat** for each other organisation or account.
+
+Apps are private by default: a private app installs only on the account that owns it, and nothing
+about it is visible to anyone else. Tick *Public* to make one app installable on several accounts
+instead; anyone could then install it, and an installation you have not linked is ignored.
+
+GitHub refuses a webhook it can't reach from the internet, so an app created from a loopback or
+private address has none, and the screen says so: press *Sync* to read its pull requests back. To
+get them as they happen, forget it and create it again from the instance's public address.
+
+Each app's private key and webhook secret are kept in the database, so a snapshot carries them. If a
+snapshot leaks, generate new keys on the apps' pages on GitHub.
 
 ## Behind a proxy
 

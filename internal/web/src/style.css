@@ -36,6 +36,9 @@
   --alert: #e5604d;
   --alert-tint: rgba(229, 96, 77, 0.14);
   --ok: #b2bd52;
+  /* A merged pull request: purple, as GitHub draws it, muted to sit with the
+     bucket colours. */
+  --pr-merged: #a58cc4;
   --on-accent: #131110;
 
   /* Motion (DESIGN.md §8). Short enough never to be waited on: a hover is
@@ -455,6 +458,12 @@ img.avatar { object-fit: cover; }
 }
 .state-badge.final { color: var(--ok); }
 .state-badge.rejected { color: var(--alert); }
+.state-badge.pr-open { color: var(--ok); }
+.state-badge.pr-open .pip { background: var(--ok); }
+.state-badge.pr-merged { color: var(--pr-merged); }
+.state-badge.pr-merged .pip { background: var(--pr-merged); }
+.state-badge.pr-closed { color: var(--alert); }
+.state-badge.pr-closed .pip { background: var(--alert); }
 
 .role-badge {
   font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase;
@@ -761,6 +770,9 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
   font-size: 12.5px; }
 .relation-row.compact { gap: 8px; padding: 6px 0; }
 .relation-row.compact .relation-kind { width: 92px; flex-basis: 92px; }
+/* A pull request's repo#number: GitHub's names keep their case. */
+.relation-kind.pr-ref { text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--accent);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Comments and history in the preview aside. The detail view has a column to
    spend on them; 288px has not, so the meta sits above the text rather than
    beside it, and the list scrolls rather than pushing the fields off screen. */

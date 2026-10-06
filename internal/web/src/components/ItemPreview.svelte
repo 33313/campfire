@@ -22,7 +22,7 @@
   import Markdown from "./Markdown.svelte";
   import { openModal, failure } from "../lib/ui.svelte.js";
   import { assigneeOptions, priorityOptions } from "../lib/options.js";
-  import { fieldName, eventChange } from "../lib/events.svelte.js";
+  import { fieldName, eventChange, actorName } from "../lib/events.svelte.js";
   import { ensure } from "../lib/catalog.svelte.js";
   import { pictures } from "../lib/pictures.js";
   import { when } from "../lib/format.js";
@@ -30,6 +30,7 @@
   import PickDialog from "../dialogs/PickDialog.svelte";
   import BucketDialog from "../dialogs/BucketDialog.svelte";
   import RelationList from "./RelationList.svelte";
+  import PullRequestList from "./PullRequestList.svelte";
   import MoveDialog from "../dialogs/MoveDialog.svelte";
 
   let { item: it, comments = [], history = [], rendering = "mono", onclose, onchange } = $props();
@@ -244,6 +245,14 @@
       <span class="dash">—</span>
     {/if}
   </div>
+  <!-- Only where GitHub has linked some (DEV-13): an instance without it
+       never sees the field. -->
+  {#if it.pullRequests?.length}
+    <div class="aside-field">
+      <span class="field-label">Pull requests</span>
+      <div><PullRequestList pullRequests={it.pullRequests} compact /></div>
+    </div>
+  {/if}
 
   <div class="tabs aside-tabs">
     <button class="tab" class:on={tab === "comments"} onclick={() => (tab = "comments")}>
@@ -284,7 +293,7 @@
           <span class="aside-event-value">
             {eventChange(e)}
           </span>
-          <span class="ident">{e.actorName || "—"} · {when(e.at)}</span>
+          <span class="ident">{actorName(e)} · {when(e.at)}</span>
         </div>
       {:else}
         <div class="explain">No history.</div>

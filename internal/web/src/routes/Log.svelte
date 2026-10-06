@@ -10,7 +10,7 @@
   import { onNotify } from "../lib/stream.svelte.js";
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
   import { userOptions } from "../lib/options.js";
-  import { fieldName, eventChange } from "../lib/events.svelte.js";
+  import { fieldName, eventChange, actorName } from "../lib/events.svelte.js";
   import { ensure } from "../lib/catalog.svelte.js";
   import { clock } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
@@ -173,7 +173,7 @@
             <td>
               <span style="display:flex;align-items:center;gap:6px">
                 <Avatar name={e.actorName} />
-                <span style="font-size:12.5px">{e.actorName || "—"}</span>
+                <span style="font-size:12.5px">{actorName(e)}</span>
                 <!-- An agent's actions are distinguishable at a glance and
                      filterable in the log (SPEC.md §14.4). -->
                 {#if e.agentName}

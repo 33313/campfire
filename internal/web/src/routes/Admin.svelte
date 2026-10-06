@@ -17,6 +17,7 @@
   import ErrorPanel from "../components/ErrorPanel.svelte";
   import FormDialog from "../dialogs/FormDialog.svelte";
   import ShowOnceDialog from "../dialogs/ShowOnceDialog.svelte";
+  import ConfirmDialog from "../dialogs/ConfirmDialog.svelte";
 
   const SECTIONS = [
     { id: "users", label: "Users" },
@@ -24,27 +25,39 @@
     { id: "backup", label: "Backup and restore" },
     { id: "agents", label: "Agent access" },
     { id: "updates", label: "Updates" },
+    { id: "github", label: "GitHub" },
     { id: "log", label: "Global log", onclick: () => navigate("/log") },
   ];
 
-  let tab = $state("users");
+  // A round trip through GitHub comes back to its section, saying what went
+  // wrong when something did.
+  const query = new URLSearchParams(location.search);
+  let tab = $state(query.get("tab") || "users");
+  let returned = $state(query.get("error"));
+  if (query.size) history.replaceState(history.state, "", location.pathname);
   let users = $state([]);
   let teams = $state([]);
   let snapshots = $state(null);
   let tokens = $state([]);
   let updates = $state(null);
+  let github = $state(null);
   let error = $state(null);
   let loaded = $state(false);
 
   async function load() {
     try {
-      [users, teams, snapshots, tokens, updates] = await Promise.all([
+      [users, teams, snapshots, tokens, updates, github] = await Promise.all([
         api.listUsers(), api.listTeams(true),
         api.listSnapshots().catch(() => null),
         api.listAgentTokens(0).catch(() => []),
         api.getUpdates().catch(() => null),
+        api.getGitHub().catch(() => null),
       ]);
       loaded = true;
+      // A newly linked account has never been read: read it now, once.
+      for (const i of (github?.apps || []).flatMap((app) => app.installations)) {
+        if (!i.syncedAt && !autoSynced.has(i.id)) { autoSynced.add(i.id); sync(i); }
+      }
       error = null;
     } catch (err) {
       error = err;
@@ -57,6 +70,42 @@
   const guard = async (fn) => {
     try { await fn(); await load(); } catch (err) { failure(err); }
   };
+
+  // GitHub (DEV-13).
+  let org = $state("");
+  let publicApp = $state(false);
+  let syncing = $state({});
+  const autoSynced = new Set();
+  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+
+  // GitHub creates the app from a manifest posted by the browser, and sends
+  // it back here with the credentials to collect.
+  async function createApp() {
+    const out = await api.createGitHubApp(org.trim(), publicApp).catch(failure);
+    if (!out) return;
+    const form = Object.assign(document.createElement("form"), { method: "post", action: out.action });
+    form.append(Object.assign(document.createElement("input"), { type: "hidden", name: "manifest", value: out.manifest }));
+    document.body.append(form);
+    form.submit();
+  }
+
+  async function sync(i) {
+    syncing[i.id] = true;
+    try { await api.syncInstallation(i.id); await load(); } catch (err) { failure(err); }
+    delete syncing[i.id];
+  }
+
+  async function forgetApp(app) {
+    const ok = await openModal(ConfirmDialog, {
+      title: `Forget ${app.slug}`,
+      lines: ["Its pull requests stop arriving, and the accounts linked through it are unlinked. " +
+        "Those already listed stay on their items.", "The app stays on GitHub until you delete it there."],
+      consequence: "Creating it again starts over", action: "Forget",
+    });
+    if (ok) guard(() => api.deleteGitHubApp(app.id));
+  }
+
+  const kindOf = (i) => (i.accountType === "Organization" ? "organisation" : "account");
 
   const usernameOf = (id) => users.find((u) => u.id === id)?.username || `user ${id}`;
 
@@ -299,6 +348,93 @@
               {#if updates?.newer}
                 <a class="btn small" style="margin-top:10px" href={updates.latest.url}
                    target="_blank" rel="noopener">Release notes for {updates.latest.version}</a>
+              {/if}
+            {/snippet}
+          </Section>
+
+        {:else if tab === "github"}
+          <Section title="GitHub" sub={github?.apps.length ? `${github.apps.length} apps` : "off"}>
+            {#snippet children()}
+              {#if returned}<p class="explain" style="color:var(--alert)">{returned}</p>{/if}
+              {#if !github}
+                <p class="explain">GitHub is unavailable.</p>
+              {:else}
+                <p class="explain">
+                  A pull request whose title starts or ends with an identifier, as in
+                  <code>DEV-12: fix it</code> or <code>fix it [DEV-12]</code>, is listed on that item with
+                  its state. Campfire reads them through GitHub Apps of its own, private repositories
+                  included: one per organisation or account, installed there.
+                </p>
+                {#if loopback}
+                  <p class="explain">
+                    GitHub can't reach {location.host}, so an app created here has no webhook, and its pull
+                    requests arrive only when you sync. Create apps from the instance's public address to get
+                    them as they happen.
+                  </p>
+                {:else if github.apps.length}
+                  <p class="explain">Deliveries go to <code>{github.webhook}</code>.</p>
+                {/if}
+
+                {#each github.apps as app (app.id)}
+                  <div style="display:flex;align-items:center;gap:8px;margin:18px 0 6px">
+                    <a href={app.htmlUrl} target="_blank" rel="noopener">{app.slug}</a>
+                    <span class="explain">
+                      owned by {app.owner} · {app.public ? "public" : "private"}{app.webhook ? "" : " · no webhook, Sync to update"}
+                    </span>
+                    <span style="margin-left:auto"></span>
+                    <button class="btn quiet small" onclick={() => location.assign(`/api/github/apps/${app.id}/install`)}>
+                      {app.public ? "Install on an account" : "Install"}
+                    </button>
+                    <button class="btn quiet small" onclick={() => forgetApp(app)}>Forget</button>
+                  </div>
+                  {#if app.error}<p class="explain">GitHub did not answer: {app.error}</p>{/if}
+                  <table class="table">
+                    <tbody>
+                      {#each app.installations as i (i.id)}
+                        <tr>
+                          <td>{i.account}</td>
+                          <td class="explain" style="width:120px">{kindOf(i)}</td>
+                          <td class="explain" style="width:240px" title={i.syncError || ""}>
+                            {syncing[i.id] ? "syncing…" : i.syncError ? `sync failed: ${i.syncError}` : i.syncedAt ? `synced ${ago(i.syncedAt)}` : "not synced yet"}
+                          </td>
+                          <td style="width:150px">
+                            <button class="btn quiet small" disabled={syncing[i.id]} onclick={() => sync(i)}>Sync</button>
+                            <button class="btn quiet small" onclick={() => guard(() => api.unlinkInstallation(i.id))}>Unlink</button>
+                          </td>
+                        </tr>
+                      {/each}
+                      {#each app.available as i (i.id)}
+                        <tr>
+                          <td>{i.account}</td>
+                          <td class="explain" style="width:120px">{kindOf(i)}</td>
+                          <td class="explain" style="width:240px">installed, not linked</td>
+                          <td style="width:150px">
+                            <button class="btn quiet small" onclick={() => guard(() => api.linkInstallation(i.id))}>Link</button>
+                          </td>
+                        </tr>
+                      {/each}
+                      {#if !app.installations.length && !app.available.length}
+                        <tr><td colspan="4"><div class="empty-note">Not installed yet.</div></td></tr>
+                      {/if}
+                    </tbody>
+                  </table>
+                {/each}
+
+                <div style="margin-top:22px">
+                  <span class="field-label">{github.apps.length ? "Add an app for another organisation or account" : "Create a GitHub App"}</span>
+                  <div style="display:flex;gap:12px;align-items:center;margin-top:8px">
+                    <input class="input" style="width:240px" placeholder="Organisation, or blank for your account"
+                           aria-label="Organisation to own the app" bind:value={org} />
+                    <label class="explain" style="display:flex;gap:6px;align-items:center">
+                      <input type="checkbox" bind:checked={publicApp} /> Public: installable on any account
+                    </label>
+                    <button class="btn primary small" onclick={createApp}>Create on GitHub</button>
+                  </div>
+                  <p class="explain" style="margin-top:8px">
+                    A private app installs only on the organisation or account that owns it. Creating one
+                    for an organisation needs its owner.
+                  </p>
+                </div>
               {/if}
             {/snippet}
           </Section>
