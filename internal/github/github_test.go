@@ -65,6 +65,11 @@ func TestVerify(t *testing.T) {
 	if Verify("other", body, good) {
 		t.Error("a signature under another secret was accepted")
 	}
+	mac = hmac.New(sha256.New, nil)
+	mac.Write(body)
+	if Verify("", body, "sha256="+hex.EncodeToString(mac.Sum(nil))) {
+		t.Error("an app without a secret verified a delivery signed with an empty key")
+	}
 }
 
 func TestParseEvent(t *testing.T) {

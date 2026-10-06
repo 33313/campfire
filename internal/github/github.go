@@ -86,19 +86,23 @@ const Homepage = "https://github.com/33313/campfire"
 // requests, and their events delivered to base. A private app installs only
 // on the account or organisation that owns it; a public one anywhere, and an
 // installation the instance has not linked is ignored.
-func Manifest(base, name string, public bool) map[string]any {
-	return map[string]any{
-		"name":         name,
-		"url":          Homepage,
-		"public":       public,
-		"redirect_url": base + "/api/github/manifest",
-		"setup_url":    base + "/api/github/setup",
-		"hook_attributes": map[string]any{
-			"url": base + "/api/github/webhook",
-		},
+//
+// GitHub refuses a webhook it cannot reach from the internet, so an instance
+// that is not public asks for none: its app is read by Sync alone.
+func Manifest(base, name string, public, webhook bool) map[string]any {
+	m := map[string]any{
+		"name":                name,
+		"url":                 Homepage,
+		"public":              public,
+		"redirect_url":        base + "/api/github/manifest",
+		"setup_url":           base + "/api/github/setup",
 		"default_permissions": map[string]string{"metadata": "read", "pull_requests": "read"},
-		"default_events":      []string{"pull_request"},
 	}
+	if webhook {
+		m["hook_attributes"] = map[string]any{"url": base + "/api/github/webhook"}
+		m["default_events"] = []string{"pull_request"}
+	}
+	return m
 }
 
 // NewAppURL is where the manifest is posted, under an organisation when one
@@ -134,8 +138,8 @@ func (c *Client) ConvertManifest(ctx context.Context, code string) (App, error) 
 	if err != nil {
 		return App{}, err
 	}
-	if out.PEM == "" || out.WebhookSecret == "" {
-		return App{}, errors.New("GitHub created the app without a key or a webhook secret")
+	if out.PEM == "" {
+		return App{}, errors.New("GitHub created the app without a key")
 	}
 	return App{ID: out.ID, Slug: out.Slug, HTMLURL: out.HTMLURL, Owner: out.Owner.Login, Public: out.Public,
 		PEM: out.PEM, WebhookSecret: out.WebhookSecret}, nil
@@ -302,7 +306,12 @@ func ParseEvent(kind string, body []byte) (Event, error) {
 }
 
 // Verify checks a delivery's X-Hub-Signature-256 against the webhook secret.
+// An app made without a webhook has no secret, and nothing verifies against
+// it: anyone can sign with an empty key.
 func Verify(secret string, body []byte, signature string) bool {
+	if secret == "" {
+		return false
+	}
 	got, err := hex.DecodeString(strings.TrimPrefix(signature, "sha256="))
 	if err != nil || !strings.HasPrefix(signature, "sha256=") {
 		return false

@@ -189,8 +189,9 @@ Apps are private by default: a private app installs only on the account that own
 about it is visible to anyone else. Tick *Public* to make one app installable on several accounts
 instead; anyone could then install it, and an installation you have not linked is ignored.
 
-An instance GitHub cannot reach, such as one on loopback, gets nothing by webhook: press *Sync* to
-read pull requests back.
+GitHub refuses a webhook it can't reach from the internet, so an app created from a loopback or
+private address has none, and the screen says so: press *Sync* to read its pull requests back. To
+get them as they happen, forget it and create it again from the instance's public address.
 
 Each app's private key and webhook secret are kept in the database, so a snapshot carries them. If a
 snapshot leaks, generate new keys on the apps' pages on GitHub.

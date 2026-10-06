@@ -367,8 +367,9 @@
                 </p>
                 {#if loopback}
                   <p class="explain">
-                    GitHub can't reach {location.host}, so pull requests will arrive only when you sync.
-                    Create apps from the instance's public address to get them as they happen.
+                    GitHub can't reach {location.host}, so an app created here has no webhook, and its pull
+                    requests arrive only when you sync. Create apps from the instance's public address to get
+                    them as they happen.
                   </p>
                 {:else if github.apps.length}
                   <p class="explain">Deliveries go to <code>{github.webhook}</code>.</p>
@@ -377,7 +378,9 @@
                 {#each github.apps as app (app.id)}
                   <div style="display:flex;align-items:center;gap:8px;margin:18px 0 6px">
                     <a href={app.htmlUrl} target="_blank" rel="noopener">{app.slug}</a>
-                    <span class="explain">owned by {app.owner} · {app.public ? "public" : "private"}</span>
+                    <span class="explain">
+                      owned by {app.owner} · {app.public ? "public" : "private"}{app.webhook ? "" : " · no webhook, Sync to update"}
+                    </span>
                     <span style="margin-left:auto"></span>
                     <button class="btn quiet small" onclick={() => location.assign(`/api/github/apps/${app.id}/install`)}>
                       {app.public ? "Install on an account" : "Install"}

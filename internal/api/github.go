@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -49,6 +50,33 @@ func base(r *http.Request) string {
 		return "https://" + r.Host
 	}
 	return "http://" + r.Host
+}
+
+// public reports whether GitHub could reach host: a name or address that is
+// not loopback, private or link-local. A name that does not resolve here may
+// still resolve for GitHub, so it is given the benefit of the doubt.
+func public(ctx context.Context, host string) bool {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	host = strings.Trim(host, "[]")
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+		return false
+	}
+	ips := []net.IP{net.ParseIP(host)}
+	if ips[0] == nil {
+		addrs, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
+		if err != nil || len(addrs) == 0 {
+			return true
+		}
+		ips = addrs
+	}
+	for _, ip := range ips {
+		if !ip.IsLoopback() && !ip.IsPrivate() && !ip.IsLinkLocalUnicast() && !ip.IsUnspecified() {
+			return true
+		}
+	}
+	return false
 }
 
 func gitHubApp(a store.GitHubApp) github.App {
@@ -125,7 +153,7 @@ func (s *Server) createGitHubApp(w http.ResponseWriter, r *http.Request, a core.
 	if len(name) > 34 {
 		name = name[:34]
 	}
-	manifest, _ := json.Marshal(github.Manifest(base(r), name, in.Public))
+	manifest, _ := json.Marshal(github.Manifest(base(r), name, in.Public, public(r.Context(), r.Host)))
 	return map[string]string{
 		"action":   s.GitHub.NewAppURL(org, state),
 		"manifest": string(manifest),

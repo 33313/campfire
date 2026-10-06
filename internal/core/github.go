@@ -24,11 +24,14 @@ type GitHub struct {
 }
 
 type GitHubApp struct {
-	ID            int64                      `json:"id"`
-	Slug          string                     `json:"slug"`
-	HTMLURL       string                     `json:"htmlUrl"`
-	Owner         string                     `json:"owner"`
-	Public        bool                       `json:"public"`
+	ID      int64  `json:"id"`
+	Slug    string `json:"slug"`
+	HTMLURL string `json:"htmlUrl"`
+	Owner   string `json:"owner"`
+	Public  bool   `json:"public"`
+	// Webhook is false for an app made where GitHub could not reach: it is
+	// read by Sync alone.
+	Webhook       bool                       `json:"webhook"`
 	Installations []store.GitHubInstallation `json:"installations"`
 }
 
@@ -47,7 +50,7 @@ func (s *Service) GitHub(ctx context.Context, a Actor) (*GitHub, error) {
 	out := &GitHub{Apps: []*GitHubApp{}}
 	for _, app := range apps {
 		v := &GitHubApp{ID: app.ID, Slug: app.Slug, HTMLURL: app.HTMLURL, Owner: app.Owner,
-			Public: app.Public, Installations: []store.GitHubInstallation{}}
+			Public: app.Public, Webhook: app.WebhookSecret != "", Installations: []store.GitHubInstallation{}}
 		for _, i := range insts {
 			if i.AppID == app.ID {
 				v.Installations = append(v.Installations, i)

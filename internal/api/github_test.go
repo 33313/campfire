@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
@@ -116,15 +117,16 @@ func TestGitHubFromAppsToPullRequests(t *testing.T) {
 		return prs
 	}
 
-	// The form goes to GitHub with a private manifest whose hooks point back
-	// here, and whose homepage is the source, not this instance.
+	// The form goes to GitHub with a private manifest that returns here, and
+	// whose homepage is the source, not this instance. This instance is on
+	// loopback, which GitHub refuses as a webhook, so it asks for none.
 	form := c.must("POST", "/api/github/apps", map[string]any{"organization": "acme"})
 	action := mustURL(t, form["action"].(string))
 	var manifest map[string]any
 	json.Unmarshal([]byte(form["manifest"].(string)), &manifest)
 	if action.Path != "/organizations/acme/settings/apps/new" || manifest["public"] != false ||
-		manifest["url"] != github.Homepage ||
-		manifest["hook_attributes"].(map[string]any)["url"] != c.base+"/api/github/webhook" {
+		manifest["url"] != github.Homepage || manifest["redirect_url"] != c.base+"/api/github/manifest" ||
+		manifest["hook_attributes"] != nil || manifest["default_events"] != nil {
 		t.Fatalf("form %v", form)
 	}
 
@@ -207,5 +209,25 @@ func TestGitHubFromAppsToPullRequests(t *testing.T) {
 	}
 	if len(item()) != 3 {
 		t.Fatal("unlinking dropped the pull requests")
+	}
+}
+
+// GitHub refuses a webhook it cannot reach, so one is asked for only where it
+// could.
+func TestPublic(t *testing.T) {
+	for host, want := range map[string]bool{
+		"localhost:8080":        false,
+		"campfire.localhost":    false,
+		"127.0.0.1:8080":        false,
+		"[::1]:8080":            false,
+		"192.168.1.5":           false,
+		"10.0.0.1:443":          false,
+		"169.254.0.9":           false,
+		"140.82.112.3:443":      true,
+		"[2606:50c0:8000::153]": true,
+	} {
+		if got := public(context.Background(), host); got != want {
+			t.Errorf("public(%q) = %v", host, got)
+		}
 	}
 }
