@@ -95,7 +95,8 @@ One JSON file, in the operating system's data directory:
   },
   "mcp": { "enabled": false },
   "liveUpdates": { "hiddenTabGrace": "1m" },
-  "images": { "maxMB": 10 }
+  "images": { "maxMB": 10 },
+  "updates": { "check": true }
 }
 ```
 
@@ -113,6 +114,9 @@ connection. Past it the connection closes, and the tab catches up when it is sho
 
 `images.maxMB` bounds a picture pasted into a description or a comment. Pictures are kept in the
 database, so a backup is still one file; `0` turns them off.
+
+`updates.check` asks GitHub once a day whether a newer release is out, and the administration
+screen says so. The request carries nothing but the running version; `false` turns it off.
 
 **The database must be on local disk.** Network filesystems (NFS, SMB) and cloud-synchronised
 folders (Dropbox, iCloud Drive, OneDrive, Google Drive) are **unsupported**: SQLite's locking is not

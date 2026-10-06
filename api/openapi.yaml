@@ -38,6 +38,15 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Ok" }
 
+  /api/instance/updates:
+    get:
+      operationId: getUpdates
+      summary: This build's version, and whether a newer release exists while the check is on
+      x-agent: false
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "403": { $ref: "#/components/responses/Error" }
+
   /api/instance/bootstrap:
     post:
       operationId: bootstrap

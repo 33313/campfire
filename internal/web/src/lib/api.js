@@ -95,6 +95,7 @@ function filterQuery(filter = {}, { cursor, limit } = {}) {
 export const api = {
   // Instance and authentication
   getInstance: () => get("/api/instance"),
+  getUpdates: () => get("/api/instance/updates"),
   bootstrap: (username, password) => post("/api/instance/bootstrap", { username, password }),
   signIn: (username, password, code) => post("/api/auth/signin", { username, password, code }),
   signOut: () => post("/api/auth/signout"),

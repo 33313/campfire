@@ -6,6 +6,7 @@ import (
 
 	"github.com/33313/campfire/internal/core"
 	"github.com/33313/campfire/internal/store"
+	"github.com/33313/campfire/internal/updates"
 )
 
 // Every route here corresponds to exactly one operation in api/openapi.yaml.
@@ -15,6 +16,7 @@ func (s *Server) routes() {
 	// Instance and authentication.
 	s.handle("GET /api/instance", s.getInstance)
 	s.handle("POST /api/instance/bootstrap", s.bootstrap)
+	s.handle("GET /api/instance/updates", s.getUpdates)
 	s.handle("POST /api/auth/signin", s.signIn)
 	s.handle("POST /api/auth/signout", s.signOut)
 	s.handle("GET /api/auth/session", s.session)
@@ -112,6 +114,17 @@ func (s *Server) getInstance(w http.ResponseWriter, r *http.Request, a core.Acto
 		"hiddenTabGrace": s.HiddenTabGrace.Milliseconds(),
 		"imageMaxSize":   s.MaxImage,
 	}, nil
+}
+
+// getUpdates says which version this is and whether a newer release exists.
+func (s *Server) getUpdates(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	if err := core.RequireInstanceAdmin(a); err != nil {
+		return nil, err
+	}
+	if s.Updates == nil {
+		return updates.Status{}, nil
+	}
+	return s.Updates.Status(), nil
 }
 
 func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
