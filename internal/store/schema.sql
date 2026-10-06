@@ -70,7 +70,7 @@ CREATE INDEX agent_tokens_user ON agent_tokens (user_id);
 CREATE TABLE one_time_links (
     id         INTEGER PRIMARY KEY,
     token_hash TEXT    NOT NULL,
-    kind       TEXT    NOT NULL CHECK (kind IN ('invite', 'reset')),
+    kind       TEXT    NOT NULL CHECK (kind IN ('invite', 'reset', 'github')),
     user_id    INTEGER REFERENCES users (id) ON DELETE CASCADE,
     created_by INTEGER NOT NULL REFERENCES users (id),
     created_at INTEGER NOT NULL,
@@ -247,6 +247,61 @@ CREATE TABLE images (
     data         BLOB    NOT NULL,
     created_at   INTEGER NOT NULL
 ) STRICT;
+
+-- The instance's GitHub App (DEV-13), created from a manifest, so GitHub hands
+-- over the key and the webhook secret. One row at most. The key is a secret
+-- like a password hash is not: whoever holds a snapshot holds it, and can read
+-- what the app can read until the key is revoked on GitHub.
+CREATE TABLE github_app (
+    id             INTEGER PRIMARY KEY CHECK (id = 1),
+    app_id         INTEGER NOT NULL,
+    slug           TEXT    NOT NULL,
+    html_url       TEXT    NOT NULL,
+    owner          TEXT    NOT NULL,
+    private_key    TEXT    NOT NULL,
+    webhook_secret TEXT    NOT NULL,
+    created_by     INTEGER NOT NULL REFERENCES users (id),
+    created_at     INTEGER NOT NULL
+) STRICT;
+
+-- An account or organisation the app is installed on, linked by an instance
+-- administrator. The id is GitHub's. A delivery from an installation not
+-- here is ignored: the app is public, so anyone can install it.
+CREATE TABLE github_installations (
+    id           INTEGER PRIMARY KEY,
+    account      TEXT    NOT NULL,
+    account_type TEXT    NOT NULL,
+    linked_by    INTEGER NOT NULL REFERENCES users (id),
+    linked_at    INTEGER NOT NULL,
+    -- The last sync's time and, when it failed, why.
+    synced_at    INTEGER,
+    sync_error   TEXT
+) STRICT;
+
+-- A pull request whose title names an item. The id is GitHub's. It outlives
+-- the installation it came through: a ticket keeps the record of the work
+-- done on it after the account is unlinked.
+CREATE TABLE pull_requests (
+    id              INTEGER PRIMARY KEY,
+    installation_id INTEGER REFERENCES github_installations (id) ON DELETE SET NULL,
+    repo            TEXT    NOT NULL,
+    number          INTEGER NOT NULL,
+    title           TEXT    NOT NULL,
+    url             TEXT    NOT NULL,
+    state           TEXT    NOT NULL CHECK (state IN ('open', 'draft', 'merged', 'closed')),
+    author          TEXT    NOT NULL,
+    -- GitHub's updated_at. Deliveries arrive out of order, and a sync reads
+    -- what a webhook already wrote; an older copy never overwrites a newer.
+    updated_at      INTEGER NOT NULL
+) STRICT;
+
+CREATE TABLE item_pull_requests (
+    item_id         INTEGER NOT NULL REFERENCES items (id) ON DELETE CASCADE,
+    pull_request_id INTEGER NOT NULL REFERENCES pull_requests (id) ON DELETE CASCADE,
+    PRIMARY KEY (item_id, pull_request_id)
+) STRICT;
+
+CREATE INDEX item_pull_requests_pull_request ON item_pull_requests (pull_request_id);
 
 -- A named CSQL query, owned by one team (SPEC.md §9.4). The query is stored in
 -- its canonical form, naming what it references by #id, so a rename changes

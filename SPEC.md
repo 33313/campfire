@@ -415,6 +415,18 @@ made in the same write.
 A relation WILL NOT carry lifecycle meaning. A *blocked by* edge is information; it MUST NOT prevent
 any transition.
 
+### 8.3 Pull requests
+
+An instance MAY be connected to GitHub as a GitHub App of its own, created from a manifest and
+installed on the accounts and organisations an instance administrator links. A pull request in a
+repository the app can read is listed on every item its title names — identifiers at the start or
+the end of the title, bare or in brackets — with its state: open, draft, merged or closed.
+
+The title is the whole link. Retitling a pull request moves it; one that names nothing is not kept.
+A pull request MUST NOT change an item's state: like a relation, it is information. Its link and
+its state changes are written to the item's history with no actor. Deliveries from an installation
+that is not linked are ignored. Unlinking an account keeps what it already listed.
+
 ---
 
 ## 9. Views, filtering and ordering

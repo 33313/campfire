@@ -675,6 +675,96 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Ok" }
 
+  /api/github:
+    get:
+      operationId: getGitHub
+      summary: The instance's GitHub App, the accounts it is linked to, and those it is installed on but not linked to
+      x-agent: false
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/github/app:
+    post:
+      operationId: createGitHubApp
+      summary: The form that asks GitHub to create the instance's app from a manifest, under an organisation or the signed-in user
+      x-agent: false
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "403": { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteGitHubApp
+      summary: Forget the app and its links; pull requests stay on their items
+      x-agent: false
+      responses:
+        "204": { description: Forgotten }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/github/manifest:
+    get:
+      operationId: gitHubManifest
+      summary: Where GitHub returns once the app exists; keeps its credentials and redirects to the administration screen
+      x-agent: false
+      responses:
+        "303": { description: To the administration screen }
+
+  /api/github/install:
+    get:
+      operationId: installGitHubApp
+      summary: Redirect to GitHub to install the app on an account or organisation
+      x-agent: false
+      responses:
+        "303": { description: To GitHub }
+
+  /api/github/setup:
+    get:
+      operationId: gitHubSetup
+      summary: Where GitHub returns after an installation; links it when the round trip started here
+      x-agent: false
+      responses:
+        "303": { description: To the administration screen }
+
+  /api/github/installations/{id}:
+    put:
+      operationId: linkInstallation
+      summary: Link an account or organisation the app is installed on
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: unlinkInstallation
+      summary: Stop reading an account's pull requests; those already listed stay
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { description: Unlinked }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/github/installations/{id}/sync:
+    post:
+      operationId: syncInstallation
+      summary: Read back the last 90 days of an account's pull requests
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/github/webhook:
+    post:
+      operationId: gitHubWebhook
+      summary: GitHub's deliveries, signed with the app's webhook secret
+      x-agent: false
+      security: []
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "204": { description: Taken }
+        "401": { $ref: "#/components/responses/Error" }
+
   /api/log:
     get:
       operationId: getLog

@@ -214,6 +214,8 @@ func (s *Service) CreateItem(ctx context.Context, a Actor, in NewItem) (*Item, e
 type Item struct {
 	store.Item
 	Relations []store.Relation `json:"relations,omitempty"`
+	// PullRequests are the pull requests whose titles name the item (DEV-13).
+	PullRequests []store.PullRequest `json:"pullRequests,omitempty"`
 	// Progress is a bucket's contents count: items in a terminal state over
 	// the total. It is a view, not a field (SPEC.md §6.2).
 	Progress *Progress `json:"progress,omitempty"`
@@ -240,6 +242,9 @@ func (s *Service) loadItem(ctx context.Context, q store.Q, id int64) (*Item, err
 	}
 	out.Item = items[0]
 	if out.Relations, err = store.ItemRelations(ctx, q, id); err != nil {
+		return nil, err
+	}
+	if out.PullRequests, err = store.ItemPullRequests(ctx, q, id); err != nil {
 		return nil, err
 	}
 	if it.Kind == store.KindBucket {

@@ -17,6 +17,7 @@
   import ErrorPanel from "../components/ErrorPanel.svelte";
   import FormDialog from "../dialogs/FormDialog.svelte";
   import ShowOnceDialog from "../dialogs/ShowOnceDialog.svelte";
+  import ConfirmDialog from "../dialogs/ConfirmDialog.svelte";
 
   const SECTIONS = [
     { id: "users", label: "Users" },
@@ -24,27 +25,39 @@
     { id: "backup", label: "Backup and restore" },
     { id: "agents", label: "Agent access" },
     { id: "updates", label: "Updates" },
+    { id: "github", label: "GitHub" },
     { id: "log", label: "Global log", onclick: () => navigate("/log") },
   ];
 
-  let tab = $state("users");
+  // A round trip through GitHub comes back to its section, saying what went
+  // wrong when something did.
+  const query = new URLSearchParams(location.search);
+  let tab = $state(query.get("tab") || "users");
+  let returned = $state(query.get("error"));
+  if (query.size) history.replaceState(history.state, "", location.pathname);
   let users = $state([]);
   let teams = $state([]);
   let snapshots = $state(null);
   let tokens = $state([]);
   let updates = $state(null);
+  let github = $state(null);
   let error = $state(null);
   let loaded = $state(false);
 
   async function load() {
     try {
-      [users, teams, snapshots, tokens, updates] = await Promise.all([
+      [users, teams, snapshots, tokens, updates, github] = await Promise.all([
         api.listUsers(), api.listTeams(true),
         api.listSnapshots().catch(() => null),
         api.listAgentTokens(0).catch(() => []),
         api.getUpdates().catch(() => null),
+        api.getGitHub().catch(() => null),
       ]);
       loaded = true;
+      // A newly linked account has never been read: read it now, once.
+      for (const i of github?.installations || []) {
+        if (!i.syncedAt && !autoSynced.has(i.id)) { autoSynced.add(i.id); sync(i); }
+      }
       error = null;
     } catch (err) {
       error = err;
@@ -57,6 +70,39 @@
   const guard = async (fn) => {
     try { await fn(); await load(); } catch (err) { failure(err); }
   };
+
+  // GitHub (DEV-13).
+  let org = $state("");
+  let syncing = $state({});
+  const autoSynced = new Set();
+  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+
+  // GitHub creates the app from a manifest posted by the browser, and sends
+  // it back here with the credentials to collect.
+  async function createApp() {
+    const out = await api.createGitHubApp(org.trim()).catch(failure);
+    if (!out) return;
+    const form = Object.assign(document.createElement("form"), { method: "post", action: out.action });
+    form.append(Object.assign(document.createElement("input"), { type: "hidden", name: "manifest", value: out.manifest }));
+    document.body.append(form);
+    form.submit();
+  }
+
+  async function sync(i) {
+    syncing[i.id] = true;
+    try { await api.syncInstallation(i.id); await load(); } catch (err) { failure(err); }
+    delete syncing[i.id];
+  }
+
+  async function forgetApp() {
+    const ok = await openModal(ConfirmDialog, {
+      title: `Forget ${github.app.slug}`,
+      lines: ["Pull requests stop arriving, and every account is unlinked. Those already listed stay on their items.",
+        "The app stays on GitHub until you delete it there."],
+      consequence: "Creating it again starts over", action: "Forget",
+    });
+    if (ok) guard(() => api.deleteGitHubApp());
+  }
 
   const usernameOf = (id) => users.find((u) => u.id === id)?.username || `user ${id}`;
 
@@ -299,6 +345,84 @@
               {#if updates?.newer}
                 <a class="btn small" style="margin-top:10px" href={updates.latest.url}
                    target="_blank" rel="noopener">Release notes for {updates.latest.version}</a>
+              {/if}
+            {/snippet}
+          </Section>
+
+        {:else if tab === "github"}
+          <Section title="GitHub" sub={github?.app ? `${github.installations.length} linked` : "off"}>
+            {#snippet children()}
+              {#if returned}<p class="explain" style="color:var(--alert)">{returned}</p>{/if}
+              {#if !github}
+                <p class="explain">GitHub is unavailable.</p>
+              {:else if !github.app}
+                <p class="explain">
+                  A pull request whose title starts or ends with an identifier, as in
+                  <code>DEV-12: fix it</code> or <code>fix it [DEV-12]</code>, is listed on that item with
+                  its state. Campfire reads them as a GitHub App of its own, installed on the accounts
+                  and organisations you choose, private repositories included.
+                </p>
+                {#if loopback}
+                  <p class="explain">
+                    GitHub can't reach {location.host}, so pull requests will arrive only when you sync.
+                    Create the app from the instance's public address to get them as they happen.
+                  </p>
+                {/if}
+                <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+                  <input class="input" style="width:240px" placeholder="Organisation (optional)"
+                         aria-label="Organisation to own the app" bind:value={org} />
+                  <button class="btn primary small" onclick={createApp}>Create the GitHub App</button>
+                </div>
+              {:else}
+                <p class="explain">
+                  <a href={github.app.htmlUrl} target="_blank" rel="noopener">{github.app.slug}</a>,
+                  owned by {github.app.owner}. Deliveries go to <code>{github.webhook}</code>.
+                </p>
+                {#if github.error}<p class="explain">GitHub did not answer: {github.error}</p>{/if}
+                <div style="display:flex;gap:8px;margin:10px 0">
+                  <button class="btn primary small" onclick={() => location.assign("/api/github/install")}>
+                    Link an account or organisation
+                  </button>
+                  <button class="btn quiet small" onclick={forgetApp}>Forget the app</button>
+                </div>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Account</th><th style="width:120px">Kind</th>
+                      <th style="width:240px">Last sync</th><th style="width:150px"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {#each github.installations as i (i.id)}
+                      <tr>
+                        <td>{i.account}</td>
+                        <td class="explain">{i.accountType === "Organization" ? "organisation" : "account"}</td>
+                        <td class="explain" title={i.syncError || ""}>
+                          {syncing[i.id] ? "syncing…" : i.syncError ? `failed: ${i.syncError}` : ago(i.syncedAt)}
+                        </td>
+                        <td>
+                          <button class="btn quiet small" disabled={syncing[i.id]} onclick={() => sync(i)}>Sync</button>
+                          <button class="btn quiet small" onclick={() => guard(() => api.unlinkInstallation(i.id))}>Unlink</button>
+                        </td>
+                      </tr>
+                    {/each}
+                    {#each github.available || [] as i (i.id)}
+                      <tr>
+                        <td>{i.account}</td>
+                        <td class="explain">{i.accountType === "Organization" ? "organisation" : "account"}</td>
+                        <td class="explain">installed, not linked</td>
+                        <td>
+                          <button class="btn quiet small" onclick={() => guard(() => api.linkInstallation(i.id))}>Link</button>
+                        </td>
+                      </tr>
+                    {/each}
+                    {#if !github.installations.length && !github.available?.length}
+                      <tr>
+                        <td colspan="4"><div class="empty-note">Not installed on any account yet.</div></td>
+                      </tr>
+                    {/if}
+                  </tbody>
+                </table>
               {/if}
             {/snippet}
           </Section>

@@ -16,7 +16,7 @@
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
   import { assigneeOptions, priorityOptions } from "../lib/options.js";
   import { when, whenDay, plural } from "../lib/format.js";
-  import { fieldName, eventChange } from "../lib/events.svelte.js";
+  import { fieldName, eventChange, actorName } from "../lib/events.svelte.js";
   import { ensure } from "../lib/catalog.svelte.js";
   import { pictures } from "../lib/pictures.js";
   import { NAV, PRIORITY, BUCKET_COLOURS } from "../lib/icons.js";
@@ -35,6 +35,7 @@
   import PickDialog from "../dialogs/PickDialog.svelte";
   import BucketDialog from "../dialogs/BucketDialog.svelte";
   import RelationList from "../components/RelationList.svelte";
+  import PullRequestList from "../components/PullRequestList.svelte";
   import RelationDialog from "../dialogs/RelationDialog.svelte";
   import FormDialog from "../dialogs/FormDialog.svelte";
   import ConfirmDialog from "../dialogs/ConfirmDialog.svelte";
@@ -557,6 +558,16 @@
           {/if}
         </section>
 
+        {#if item.pullRequests?.length}
+          <section style="margin-top:28px">
+            <div class="section-head">
+              <span class="eyebrow">Pull requests</span>
+              <span class="ident">{item.pullRequests.length}</span>
+            </div>
+            <PullRequestList pullRequests={item.pullRequests} />
+          </section>
+        {/if}
+
         <section>
           <div class="tabs">
             <button class="tab" class:on={tab === "comments"} onclick={() => (tab = "comments")}>
@@ -601,7 +612,7 @@
                 <span class="ident" style="width:70px;flex:0 0 70px">{e.seq}</span>
                 <span style="display:flex;align-items:center;gap:6px;width:150px">
                   <Avatar name={e.actorName} />
-                  <span style="font-size:12.5px">{e.actorName || "—"}</span>
+                  <span style="font-size:12.5px">{actorName(e)}</span>
                   <!-- History surfaces name the token beside the actor, so an
                        agent's actions are distinguishable (SPEC.md §14.4). -->
                   {#if e.agentName}
