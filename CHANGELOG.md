@@ -5,6 +5,13 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v0.12.0 - 2026-10-06
+
+### Added
+
+- The administration screen says when a newer release is out, from a daily check of GitHub that updates.check turns off; its new Updates section names the running version
+- A pull request whose title starts or ends with an identifier, such as DEV-12: or [DEV-12], is listed on that item and in its preview, with its state. Administration has a GitHub section that creates the instance's own GitHub Apps, private by default and one per organisation or account, installs and links them, private repositories included, and syncs them back 90 days
+
 ## v0.11.0 - 2026-10-05
 
 ### Added

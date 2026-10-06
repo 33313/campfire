@@ -1,3 +1,0 @@
-kind: Added
-body: "A pull request whose title starts or ends with an identifier, such as DEV-12: or [DEV-12], is listed on that item and in its preview, with its state. Administration has a GitHub section that creates the instance's own GitHub Apps, private by default and one per organisation or account, installs and links them, private repositories included, and syncs them back 90 days"
-time: 2026-10-06T02:21:15.900602949+02:00
