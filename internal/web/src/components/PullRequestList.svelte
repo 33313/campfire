@@ -1,7 +1,7 @@
 <script>
   // The pull requests whose titles name an item (DEV-13), drawn like its
-  // relations: where, which, its title, and its state, coloured as GitHub
-  // colours it.
+  // relations: where, which, its title, and its state. Open is green and
+  // merged purple, as on GitHub, in this palette's own shades.
   let { pullRequests = [], compact = false } = $props();
 
   const NAME = { open: "Open", draft: "Draft", merged: "Merged", closed: "Closed" };
