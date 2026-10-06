@@ -23,6 +23,7 @@
     { id: "teams", label: "Teams" },
     { id: "backup", label: "Backup and restore" },
     { id: "agents", label: "Agent access" },
+    { id: "updates", label: "Updates" },
     { id: "log", label: "Global log", onclick: () => navigate("/log") },
   ];
 
@@ -31,15 +32,17 @@
   let teams = $state([]);
   let snapshots = $state(null);
   let tokens = $state([]);
+  let updates = $state(null);
   let error = $state(null);
   let loaded = $state(false);
 
   async function load() {
     try {
-      [users, teams, snapshots, tokens] = await Promise.all([
+      [users, teams, snapshots, tokens, updates] = await Promise.all([
         api.listUsers(), api.listTeams(true),
         api.listSnapshots().catch(() => null),
         api.listAgentTokens(0).catch(() => []),
+        api.getUpdates().catch(() => null),
       ]);
       loaded = true;
       error = null;
@@ -100,6 +103,12 @@
   <ErrorPanel {error} retry={load} />
 {:else if loaded}
   <ScreenHeader title="Administration" sub={location.host} badge="Instance administrator" />
+  {#if updates?.newer}
+    <div class="banner">
+      <span class="grow">Campfire {updates.latest.version} is out. This instance runs {updates.current}.</span>
+      <a class="btn small" href={updates.latest.url} target="_blank" rel="noopener">Release notes</a>
+    </div>
+  {/if}
 
   <div class="body">
     <SettingsRail sections={SECTIONS} active={tab} onpick={(t) => (tab = t)}>
@@ -268,6 +277,31 @@
               {/snippet}
             </Section>
           {/if}
+
+        {:else if tab === "updates"}
+          <Section title="Updates" sub={updates?.check ? "checking daily" : "off"}>
+            {#snippet children()}
+              <p class="explain">
+                This instance runs {updates?.current || "an unknown version"}.
+                {#if !updates?.check}
+                  Set <code>updates.check</code> to true and restart, and this screen says when a newer
+                  release is out.
+                {:else if updates.latest}
+                  The latest release is {updates.latest.version}{updates.newer ? "" : ", so it is up to date"},
+                  checked {new Date(updates.latest.checked).toLocaleString()}.
+                {:else if !updates.error}
+                  Asking GitHub for the latest release.
+                {/if}
+              </p>
+              {#if updates?.error}
+                <p class="explain">The last check failed: {updates.error}.</p>
+              {/if}
+              {#if updates?.newer}
+                <a class="btn small" style="margin-top:10px" href={updates.latest.url}
+                   target="_blank" rel="noopener">Release notes for {updates.latest.version}</a>
+              {/if}
+            {/snippet}
+          </Section>
 
         {:else}
           <Section title="Agent access" sub="{tokens.length} live tokens">

@@ -20,6 +20,7 @@ import (
 
 	"github.com/33313/campfire/internal/core"
 	"github.com/33313/campfire/internal/stream"
+	"github.com/33313/campfire/internal/updates"
 )
 
 const sessionCookie = "campfire_session"
@@ -39,6 +40,7 @@ type Server struct {
 	Snapshots      Snapshots
 	// MaxImage bounds a pasted picture, in bytes; 0 takes none (DEV-40).
 	MaxImage int64
+	Updates  *updates.Checker
 }
 
 func New(svc *core.Service, bus *stream.Bus) *Server {

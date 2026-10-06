@@ -260,7 +260,7 @@ while connected, dimming while disconnected. After a disconnect the board catche
 |---|---|
 | Member | Create and edit items in their teams; comment on any item. |
 | Team administrator | Also manage the team: members, work states, name, picture and description. |
-| Instance administrator | Also create accounts and teams, send invitations and password resets, manage backups, and read the log of every team. |
+| Instance administrator | Also create accounts and teams, send invitations and password resets, manage backups, see when a newer release is out, and read the log of every team. |
 
 Your role can differ from team to team.
 

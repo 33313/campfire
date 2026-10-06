@@ -26,6 +26,7 @@ import (
 	"github.com/33313/campfire/internal/mcp"
 	"github.com/33313/campfire/internal/store"
 	"github.com/33313/campfire/internal/stream"
+	"github.com/33313/campfire/internal/updates"
 	"github.com/33313/campfire/internal/web"
 )
 
@@ -223,6 +224,7 @@ func serve(cfg config.Config) error {
 	apiServer.MaxImage = cfg.Images.MaxMB << 20
 	apiServer.Snapshots = api.Snapshots{Snapshots: cfg.Snapshots,
 		Take: func(ctx context.Context) (backup.Snapshot, error) { return takeSnapshot(ctx, cfg, db) }}
+	apiServer.Updates = updates.New(buildVersion())
 	mux.Handle("/api/", apiServer)
 	if cfg.MCP.Enabled {
 		// The agent interface is served from this process, on this origin, at
@@ -260,6 +262,12 @@ func serve(cfg config.Config) error {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+
+	if cfg.Updates.Check {
+		go apiServer.Updates.Run(ctx)
+	} else {
+		log.Print("update check is off")
+	}
 
 	go func() {
 		<-ctx.Done()

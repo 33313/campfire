@@ -37,6 +37,8 @@ type Config struct {
 	LiveUpdates LiveUpdates `json:"liveUpdates"`
 
 	Images Images `json:"images"`
+
+	Updates Updates `json:"updates"`
 }
 
 type Snapshots struct {
@@ -70,6 +72,12 @@ type Images struct {
 	MaxMB int64 `json:"maxMB"`
 }
 
+type Updates struct {
+	// Check asks GitHub once a day whether a newer release exists, and the
+	// administration screen says so. It sends nothing but the request.
+	Check bool `json:"check"`
+}
+
 // Default is what an instance runs with when nothing is configured.
 func Default() Config {
 	dir := DataDir()
@@ -84,6 +92,7 @@ func Default() Config {
 		},
 		LiveUpdates: LiveUpdates{HiddenTabGrace: "1m"},
 		Images:      Images{MaxMB: 10},
+		Updates:     Updates{Check: true},
 	}
 }
 
