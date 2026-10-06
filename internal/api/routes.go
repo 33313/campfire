@@ -95,10 +95,10 @@ func (s *Server) routes() {
 
 	// GitHub (DEV-13).
 	s.handle("GET /api/github", s.getGitHub)
-	s.handle("POST /api/github/app", s.createGitHubApp)
-	s.handle("DELETE /api/github/app", s.deleteGitHubApp)
+	s.handle("POST /api/github/apps", s.createGitHubApp)
+	s.handle("DELETE /api/github/apps/{id}", s.deleteGitHubApp)
+	s.handle("GET /api/github/apps/{id}/install", s.installGitHubApp)
 	s.handle("GET /api/github/manifest", s.gitHubManifest)
-	s.handle("GET /api/github/install", s.installGitHubApp)
 	s.handle("GET /api/github/setup", s.gitHubSetup)
 	s.handle("PUT /api/github/installations/{id}", s.linkInstallation)
 	s.handle("DELETE /api/github/installations/{id}", s.unlinkInstallation)

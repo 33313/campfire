@@ -248,27 +248,30 @@ CREATE TABLE images (
     created_at   INTEGER NOT NULL
 ) STRICT;
 
--- The instance's GitHub App (DEV-13), created from a manifest, so GitHub hands
--- over the key and the webhook secret. One row at most. The key is a secret
--- like a password hash is not: whoever holds a snapshot holds it, and can read
--- what the app can read until the key is revoked on GitHub.
-CREATE TABLE github_app (
-    id             INTEGER PRIMARY KEY CHECK (id = 1),
-    app_id         INTEGER NOT NULL,
+-- The instance's GitHub Apps (DEV-13), each created from a manifest, so GitHub
+-- hands over the key and the webhook secret. Usually one private app per
+-- organisation, since a private app installs only on its owner; a public one
+-- installs anywhere. The id is GitHub's. The key is a secret like a password
+-- hash is not: whoever holds a snapshot holds it, and can read what the app
+-- can read until the key is revoked on GitHub.
+CREATE TABLE github_apps (
+    id             INTEGER PRIMARY KEY,
     slug           TEXT    NOT NULL,
     html_url       TEXT    NOT NULL,
     owner          TEXT    NOT NULL,
+    public         INTEGER NOT NULL,
     private_key    TEXT    NOT NULL,
     webhook_secret TEXT    NOT NULL,
     created_by     INTEGER NOT NULL REFERENCES users (id),
     created_at     INTEGER NOT NULL
 ) STRICT;
 
--- An account or organisation the app is installed on, linked by an instance
+-- An account or organisation an app is installed on, linked by an instance
 -- administrator. The id is GitHub's. A delivery from an installation not
--- here is ignored: the app is public, so anyone can install it.
+-- here is ignored: a public app can be installed by anyone.
 CREATE TABLE github_installations (
     id           INTEGER PRIMARY KEY,
+    app_id       INTEGER NOT NULL REFERENCES github_apps (id) ON DELETE CASCADE,
     account      TEXT    NOT NULL,
     account_type TEXT    NOT NULL,
     linked_by    INTEGER NOT NULL REFERENCES users (id),
@@ -277,6 +280,8 @@ CREATE TABLE github_installations (
     synced_at    INTEGER,
     sync_error   TEXT
 ) STRICT;
+
+CREATE INDEX github_installations_app ON github_installations (app_id);
 
 -- A pull request whose title names an item. The id is GitHub's. It outlives
 -- the installation it came through: a ticket keeps the record of the work

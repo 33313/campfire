@@ -178,8 +178,8 @@ export const api = {
 
   // GitHub (DEV-13)
   getGitHub: () => get("/api/github"),
-  createGitHubApp: (organization) => post("/api/github/app", { organization }),
-  deleteGitHubApp: () => del("/api/github/app"),
+  createGitHubApp: (organization, isPublic) => post("/api/github/apps", { organization, public: isPublic }),
+  deleteGitHubApp: (id) => del(`/api/github/apps/${id}`),
   linkInstallation: (id) => put(`/api/github/installations/${id}`),
   unlinkInstallation: (id) => del(`/api/github/installations/${id}`),
   syncInstallation: (id) => post(`/api/github/installations/${id}/sync`),

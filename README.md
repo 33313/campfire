@@ -174,24 +174,26 @@ browser.
 
 A pull request whose title starts or ends with an item's identifier (`DEV-12: fix it`,
 `[DEV-12] fix it`, `fix it DEV-12`) is listed on that item, with its state. Private repositories
-work: Campfire reads them as a GitHub App of its own.
+work: Campfire reads them through GitHub Apps of its own, one per organisation or account.
 
-1. **Create the app.** *Administration → GitHub*, optionally name an organisation to own it, and
-   press *Create the GitHub App*. GitHub shows the app it is about to create (read access to pull
-   requests, nothing else) and sends you back. Do this from the address GitHub should deliver to:
-   the app's webhook and return addresses are the ones your browser used.
-2. **Link accounts.** *Link an account or organisation* installs the app on GitHub, where you pick
-   all repositories or some. Linking an organisation needs its owner; one who installs it without
-   you shows up under *installed, not linked*, for you to link. Repeat for each account.
-3. **That's it.** Pull requests arrive as they are opened, retitled, merged or closed. A newly
-   linked account is read back 90 days at once; *Sync* does it again.
+1. **Create an app.** *Administration → GitHub*: name the organisation (or leave it blank for your
+   own account) and press *Create on GitHub*. GitHub shows the app it is about to create (read
+   access to pull requests, nothing else) and asks you to confirm; creating one under an
+   organisation needs its owner. Do this from the address GitHub should deliver to: the app's
+   webhook and return addresses are the ones your browser used.
+2. **Install it.** You go straight on to installing it, where you pick all repositories or some, and
+   come back linked. A newly linked account is read back 90 days at once; *Sync* does it again.
+3. **Repeat** for each other organisation or account.
 
-The app is public so that it can be installed on more than one account. Anyone may install it, and
-an installation you have not linked is ignored. An instance GitHub cannot reach, such as one on
-loopback, gets nothing by webhook: press *Sync* to read pull requests back.
+Apps are private by default: a private app installs only on the account that owns it, and nothing
+about it is visible to anyone else. Tick *Public* to make one app installable on several accounts
+instead; anyone could then install it, and an installation you have not linked is ignored.
 
-The app's private key and webhook secret are kept in the database, so a snapshot carries them. If a
-snapshot leaks, generate a new key on the app's page on GitHub.
+An instance GitHub cannot reach, such as one on loopback, gets nothing by webhook: press *Sync* to
+read pull requests back.
+
+Each app's private key and webhook secret are kept in the database, so a snapshot carries them. If a
+snapshot leaks, generate new keys on the apps' pages on GitHub.
 
 ## Behind a proxy
 

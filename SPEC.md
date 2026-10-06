@@ -417,10 +417,12 @@ any transition.
 
 ### 8.3 Pull requests
 
-An instance MAY be connected to GitHub as a GitHub App of its own, created from a manifest and
-installed on the accounts and organisations an instance administrator links. A pull request in a
-repository the app can read is listed on every item its title names — identifiers at the start or
-the end of the title, bare or in brackets — with its state: open, draft, merged or closed.
+An instance MAY be connected to GitHub through GitHub Apps of its own, created from a manifest by
+an instance administrator, each installed on the account or organisation it serves; a private app
+installs only on its owner, a public one anywhere. A pull request in a repository an app can read
+is listed on every item its title names — identifiers at the start or the end of the title, bare
+or in brackets — with its state: open, draft, merged or closed. Forgetting an app unlinks the
+accounts linked through it.
 
 The title is the whole link. Retitling a pull request moves it; one that names nothing is not kept.
 A pull request MUST NOT change an item's state: like a relation, it is information. Its link and

@@ -31,6 +31,18 @@ func (f *fixture) apply(pr store.PullRequest, ids ...string) {
 	}
 }
 
+// link saves app 42 and links installation id to it.
+func (f *fixture) link(id int64, account string) {
+	f.t.Helper()
+	if err := f.SaveGitHubApp(f.ctx, f.admin, store.GitHubApp{ID: 42, Slug: "campfire", HTMLURL: "u",
+		Owner: account, PrivateKey: "k", WebhookSecret: "s"}); err != nil {
+		f.t.Fatal(err)
+	}
+	if err := f.LinkInstallation(f.ctx, f.admin, 42, id, account, "Organization"); err != nil {
+		f.t.Fatal(err)
+	}
+}
+
 func (f *fixture) kinds() map[string]int {
 	out := map[string]int{}
 	for _, e := range f.events {
@@ -44,9 +56,7 @@ func TestPullRequestsFollowTheirTitles(t *testing.T) {
 	f := newFixture(t)
 	team := f.team("Development", "DEV", f.admin)
 	one, two := f.ticket(team, "one"), f.ticket(team, "two")
-	if err := f.LinkInstallation(f.ctx, f.admin, 7, "acme", "Organization"); err != nil {
-		t.Fatal(err)
-	}
+	f.link(7, "acme")
 	f.events = nil
 
 	pr := store.PullRequest{ID: 100, InstallationID: 7, Repo: "acme/web", Number: 4,
@@ -113,9 +123,7 @@ func TestAnUnlinkedInstallationIsIgnored(t *testing.T) {
 	}
 
 	// Unlinking keeps what was linked: it is the record of the work.
-	if err := f.LinkInstallation(f.ctx, f.admin, 7, "acme", "Organization"); err != nil {
-		t.Fatal(err)
-	}
+	f.link(7, "acme")
 	f.apply(store.PullRequest{ID: 2, InstallationID: 7, Repo: "acme/web", Number: 1,
 		Title: "DEV-1", URL: "u", State: "open", UpdatedAt: 1}, one.Identifier)
 	if err := f.InstallationRemoved(f.ctx, 7); err != nil {
@@ -135,12 +143,36 @@ func TestAnUnlinkedInstallationIsIgnored(t *testing.T) {
 	}
 }
 
+// Forgetting an app unlinks the accounts linked through it, and keeps what
+// they listed.
+func TestForgettingAnAppUnlinksItsAccounts(t *testing.T) {
+	f := newFixture(t)
+	team := f.team("Development", "DEV", f.admin)
+	one := f.ticket(team, "one")
+	f.link(7, "acme")
+	f.apply(store.PullRequest{ID: 1, InstallationID: 7, Repo: "acme/web", Number: 1,
+		Title: "DEV-1", URL: "u", State: "open", UpdatedAt: 1}, one.Identifier)
+	if err := f.DeleteGitHubApp(f.ctx, f.admin, 42); err != nil {
+		t.Fatal(err)
+	}
+	gh, err := f.GitHub(f.ctx, f.admin)
+	if err != nil || len(gh.Apps) != 0 {
+		t.Fatalf("apps %v, %v", gh, err)
+	}
+	if _, err := f.Installation(f.ctx, f.admin, 7); err == nil {
+		t.Fatal("the account is still linked")
+	}
+	if len(f.pullRequests(one.ID)) != 1 {
+		t.Fatal("forgetting the app dropped the pull request")
+	}
+}
+
 func TestGitHubIsForInstanceAdministrators(t *testing.T) {
 	f := newFixture(t)
 	marta := f.user("marta")
 	_, err := f.GitHub(f.ctx, marta)
 	requireCode(t, err, CodeForbidden)
-	requireCode(t, f.LinkInstallation(f.ctx, marta, 7, "acme", "Organization"), CodeForbidden)
+	requireCode(t, f.LinkInstallation(f.ctx, marta, 42, 7, "acme", "Organization"), CodeForbidden)
 	_, err = f.GitHubState(f.ctx, marta)
 	requireCode(t, err, CodeForbidden)
 }

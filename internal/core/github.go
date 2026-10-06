@@ -17,40 +17,56 @@ import (
 // Pull requests are written by nobody: the events carry no actor, the way
 // GitHub, not a user, made the change.
 
-// GitHub is what the administration screen shows of the integration.
+// GitHub is what the administration screen shows of the integration: each
+// app, and the accounts linked through it.
 type GitHub struct {
-	App           *GitHubApp                 `json:"app"`
-	Installations []store.GitHubInstallation `json:"installations"`
+	Apps []*GitHubApp `json:"apps"`
 }
 
 type GitHubApp struct {
-	Slug    string `json:"slug"`
-	HTMLURL string `json:"htmlUrl"`
-	Owner   string `json:"owner"`
+	ID            int64                      `json:"id"`
+	Slug          string                     `json:"slug"`
+	HTMLURL       string                     `json:"htmlUrl"`
+	Owner         string                     `json:"owner"`
+	Public        bool                       `json:"public"`
+	Installations []store.GitHubInstallation `json:"installations"`
 }
 
 func (s *Service) GitHub(ctx context.Context, a Actor) (*GitHub, error) {
 	if err := RequireInstanceAdmin(a); err != nil {
 		return nil, err
 	}
-	out := &GitHub{}
-	app, err := store.LoadGitHubApp(ctx, s.DB.R)
-	if errors.Is(err, store.ErrNotFound) {
-		out.Installations = []store.GitHubInstallation{}
-		return out, nil
-	}
+	apps, err := store.ListGitHubApps(ctx, s.DB.R)
 	if err != nil {
 		return nil, err
 	}
-	out.App = &GitHubApp{Slug: app.Slug, HTMLURL: app.HTMLURL, Owner: app.Owner}
-	out.Installations, err = list(store.ListInstallations(ctx, s.DB.R))
-	return out, err
+	insts, err := store.ListInstallations(ctx, s.DB.R)
+	if err != nil {
+		return nil, err
+	}
+	out := &GitHub{Apps: []*GitHubApp{}}
+	for _, app := range apps {
+		v := &GitHubApp{ID: app.ID, Slug: app.Slug, HTMLURL: app.HTMLURL, Owner: app.Owner,
+			Public: app.Public, Installations: []store.GitHubInstallation{}}
+		for _, i := range insts {
+			if i.AppID == app.ID {
+				v.Installations = append(v.Installations, i)
+			}
+		}
+		out.Apps = append(out.Apps, v)
+	}
+	return out, nil
 }
 
-// LoadGitHubApp is the app with its secrets, for talking to GitHub and
-// checking its deliveries. It is never sent to a client.
-func (s *Service) LoadGitHubApp(ctx context.Context) (store.GitHubApp, error) {
-	app, err := store.LoadGitHubApp(ctx, s.DB.R)
+// GitHubApps are the apps with their secrets, for talking to GitHub and
+// checking its deliveries. They are never sent to a client.
+func (s *Service) GitHubApps(ctx context.Context) ([]store.GitHubApp, error) {
+	apps, err := store.ListGitHubApps(ctx, s.DB.R)
+	return apps, mapErr(err)
+}
+
+func (s *Service) LoadGitHubApp(ctx context.Context, id int64) (store.GitHubApp, error) {
+	app, err := store.LoadGitHubApp(ctx, s.DB.R, id)
 	return app, mapErr(err)
 }
 
@@ -99,7 +115,7 @@ func (s *Service) SpendGitHubState(ctx context.Context, a Actor, state string) e
 	})
 }
 
-// SaveGitHubApp keeps the app GitHub created from the manifest.
+// SaveGitHubApp keeps an app GitHub created from the manifest.
 func (s *Service) SaveGitHubApp(ctx context.Context, a Actor, app store.GitHubApp) error {
 	if err := RequireInstanceAdmin(a); err != nil {
 		return err
@@ -114,33 +130,31 @@ func (s *Service) SaveGitHubApp(ctx context.Context, a Actor, app store.GitHubAp
 	})
 }
 
-// DeleteGitHubApp forgets the app and its links. The app itself stays on
-// GitHub until it is deleted there; pull requests stay on their items.
-func (s *Service) DeleteGitHubApp(ctx context.Context, a Actor) error {
+// DeleteGitHubApp forgets an app and the accounts linked through it. The
+// app itself stays on GitHub until it is deleted there; pull requests stay
+// on their items.
+func (s *Service) DeleteGitHubApp(ctx context.Context, a Actor, id int64) error {
 	if err := RequireInstanceAdmin(a); err != nil {
 		return err
 	}
 	return s.write(ctx, a, func(t *wtx) error {
-		app, err := store.LoadGitHubApp(ctx, t.Tx)
+		slug, err := store.DeleteGitHubApp(ctx, t.Tx, id)
 		if err != nil {
 			return err
 		}
-		if err := store.DeleteGitHubApp(ctx, t.Tx); err != nil {
-			return err
-		}
 		return t.log(ctx, store.Event{Kind: store.EvInstance, Entity: "instance",
-			Field: "github_app", OldValue: app.Slug})
+			Field: "github_app", OldValue: slug})
 	})
 }
 
 // LinkInstallation lets the instance read an account's pull requests. The
 // caller has asked GitHub that the installation is the app's.
-func (s *Service) LinkInstallation(ctx context.Context, a Actor, id int64, account, accountType string) error {
+func (s *Service) LinkInstallation(ctx context.Context, a Actor, appID, id int64, account, accountType string) error {
 	if err := RequireInstanceAdmin(a); err != nil {
 		return err
 	}
 	return s.write(ctx, a, func(t *wtx) error {
-		added, err := store.LinkInstallation(ctx, t.Tx, store.GitHubInstallation{ID: id, Account: account,
+		added, err := store.LinkInstallation(ctx, t.Tx, store.GitHubInstallation{ID: id, AppID: appID, Account: account,
 			AccountType: accountType, LinkedBy: a.UserID, LinkedAt: t.now})
 		if err != nil || !added {
 			return err

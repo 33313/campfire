@@ -52,40 +52,51 @@ func base(r *http.Request) string {
 }
 
 func gitHubApp(a store.GitHubApp) github.App {
-	return github.App{ID: a.AppID, Slug: a.Slug, HTMLURL: a.HTMLURL, Owner: a.Owner,
+	return github.App{ID: a.ID, Slug: a.Slug, HTMLURL: a.HTMLURL, Owner: a.Owner, Public: a.Public,
 		PEM: a.PrivateKey, WebhookSecret: a.WebhookSecret}
 }
 
 func (s *Server) getGitHub(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
 	gh, err := s.svc.GitHub(r.Context(), a)
-	if err != nil || gh.App == nil {
-		return gh, err
-	}
-	// The installations not linked yet, as GitHub lists them. One may be
-	// installed by an organisation's owner who is not this instance's
-	// administrator, and so never come back through setup.
-	out := struct {
-		*core.GitHub
-		Available []github.Installation `json:"available"`
-		Error     string                `json:"error,omitempty"`
-		Webhook   string                `json:"webhook"`
-	}{GitHub: gh, Available: []github.Installation{}, Webhook: base(r) + "/api/github/webhook"}
-	app, err := s.svc.LoadGitHubApp(r.Context())
 	if err != nil {
 		return nil, err
 	}
-	all, err := s.GitHub.Installations(r.Context(), gitHubApp(app))
+	apps, err := s.svc.GitHubApps(r.Context())
 	if err != nil {
-		out.Error = err.Error()
+		return nil, err
 	}
-	linked := map[int64]bool{}
-	for _, i := range gh.Installations {
-		linked[i.ID] = true
+	// Each app's installations not linked yet, as GitHub lists them. One may
+	// be installed by an organisation's owner who is not this instance's
+	// administrator, and so never come back through setup.
+	type appView struct {
+		*core.GitHubApp
+		Available []github.Installation `json:"available"`
+		Error     string                `json:"error,omitempty"`
 	}
-	for _, i := range all {
-		if !linked[i.ID] {
-			out.Available = append(out.Available, i)
+	out := struct {
+		Apps    []appView `json:"apps"`
+		Webhook string    `json:"webhook"`
+	}{Apps: []appView{}, Webhook: base(r) + "/api/github/webhook"}
+	secrets := map[int64]store.GitHubApp{}
+	for _, app := range apps {
+		secrets[app.ID] = app
+	}
+	for _, v := range gh.Apps {
+		view := appView{GitHubApp: v, Available: []github.Installation{}}
+		all, err := s.GitHub.Installations(r.Context(), gitHubApp(secrets[v.ID]))
+		if err != nil {
+			view.Error = err.Error()
 		}
+		linked := map[int64]bool{}
+		for _, i := range v.Installations {
+			linked[i.ID] = true
+		}
+		for _, i := range all {
+			if !linked[i.ID] {
+				view.Available = append(view.Available, i)
+			}
+		}
+		out.Apps = append(out.Apps, view)
 	}
 	return out, nil
 }
@@ -95,6 +106,7 @@ func (s *Server) getGitHub(w http.ResponseWriter, r *http.Request, a core.Actor)
 func (s *Server) createGitHubApp(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
 	var in struct {
 		Organization string `json:"organization"`
+		Public       bool   `json:"public"`
 	}
 	if err := decode(r, &in); err != nil {
 		return nil, err
@@ -105,19 +117,24 @@ func (s *Server) createGitHubApp(w http.ResponseWriter, r *http.Request, a core.
 	}
 	// An app's name is unique across GitHub; the administrator can change it
 	// on the form if this one is taken.
+	org := strings.TrimSpace(in.Organization)
 	name := "Campfire " + strings.Split(r.Host, ":")[0]
+	if org != "" {
+		name = "Campfire " + org
+	}
 	if len(name) > 34 {
 		name = name[:34]
 	}
-	manifest, _ := json.Marshal(github.Manifest(base(r), name))
+	manifest, _ := json.Marshal(github.Manifest(base(r), name, in.Public))
 	return map[string]string{
-		"action":   s.GitHub.NewAppURL(strings.TrimSpace(in.Organization), state),
+		"action":   s.GitHub.NewAppURL(org, state),
 		"manifest": string(manifest),
 	}, nil
 }
 
 // gitHubManifest is where GitHub sends the administrator back once the app
-// exists, with a code to exchange for its credentials.
+// exists, with a code to exchange for its credentials. From there it goes
+// straight on to installing it: an app installed nowhere reads nothing.
 func (s *Server) gitHubManifest(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
 	q := r.URL.Query()
 	if err := s.svc.SpendGitHubState(r.Context(), a, q.Get("state")); err != nil {
@@ -127,26 +144,43 @@ func (s *Server) gitHubManifest(w http.ResponseWriter, r *http.Request, a core.A
 	if err != nil {
 		return back(err)
 	}
-	return back(s.svc.SaveGitHubApp(r.Context(), a, store.GitHubApp{AppID: app.ID, Slug: app.Slug,
-		HTMLURL: app.HTMLURL, Owner: app.Owner, PrivateKey: app.PEM, WebhookSecret: app.WebhookSecret}))
+	if err := s.svc.SaveGitHubApp(r.Context(), a, store.GitHubApp{ID: app.ID, Slug: app.Slug,
+		HTMLURL: app.HTMLURL, Owner: app.Owner, Public: app.Public, PrivateKey: app.PEM,
+		WebhookSecret: app.WebhookSecret}); err != nil {
+		return back(err)
+	}
+	return s.install(r, a, app.Slug)
 }
 
 func (s *Server) deleteGitHubApp(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
-	return nil, s.svc.DeleteGitHubApp(r.Context(), a)
+	id, err := pathID(r, "id")
+	if err != nil {
+		return nil, err
+	}
+	return nil, s.svc.DeleteGitHubApp(r.Context(), a, id)
 }
 
-// installGitHubApp sends the administrator to GitHub to install the app on
-// an account or an organisation, and pick its repositories.
+// installGitHubApp sends the administrator to GitHub to install an app on
+// an account or an organisation, and pick its repositories. A private app
+// installs only on its owner.
 func (s *Server) installGitHubApp(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
-	app, err := s.svc.LoadGitHubApp(r.Context())
+	id, err := pathID(r, "id")
 	if err != nil {
 		return back(err)
 	}
+	app, err := s.svc.LoadGitHubApp(r.Context(), id)
+	if err != nil {
+		return back(err)
+	}
+	return s.install(r, a, app.Slug)
+}
+
+func (s *Server) install(r *http.Request, a core.Actor, slug string) (any, error) {
 	state, err := s.svc.GitHubState(r.Context(), a)
 	if err != nil {
 		return back(err)
 	}
-	return redirect(s.GitHub.InstallURL(app.Slug, state)), nil
+	return redirect(s.GitHub.InstallURL(slug, state)), nil
 }
 
 // gitHubSetup is where GitHub sends whoever installed the app. Arriving with
@@ -165,18 +199,24 @@ func (s *Server) gitHubSetup(w http.ResponseWriter, r *http.Request, a core.Acto
 	return back(s.link(r.Context(), a, id))
 }
 
-// link asks GitHub whether the installation is the app's, and for whom,
-// before linking it: an id in a URL proves nothing.
+// link asks GitHub which app an installation belongs to, and for whom,
+// before linking it: an id in a URL proves nothing. Each app is asked in
+// turn; only the one it belongs to can read it.
 func (s *Server) link(ctx context.Context, a core.Actor, id int64) error {
-	app, err := s.svc.LoadGitHubApp(ctx)
+	apps, err := s.svc.GitHubApps(ctx)
 	if err != nil {
 		return err
 	}
-	inst, err := s.GitHub.Installation(ctx, gitHubApp(app), id)
-	if err != nil {
-		return err
+	var last error = &core.Error{Code: core.CodeNotFound, Message: "no GitHub App here is installed there"}
+	for _, app := range apps {
+		inst, err := s.GitHub.Installation(ctx, gitHubApp(app), id)
+		if err != nil {
+			last = err
+			continue
+		}
+		return s.svc.LinkInstallation(ctx, a, app.ID, inst.ID, inst.Account, inst.AccountType)
 	}
-	return s.svc.LinkInstallation(ctx, a, inst.ID, inst.Account, inst.AccountType)
+	return last
 }
 
 func (s *Server) linkInstallation(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
@@ -214,10 +254,11 @@ func (s *Server) syncInstallation(w http.ResponseWriter, r *http.Request, a core
 	if err != nil {
 		return nil, err
 	}
-	if _, err := s.svc.Installation(r.Context(), a, id); err != nil {
+	inst, err := s.svc.Installation(r.Context(), a, id)
+	if err != nil {
 		return nil, err
 	}
-	app, err := s.svc.LoadGitHubApp(r.Context())
+	app, err := s.svc.LoadGitHubApp(r.Context(), inst.AppID)
 	if err != nil {
 		return nil, err
 	}
@@ -247,18 +288,26 @@ func storePR(p github.PullRequest) store.PullRequest {
 }
 
 // gitHubWebhook takes GitHub's deliveries. It is the one route that trusts a
-// signature instead of a session: the body is signed with the secret GitHub
-// handed over when the app was created.
+// signature instead of a session: each app's deliveries are signed with the
+// secret GitHub handed over when it was created, and the one that matches
+// says which app it is.
 func (s *Server) gitHubWebhook(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, 5<<20))
 	if err != nil {
 		return nil, err
 	}
-	app, err := s.svc.LoadGitHubApp(r.Context())
+	apps, err := s.svc.GitHubApps(r.Context())
 	if err != nil {
 		return nil, err
 	}
-	if !github.Verify(app.WebhookSecret, body, r.Header.Get("X-Hub-Signature-256")) {
+	signed := false
+	for _, app := range apps {
+		if github.Verify(app.WebhookSecret, body, r.Header.Get("X-Hub-Signature-256")) {
+			signed = true
+			break
+		}
+	}
+	if !signed {
 		return nil, &core.Error{Code: core.CodeUnauthenticated, Message: "the delivery's signature does not match"}
 	}
 	e, err := github.ParseEvent(r.Header.Get("X-GitHub-Event"), body)

@@ -11,50 +11,75 @@ import (
 // to, and the pull requests whose titles name items.
 
 type GitHubApp struct {
-	AppID         int64
+	ID            int64
 	Slug          string
 	HTMLURL       string
 	Owner         string
+	Public        bool
 	PrivateKey    string
 	WebhookSecret string
 	CreatedBy     int64
 	CreatedAt     int64
 }
 
-// SaveGitHubApp stores the app, replacing one there was.
+// SaveGitHubApp stores an app, replacing one with its id.
 func SaveGitHubApp(ctx context.Context, q Q, a GitHubApp) error {
 	_, err := q.ExecContext(ctx, `
-		INSERT OR REPLACE INTO github_app
-		  (id, app_id, slug, html_url, owner, private_key, webhook_secret, created_by, created_at)
-		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		a.AppID, a.Slug, a.HTMLURL, a.Owner, a.PrivateKey, a.WebhookSecret, a.CreatedBy, a.CreatedAt)
+		INSERT OR REPLACE INTO github_apps
+		  (id, slug, html_url, owner, public, private_key, webhook_secret, created_by, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		a.ID, a.Slug, a.HTMLURL, a.Owner, a.Public, a.PrivateKey, a.WebhookSecret, a.CreatedBy, a.CreatedAt)
 	return err
 }
 
-func LoadGitHubApp(ctx context.Context, q Q) (GitHubApp, error) {
+const appColumns = `id, slug, html_url, owner, public, private_key, webhook_secret, created_by, created_at`
+
+func scanApp(row interface{ Scan(...any) error }) (GitHubApp, error) {
 	var a GitHubApp
-	err := q.QueryRowContext(ctx, `
-		SELECT app_id, slug, html_url, owner, private_key, webhook_secret, created_by, created_at
-		FROM github_app WHERE id = 1`).
-		Scan(&a.AppID, &a.Slug, &a.HTMLURL, &a.Owner, &a.PrivateKey, &a.WebhookSecret, &a.CreatedBy, &a.CreatedAt)
+	err := row.Scan(&a.ID, &a.Slug, &a.HTMLURL, &a.Owner, &a.Public, &a.PrivateKey, &a.WebhookSecret,
+		&a.CreatedBy, &a.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return a, ErrNotFound
 	}
 	return a, err
 }
 
-// DeleteGitHubApp forgets the app and every link to an account. Pull
-// requests stay on the items they name.
-func DeleteGitHubApp(ctx context.Context, q Q) error {
-	if _, err := q.ExecContext(ctx, `DELETE FROM github_installations`); err != nil {
-		return err
+func LoadGitHubApp(ctx context.Context, q Q, id int64) (GitHubApp, error) {
+	return scanApp(q.QueryRowContext(ctx, `SELECT `+appColumns+` FROM github_apps WHERE id = ?`, id))
+}
+
+// ListGitHubApps is every app, oldest first, secrets included.
+func ListGitHubApps(ctx context.Context, q Q) ([]GitHubApp, error) {
+	rows, err := q.QueryContext(ctx, `SELECT `+appColumns+` FROM github_apps ORDER BY created_at`)
+	if err != nil {
+		return nil, err
 	}
-	_, err := q.ExecContext(ctx, `DELETE FROM github_app`)
-	return err
+	defer rows.Close()
+	var out []GitHubApp
+	for rows.Next() {
+		a, err := scanApp(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+// DeleteGitHubApp forgets an app and, by cascade, the accounts linked
+// through it. Pull requests stay on the items they name.
+func DeleteGitHubApp(ctx context.Context, q Q, id int64) (string, error) {
+	var slug string
+	err := q.QueryRowContext(ctx, `DELETE FROM github_apps WHERE id = ? RETURNING slug`, id).Scan(&slug)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	return slug, err
 }
 
 type GitHubInstallation struct {
 	ID          int64  `json:"id"`
+	AppID       int64  `json:"appId"`
 	Account     string `json:"account"`
 	AccountType string `json:"accountType"`
 	LinkedBy    int64  `json:"linkedBy"`
@@ -67,9 +92,9 @@ type GitHubInstallation struct {
 // It reports whether it was new.
 func LinkInstallation(ctx context.Context, q Q, i GitHubInstallation) (bool, error) {
 	res, err := q.ExecContext(ctx, `
-		INSERT INTO github_installations (id, account, account_type, linked_by, linked_at)
-		VALUES (?, ?, ?, ?, ?)
-		ON CONFLICT (id) DO NOTHING`, i.ID, i.Account, i.AccountType, i.LinkedBy, i.LinkedAt)
+		INSERT INTO github_installations (id, app_id, account, account_type, linked_by, linked_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT (id) DO NOTHING`, i.ID, i.AppID, i.Account, i.AccountType, i.LinkedBy, i.LinkedAt)
 	if err != nil {
 		return false, err
 	}
@@ -92,14 +117,13 @@ func UnlinkInstallation(ctx context.Context, q Q, id int64) (string, error) {
 	return account, err
 }
 
-func Installation(ctx context.Context, q Q, id int64) (GitHubInstallation, error) {
+const installationColumns = `id, app_id, account, account_type, linked_by, linked_at, synced_at, sync_error`
+
+func scanInstallation(row interface{ Scan(...any) error }) (GitHubInstallation, error) {
 	var i GitHubInstallation
 	var synced sql.NullInt64
 	var syncErr sql.NullString
-	err := q.QueryRowContext(ctx, `
-		SELECT id, account, account_type, linked_by, linked_at, synced_at, sync_error
-		FROM github_installations WHERE id = ?`, id).
-		Scan(&i.ID, &i.Account, &i.AccountType, &i.LinkedBy, &i.LinkedAt, &synced, &syncErr)
+	err := row.Scan(&i.ID, &i.AppID, &i.Account, &i.AccountType, &i.LinkedBy, &i.LinkedAt, &synced, &syncErr)
 	if errors.Is(err, sql.ErrNoRows) {
 		return i, ErrNotFound
 	}
@@ -107,23 +131,24 @@ func Installation(ctx context.Context, q Q, id int64) (GitHubInstallation, error
 	return i, err
 }
 
+func Installation(ctx context.Context, q Q, id int64) (GitHubInstallation, error) {
+	return scanInstallation(q.QueryRowContext(ctx,
+		`SELECT `+installationColumns+` FROM github_installations WHERE id = ?`, id))
+}
+
 func ListInstallations(ctx context.Context, q Q) ([]GitHubInstallation, error) {
-	rows, err := q.QueryContext(ctx, `
-		SELECT id, account, account_type, linked_by, linked_at, synced_at, sync_error
-		FROM github_installations ORDER BY account`)
+	rows, err := q.QueryContext(ctx,
+		`SELECT `+installationColumns+` FROM github_installations ORDER BY account`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var out []GitHubInstallation
 	for rows.Next() {
-		var i GitHubInstallation
-		var synced sql.NullInt64
-		var syncErr sql.NullString
-		if err := rows.Scan(&i.ID, &i.Account, &i.AccountType, &i.LinkedBy, &i.LinkedAt, &synced, &syncErr); err != nil {
+		i, err := scanInstallation(rows)
+		if err != nil {
 			return nil, err
 		}
-		i.SyncedAt, i.SyncError = num(synced), text(syncErr)
 		out = append(out, i)
 	}
 	return out, rows.Err()

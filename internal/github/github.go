@@ -51,6 +51,7 @@ type App struct {
 	Slug          string
 	HTMLURL       string
 	Owner         string
+	Public        bool
 	PEM           string
 	WebhookSecret string
 }
@@ -75,15 +76,21 @@ type PullRequest struct {
 	UpdatedAt      time.Time
 }
 
+// Homepage is the app's homepage on GitHub, which anyone may see on a
+// public app's page. It is Campfire's source, never the instance's address;
+// a host running a modified copy points it, with internal/web/src/lib/source.js, at
+// their own.
+const Homepage = "https://github.com/33313/campfire"
+
 // Manifest is the app an instance asks GitHub to create: read access to pull
-// requests, and their events delivered to base. It is public so that it can
-// be installed on more than the account that owns it; an installation the
-// instance has not linked is ignored.
-func Manifest(base, name string) map[string]any {
+// requests, and their events delivered to base. A private app installs only
+// on the account or organisation that owns it; a public one anywhere, and an
+// installation the instance has not linked is ignored.
+func Manifest(base, name string, public bool) map[string]any {
 	return map[string]any{
 		"name":         name,
-		"url":          base,
-		"public":       true,
+		"url":          Homepage,
+		"public":       public,
 		"redirect_url": base + "/api/github/manifest",
 		"setup_url":    base + "/api/github/setup",
 		"hook_attributes": map[string]any{
@@ -118,6 +125,7 @@ func (c *Client) ConvertManifest(ctx context.Context, code string) (App, error) 
 		HTMLURL       string `json:"html_url"`
 		PEM           string `json:"pem"`
 		WebhookSecret string `json:"webhook_secret"`
+		Public        bool   `json:"public"`
 		Owner         struct {
 			Login string `json:"login"`
 		} `json:"owner"`
@@ -129,7 +137,7 @@ func (c *Client) ConvertManifest(ctx context.Context, code string) (App, error) 
 	if out.PEM == "" || out.WebhookSecret == "" {
 		return App{}, errors.New("GitHub created the app without a key or a webhook secret")
 	}
-	return App{ID: out.ID, Slug: out.Slug, HTMLURL: out.HTMLURL, Owner: out.Owner.Login,
+	return App{ID: out.ID, Slug: out.Slug, HTMLURL: out.HTMLURL, Owner: out.Owner.Login, Public: out.Public,
 		PEM: out.PEM, WebhookSecret: out.WebhookSecret}, nil
 }
 
