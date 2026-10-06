@@ -36,6 +36,9 @@
   --alert: #e5604d;
   --alert-tint: rgba(229, 96, 77, 0.14);
   --ok: #b2bd52;
+  /* A pull request's state, in GitHub's own colours, so it reads as it does there. */
+  --pr-open: #3fb950;
+  --pr-merged: #a371f7;
   --on-accent: #131110;
 
   /* Motion (DESIGN.md §8). Short enough never to be waited on: a hover is
@@ -455,6 +458,12 @@ img.avatar { object-fit: cover; }
 }
 .state-badge.final { color: var(--ok); }
 .state-badge.rejected { color: var(--alert); }
+.state-badge.pr-open { color: var(--pr-open); }
+.state-badge.pr-open .pip { background: var(--pr-open); }
+.state-badge.pr-merged { color: var(--pr-merged); }
+.state-badge.pr-merged .pip { background: var(--pr-merged); }
+.state-badge.pr-closed { color: var(--alert); }
+.state-badge.pr-closed .pip { background: var(--alert); }
 
 .role-badge {
   font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase;
