@@ -3,7 +3,11 @@
   // you type in on one line, and the labels that already exist offered as you
   // type so a second spelling of one is not the easiest thing to do. The
   // ticket page and the create dialog both use it.
+  //
+  // The box waits behind a quiet "+" (DEV-100): the same one click, since the
+  // "+" opens it already focused, and no empty box sitting among the chips.
 
+  import { tick } from "svelte";
   import { app } from "../lib/state.svelte.js";
   import { NAV } from "../lib/icons.js";
   import Icon from "./Icon.svelte";
@@ -13,6 +17,17 @@
   let { labels = [], draft = $bindable(""), onadd, onremove } = $props();
 
   let active = $state(0); // which suggestion the keyboard is on
+  let open = $state(false); // the box is up, not the "+"
+  let plus = $state();
+
+  // Escape puts the "+" back and the focus on it, so the keyboard is not
+  // dropped on the page.
+  async function shut() {
+    draft = "";
+    open = false;
+    await tick();
+    plus?.focus();
+  }
 
   // Labels are created by typing them: there is no registry to pick from first
   // (SPEC.md §8.1). The list is a shortcut to an existing one, never a gate.
@@ -24,6 +39,8 @@
       .filter((n) => !labels.includes(n) && n.toLowerCase().startsWith(typed))
       .slice(0, 6);
   });
+
+  const focus = (el) => el.focus();
 
   function add(name) {
     const value = (name ?? draft).trim();
@@ -43,7 +60,7 @@
       e.preventDefault();
       active = (active - 1 + matches.length) % matches.length;
     } else if (e.key === "Escape") {
-      draft = "";
+      shut();
     } else if (e.key === "Backspace" && !draft && labels.length) {
       onremove(labels[labels.length - 1]); // the box is empty: take the last chip
     } else {
@@ -63,9 +80,17 @@
     </span>
   {/each}
   <!-- No placeholder: the box sits among the chips it makes, which says what
-       it is better than grey words inside it do. -->
-  <input class="label-input" aria-label="Labels" bind:value={draft} onkeydown={key}
-         onblur={() => setTimeout(() => (active = 0), 0)} />
+       it is better than grey words inside it do. It stays up while it holds
+       text, which a form still adds when it is submitted. -->
+  {#if open || draft}
+    <input class="label-input" aria-label="Labels" bind:value={draft} onkeydown={key}
+           use:focus onblur={() => setTimeout(() => { active = 0; open = false; }, 0)} />
+  {:else}
+    <button type="button" class="btn quiet label-add" aria-label="Add a label" title="Add a label"
+            bind:this={plus} onclick={() => (open = true)}>
+      <Icon body={NAV.plus} size={11} />
+    </button>
+  {/if}
   {#if matches.length}
     <div class="label-suggestions" role="listbox">
       {#each matches as name, i}

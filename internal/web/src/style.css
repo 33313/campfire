@@ -394,6 +394,7 @@ select.input {
   width: 104px; height: 24px; padding: 0 6px; background: var(--sunk);
   border: 1px solid var(--border); color: var(--text); font-size: 12px; font-family: inherit;
 }
+.label-add { height: 24px; padding: 0 6px; }
 .label-input:focus { outline: none; border-color: var(--accent); color: var(--bright); }
 .label-suggestions {
   position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; min-width: 160px;

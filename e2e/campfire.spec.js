@@ -58,6 +58,7 @@ test("a new ticket lands in the backlog and leaves you where you were", async ({
   // Every field the item has is on the form, so creating is not followed by
   // three edits to finish it.
   await form.getByLabel("Assignee").selectOption({ label: "root" });
+  await form.getByRole("button", { name: "Add a label" }).click();
   await form.getByLabel("Labels").fill("plumbing");
   await form.getByRole("button", { name: "Create" }).click();
 
@@ -144,12 +145,20 @@ test("a label is added on the detail view and nowhere else", async ({ page }) =>
   await signIn(page);
   await page.goto("/SOL-1");
 
-  // One box, inline with the chips it makes, always there.
+  // A quiet "+" inline with the chips opens the box already focused (DEV-100).
+  const plus = page.getByRole("button", { name: "Add a label" });
   const box = page.getByLabel("Labels");
-  await box.fill("heating");
+  await expect(box).toHaveCount(0);
+  await plus.click();
+  await expect(box).toBeFocused();
+  await page.keyboard.type("heating");
   await box.press("Enter");
   await expect(page.locator(".label-chip", { hasText: "heating" })).toBeVisible();
-  await expect(box).toBeVisible(); // it does not come and go with the chips
+  await expect(box).toBeFocused(); // it stays up for the next one
+  // Escape puts the "+" back, focused.
+  await box.press("Escape");
+  await expect(box).toHaveCount(0);
+  await expect(plus).toBeFocused();
 
   // SPEC.md §8.1: a card never carries a label.
   await page.goto("/t/1/board");
@@ -166,6 +175,7 @@ test("a label that exists is offered before it is spelled a second way", async (
   const form = page.getByRole("dialog");
   await expect(form.locator(".label-editor")).toBeVisible();
 
+  await form.getByRole("button", { name: "Add a label" }).click();
   const box = form.getByLabel("Labels");
   await box.fill("he");
 
