@@ -223,7 +223,7 @@
         {:else}
           <!-- Empty but editable: it says so, as the description does. -->
           <button class="aside-control" onclick={pickBucket}>
-            <span class="note">No bucket. Pick one.</span>
+            <span style="color:var(--faint)">No bucket. Pick one.</span>
           </button>
         {/if}
         <button class="btn quiet" style="height:34px" aria-label="Change bucket"
