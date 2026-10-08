@@ -2014,3 +2014,25 @@ test("a relation is added from the ticket page by searching for the other item",
   await expect(dialog).toHaveCount(0);
   await expect(page.locator(".relation-row", { hasText: "Dry the kindling" })).toContainText("follows up");
 });
+
+// DEV-97: the preview leaves out what is empty and cannot be edited there, and
+// says what is empty and can be.
+test("a preview draws no dashes for what is not there", async ({ page }) => {
+  await signIn(page);
+  await page.request.post("/api/items", { data: { kind: "ticket", teamId: 1, title: "Sweep the grate" } });
+  await page.request.post("/api/items", { data: { kind: "bucket", teamId: 1, title: "Ash pit", icon: "flag" } });
+  await page.goto("/t/1/backlog");
+  const aside = page.locator(".detail-aside");
+
+  await page.locator("tbody tr", { hasText: "Sweep the grate" }).click();
+  await expect(aside.getByLabel("Title")).toHaveValue("Sweep the grate");
+  await expect(aside.locator(".dash")).toHaveCount(0);
+  await expect(aside.getByText("Relations")).toHaveCount(0);
+  await expect(aside.getByRole("button", { name: "No bucket. Pick one." })).toBeVisible();
+
+  // A bucket cannot be in a bucket, so its preview does not offer one.
+  await page.getByRole("button", { name: "Show buckets" }).click();
+  await page.locator("tbody tr", { hasText: "Ash pit" }).click();
+  await expect(aside.getByLabel("Title")).toHaveValue("Ash pit");
+  await expect(aside.getByText("Bucket", { exact: true })).toHaveCount(0);
+});
