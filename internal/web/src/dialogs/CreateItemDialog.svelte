@@ -84,7 +84,7 @@
       close(await api.createItem(body));
     } catch (err) {
       // The API names the offending field; without one the message still has
-      // to land somewhere, so it lands under the footer.
+      // to land somewhere, so it lands at the foot of the form.
       invalid = { field: err.field || "", message: err.message };
     }
   }
@@ -116,7 +116,9 @@
       <textarea class="input" rows="4" placeholder="Markdown… paste a picture to add one"
                 bind:value={description} use:pictures></textarea>
     </label>
-    <div style="display:flex;gap:12px">
+    <!-- Priority, planned end and assignee on one row: there is room, and the
+         form is a row shorter for it (DEV-101). -->
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
       <label class="field">
         <span class="field-label">Priority</span>
         <select class="input" class:error={invalid?.field === "priority"} bind:value={priority}
@@ -131,20 +133,20 @@
                bind:value={plannedEnd} oninput={clearIf("plannedEnd")} />
         {@render complaint("plannedEnd")}
       </label>
-    </div>
-    <!-- A div, not a label: a label would name the shortcut inside it too. -->
-    <div class="field">
-      <!-- A bucket's assignee is its owner: the person accountable for the
-           milestone (SPEC.md §6.2). -->
-      <span class="field-label">
-        {chosen === "bucket" ? "Owner" : "Assignee"}
-        <!-- The one assignee picked most often, without the drop-down (DEV-82). -->
-        <button type="button" class="pick-me" onclick={() => (assigneeId = app.user.id)}>(Me!)</button>
-      </span>
-      <select class="input" aria-label={chosen === "bucket" ? "Owner" : "Assignee"} bind:value={assigneeId}>
-        <option value="">Unassigned</option>
-        {#each app.users as u}<option value={u.id}>{u.username}</option>{/each}
-      </select>
+      <!-- A div, not a label: a label would name the shortcut inside it too. -->
+      <div class="field">
+        <!-- A bucket's assignee is its owner: the person accountable for the
+             milestone (SPEC.md §6.2). -->
+        <span class="field-label">
+          {chosen === "bucket" ? "Owner" : "Assignee"}
+          <!-- The one assignee picked most often, without the drop-down (DEV-82). -->
+          <button type="button" class="pick-me" onclick={() => (assigneeId = app.user.id)}>(Me!)</button>
+        </span>
+        <select class="input" aria-label={chosen === "bucket" ? "Owner" : "Assignee"} bind:value={assigneeId}>
+          <option value="">Unassigned</option>
+          {#each app.users as u}<option value={u.id}>{u.username}</option>{/each}
+        </select>
+      </div>
     </div>
     {#if chosen === "bucket"}
       <div class="field">
@@ -203,18 +205,17 @@
       </div>
       {@render complaint("relations")}
     </div>
+    <!-- A refusal that names no field still has to land somewhere: here, at
+         the foot of the form. -->
+    {@render complaint("")}
+  {/snippet}
+  {#snippet footer()}
+    <!-- Beside Create, where it decides where the item lands (DEV-101). -->
     <label style="display:flex;gap:8px;align-items:center">
       <input class="check" type="checkbox" bind:checked={accepted} />
       <span>Mark as accepted</span>
       {#if acceptedState}<span class="eyebrow">→ {acceptedState.name}</span>{/if}
     </label>
-  {/snippet}
-  {#snippet footer()}
-    {#if invalid && !invalid.field}
-      <span class="field-error">{invalid.message}</span>
-    {:else}
-      <span class="consequence">{chosen === "bucket" ? "A new bucket" : "A new ticket"}</span>
-    {/if}
     <div class="actions">
       <button class="btn" onclick={() => close(undefined)}>Cancel</button>
       <button class="btn primary" onclick={create}>Create</button>
