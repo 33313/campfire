@@ -208,43 +208,46 @@
     </div>
   </div>
   <!-- The bucket is a way through to the bucket, as it is on the detail view;
-       changing it is the deliberate second action beside it. -->
-  <div class="aside-field">
-    <span class="field-label">Bucket</span>
-    <div style="display:flex;gap:6px">
-      {#if it.bucketIdentifier}
-        <a class="aside-control" href="/{it.bucketIdentifier}">
-          <BucketIcon name={it.bucketIcon} size={13} {rendering} color={it.bucketColor} />
-          <span>{it.bucketTitle}</span>
-          <span class="note">{it.bucketIdentifier}</span>
-        </a>
-      {:else}
-        <button class="aside-control" onclick={pickBucket}>
-          <span class="dash">—</span>
-          <span class="note">none</span>
+       changing it is the deliberate second action beside it. A bucket cannot
+       be in one, so its preview has no such field. -->
+  {#if it.kind !== "bucket"}
+    <div class="aside-field">
+      <span class="field-label">Bucket</span>
+      <div style="display:flex;gap:6px">
+        {#if it.bucketIdentifier}
+          <a class="aside-control" href="/{it.bucketIdentifier}">
+            <BucketIcon name={it.bucketIcon} size={13} {rendering} color={it.bucketColor} />
+            <span>{it.bucketTitle}</span>
+            <span class="note">{it.bucketIdentifier}</span>
+          </a>
+        {:else}
+          <!-- Empty but editable: it says so, as the description does. -->
+          <button class="aside-control" onclick={pickBucket}>
+            <span style="color:var(--faint)">No bucket. Pick one.</span>
+          </button>
+        {/if}
+        <button class="btn quiet" style="height:34px" aria-label="Change bucket"
+                title="Change bucket" onclick={pickBucket}>
+          <Icon body={NAV.pen} size={13} />
         </button>
-      {/if}
-      <button class="btn quiet" style="height:34px" aria-label="Change bucket"
-              title="Change bucket" onclick={pickBucket}>
-        <Icon body={NAV.pen} size={13} />
-      </button>
+      </div>
     </div>
-  </div>
-  <div class="aside-rule"></div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap">
-    {#each it.labels || [] as name}<span class="label-chip">{name}</span>{:else}
-      <span class="dash">—</span>
-    {/each}
-  </div>
+  {/if}
+  <!-- Labels and relations are not edited here, so an empty one is left out
+       rather than drawn as a dash (DEV-97). -->
+  {#if it.labels?.length}
+    <div class="aside-rule"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      {#each it.labels as name}<span class="label-chip">{name}</span>{/each}
+    </div>
+  {/if}
   <!-- What it blocks, follows up or duplicates, without opening it (DEV-94). -->
-  <div class="aside-field">
-    <span class="field-label">Relations</span>
-    {#if it.relations?.length}
+  {#if it.relations?.length}
+    <div class="aside-field">
+      <span class="field-label">Relations</span>
       <div><RelationList relations={it.relations} compact /></div>
-    {:else}
-      <span class="dash">—</span>
-    {/if}
-  </div>
+    </div>
+  {/if}
   <!-- Only where GitHub has linked some (DEV-13): an instance without it
        never sees the field. -->
   {#if it.pullRequests?.length}
