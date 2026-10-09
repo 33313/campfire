@@ -1,3 +1,0 @@
-kind: Fixed
-body: "In Firefox the caret stays where a password field's dots put it, and stays one crisp pixel wide instead of turning bold and thin as it moves"
-time: 2026-10-09T12:10:00.000000000+02:00

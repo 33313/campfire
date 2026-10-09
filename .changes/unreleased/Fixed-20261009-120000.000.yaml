@@ -1,3 +1,0 @@
-kind: Fixed
-body: "The preview leaves out labels and relations when there are none instead of drawing a dash, a bucket's preview no longer offers a bucket, and an empty bucket reads as one to pick"
-time: 2026-10-09T12:00:00.000000000+02:00

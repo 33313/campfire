@@ -5,6 +5,18 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v0.13.0 - 2026-10-09
+
+### Changed
+
+- Labels are added through a quiet + beside the chips, which opens the box already focused, instead of an empty box always sitting there
+- The create form sets the assignee on the row with priority and planned end, and Mark as accepted sits in the footer beside Create
+
+### Fixed
+
+- The preview leaves out labels and relations when there are none instead of drawing a dash, a bucket's preview no longer offers a bucket, and an empty bucket reads as one to pick
+- In Firefox the caret stays where a password field's dots put it, and stays one crisp pixel wide instead of turning bold and thin as it moves
+
 ## v0.12.0 - 2026-10-06
 
 ### Added
