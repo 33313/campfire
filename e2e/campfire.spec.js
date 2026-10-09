@@ -1703,6 +1703,35 @@ test("Firefox draws the caret at the caret, blinking every half second", async (
   }
 });
 
+// DEV-99: the drawn caret sits on whole device pixels, one wide, so it is not
+// smeared over two and does not turn bold and thin as it moves. In a password
+// field it follows the mask the field draws, not the letters behind it.
+test("Firefox draws the caret crisp, and where a password's mask puts it", async ({ baseURL }) => {
+  const browser = await firefox.launch();
+  try {
+    const page = await browser.newPage({ baseURL, deviceScaleFactor: 1.25 });
+    await page.goto("/");
+    const password = page.getByLabel("Password");
+    await password.click();
+    // Long enough to run past the box: Firefox then scrolls the caret to the
+    // inner right edge, a place found without knowing the mask's width.
+    await page.keyboard.type("correct horse battery staple ".repeat(3));
+    const bar = page.locator(".drawn-caret");
+    await expect(bar).toBeVisible();
+    const at = await password.evaluate((el) => {
+      const cs = getComputedStyle(el), box = el.getBoundingClientRect();
+      const r = document.querySelector(".drawn-caret").getBoundingClientRect();
+      return { got: r.left, width: r.width * devicePixelRatio, device: r.left * devicePixelRatio,
+        edge: box.right - parseFloat(cs.borderRightWidth) - parseFloat(cs.paddingRight) };
+    });
+    expect(at.device).toBeCloseTo(Math.round(at.device), 3);
+    expect(at.width).toBeCloseTo(1, 3);
+    expect(Math.abs(at.got - at.edge)).toBeLessThan(2);
+  } finally {
+    await browser.close();
+  }
+});
+
 // DEV-82: assigning a new ticket to yourself is one click beside the label.
 test("(Me!) beside the assignee assigns the new ticket to you", async ({ page }) => {
   await signIn(page);
