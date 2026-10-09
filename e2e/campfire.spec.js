@@ -2075,3 +2075,18 @@ test("a preview draws no dashes for what is not there", async ({ page }) => {
   await expect(aside.getByLabel("Title")).toHaveValue("Ash pit");
   await expect(aside.getByText("Bucket", { exact: true })).toHaveCount(0);
 });
+
+// DEV-101: the create form is a row shorter, and accepting sits beside Create.
+test("the create form sets assignee beside priority and accepts from its footer", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/t/1/backlog");
+  await page.getByRole("banner").getByRole("button", { name: "Create" }).click();
+  const form = page.getByRole("dialog");
+  const top = async (field) => (await field.boundingBox()).y;
+  const priority = await top(form.getByRole("combobox", { name: "Priority" }));
+  expect(await top(form.getByRole("combobox", { name: "Assignee" }))).toBe(priority);
+  expect(await top(form.getByLabel("Planned end"))).toBe(priority);
+  await expect(form.locator(".dialog-foot").getByLabel("Mark as accepted")).toBeVisible();
+  await expect(form.locator(".dialog-foot")).not.toContainText("A new ticket");
+  await form.getByRole("button", { name: "Cancel" }).click();
+});
