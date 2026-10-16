@@ -478,7 +478,7 @@
                        animate:flip={{ duration: landing.includes(item.id) ? 0 : ms(GLIDE),
                                        easing: easeOut }}>
                     <Card {item} selected={selected.includes(item.id)}
-                          focused={focused?.item.id === item.id} rendering={team.iconRendering}
+                          focused={focused?.item.id === item.id}
                           dragging={drag?.live && drag.ids.includes(item.id)}
                           ontoggle={toggle} ongrab={grab} onpreview={preview} onmenu={openMenu} />
                   </div>
@@ -494,7 +494,7 @@
 
       {#if focused}
         <ItemPreview item={focused.item} comments={focused.comments} history={focused.history}
-                     rendering={team.iconRendering} onclose={() => (focused = null)}
+                     onclose={() => (focused = null)}
                      onchange={() => load()} />
       {/if}
     </div>

@@ -181,48 +181,47 @@ are in `priority-colour-handoff.md` and `priority-lineup.html` in the design dir
 
 ## 4. Bucket icons
 
-A bucket carries one icon; a ticket carries none (`SPEC.md` §6.2). The set is **fixed at eight** —
-not extensible, not uploadable. It stands in for the bucket wherever the bucket is named: on a card,
-in the bucket index, in the item detail aside, in the log.
+A bucket carries one icon; a ticket carries none (`SPEC.md` §6.2). It stands in for the bucket
+wherever the bucket is named: on a card, in the bucket index, in the item detail aside, in the log.
+
+The built-in set is 42 glyphs in four groups, offered in this order wherever a picker draws them.
+Each key is stored on the bucket and named by the API, so after v1 a key may be added but never
+renamed or removed. The path data lives in `internal/web/src/lib/icons.js` (`BUCKET_ICON_GROUPS`).
+
+| Group | Keys |
+|---|---|
+| Planning | `flag` `bookmark` `milestone` `target` `rocket` `hourglass` `chart` `inbox` `archive` `trophy` |
+| Signals | `lens` `bolt` `star` `sparkle` `bell` `heart` `chat` `bulb` `coin` `key` `lock` |
+| Work | `check` `bug` `wrench` `pen` `page` `code` `terminal` `database` `beaker` `box` `layers` |
+| Places | `flame` `tent` `mountain` `leaf` `sun` `moon` `globe` `map` `anchor` `home` |
 
 Rendered at 9–11px inline, 16px in the picker, `stroke-width` 1.3–1.8, `viewBox="0 0 16 16"`.
-
-| Key | Path |
-|---|---|
-| `check` | `M2.9 2.9h10.2v10.2H2.9Z` + `M5.7 8.2 7.4 9.9l3-3.4` |
-| `bug` | `<rect x="4.9" y="5" width="6.2" height="8" rx="3.1"/>` + `M4.9 8H2.5M13.5 8h-2.4M5.7 5.3 4.5 3.5M10.3 5.3l1.2-1.8` |
-| `bookmark` | `M4.1 2.7h7.8v10.9L8 10.9l-3.9 2.7Z` |
-| `page` | `M4.2 2.5h4.9L12 5.4v8.1H4.2Z` + `M8.9 2.5v3h3.1` |
-| `pen` | `M2.9 13.1 4.5 8.5l5.8-5.8 2.9 2.9-5.8 5.8Z` + `M9.3 3.7l2.9 2.9` |
-| `wrench` | `M10.5 2.7a3.3 3.3 0 0 0-3.9 4.3l-4 4a1.35 1.35 0 0 0 1.9 1.9l4-4a3.3 3.3 0 0 0 4.3-3.9l-1.9 1.9-1.6-.4-.4-1.6Z` |
-| `lens` | `<circle cx="7" cy="7" r="4.2"/>` + `M10.1 10.1 13.6 13.6` |
-| `flag` | `M4.1 2.5v11.1` + `M4.1 3.3h7.5L10 5.9l1.6 2.6H4.1` |
-
-A monochrome set (`muted-soft`) is the default. A colour set exists — `check` `#7d94a8`, `bug`
-`#a27459`, `bookmark` `#b087a3`, `page` `#8aa8a0`, `pen` `#d9a05b`, `wrench` `#8f8578`, `lens`
-`#a3a961`, `flag` `#7d94a8`. A team picks which rendering its surfaces use (`SPEC.md` §6.2), so both
-ship. Monochrome is the default and the one every artboard here draws.
+Strokes only, square caps, mitred joins, no fills. A glyph that already means a place in the
+navigation — the pail, calendar, clock, shield and people, the search magnifier, the edit pen — is
+not a bucket icon, so a bucket never reads as somewhere to go. An icon is drawn in `muted-soft`, or in
+its bucket's colour.
 
 ### A bucket's colour
 
 A bucket may also carry one colour, on the same terms as the icon: recognition only, nothing reads
-it. The set is fixed at seven and there is no default member — a bucket without a colour is drawn
-exactly as it always was.
+it. There is no default member — a bucket without a colour is drawn exactly as it always was. The
+sixteen are one step of lightness and saturation for the warm page, in hue order. Red is left out,
+because on a card red means late or P1, and so is the accent orange, which means selected.
 
-| Key | Hex |
-|---|---|
-| `amber` | `#d9a05b` |
-| `rust` | `#a27459` — a brown, whatever its key says: red on a card means urgent or late |
-| `olive` | `#a3a961` |
-| `steel` | `#7d94a8` |
-| `mauve` | `#b087a3` |
-| `sage` | `#8aa8a0` |
-| `stone` | `#8f8578` |
+| Key | Hex | Key | Hex |
+|---|---|---|---|
+| `amber` | `#d9a05b` | `dusk` | `#8a8fc9` |
+| `straw` | `#c8b45e` | `plum` | `#9d82c2` |
+| `olive` | `#a3a961` | `mauve` | `#b087a3` |
+| `moss` | `#7fa86a` | `rose` | `#c48098` |
+| `sage` | `#8aa8a0` | `rust` | `#a27459` — a brown, whatever its key says |
+| `teal` | `#5fa7a3` | `sand` | `#b7a587` |
+| `sky` | `#6fa3c7` | `stone` | `#8f8578` |
+| `steel` | `#7d94a8` | `slate` | `#737d87` |
 
-Where a bucket has one, its colour beats both the team's rendering and the icon's own default: it
-was chosen for this bucket. It tints the bucket chip on a card — border and text in the colour, never
-a fill: a filled chip on most cards outshouts the priority glyph beside it — and the bucket's icon wherever that
-is drawn.
+A bucket's colour tints the bucket chip on a card — border and text in the colour, never a fill: a
+filled chip on most cards outshouts the priority glyph beside it — and the bucket's icon wherever
+that is drawn.
 
 The **pail** glyph (`M3.2 5.2h9.6l-1 8a1.1 1.1 0 0 1-1.1 1H5.3a1.1 1.1 0 0 1-1.1-1Z` +
 `M5.5 5.2a2.5 2.5 0 0 1 5 0`) is *not* a bucket icon. It is the sidebar's Buckets section icon and
@@ -278,7 +277,7 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | `BucketIndex.dc.html` | Bucket index | Cards with progress bar, per-bucket icon, scope switch (participation / owned / instance). |
 | `BucketDetail.dc.html` | Bucket detail | Contents grouped by owning team, per-row remove ×. `Icon` and `Colour` are fields here. The screen is the item detail screen — a bucket and a ticket are one namespace. |
 | `Log.dc.html` | Log | Keyset paging: the footer says "load older from 41192", never a page number. Agent actions carry a small accent glyph beside the actor. |
-| `TeamSettings.dc.html` | Team settings | Work states, Members, Identity, Archive. Identity carries the icon-rendering switch (mono / colour). **No ticket types tab.** |
+| `TeamSettings.dc.html` | Team settings | Work states, Members, Identity, Archive. **No ticket types tab.** |
 | `Admin.dc.html` | Administration | Users, backup/restore, agent access. |
 | `Components.dc.html` | Foundations | The token and component reference this document describes. |
 | *(none)* | Docs | How the product works, at `/docs`, from `Documentation` at the foot of the sidebar: one page, written as Markdown (`internal/web/src/docs.md`) and drawn by the description renderer but set in Sans 14 at a 784px column, tables across it, `h2` 20px under a `rule-faint` line, `h3` 15px. Its sections sit in a settings rail that stays beside the scroll and marks the one being read. It runs from the concepts to everyday use to the agent interface and the HTTP API, in that order, and ends with *Source code*, the link AGPL-3.0 §13 asks for. `/docs#filtering` opens at a section; the query box's cheat sheet links there. A line under the sign-in card links the source too. Never drawn. |

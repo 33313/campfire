@@ -44,8 +44,7 @@ func (s *Service) CreateTeam(ctx context.Context, a Actor, name, shortCode strin
 	}
 	var out *store.Team
 	err := s.write(ctx, a, func(t *wtx) error {
-		team := store.Team{Name: name, ShortCode: strings.ToUpper(strings.TrimSpace(shortCode)),
-			IconRendering: "mono", CreatedAt: t.now}
+		team := store.Team{Name: name, ShortCode: strings.ToUpper(strings.TrimSpace(shortCode)), CreatedAt: t.now}
 		id, err := store.CreateTeam(ctx, t.Tx, team)
 		if err != nil {
 			return err
@@ -121,25 +120,6 @@ func (s *Service) RenameTeam(ctx context.Context, a Actor, teamID int64, name st
 		}
 		return t.log(ctx, store.Event{Kind: store.EvTeamUpdated, Entity: "team",
 			EntityID: teamID, TeamID: teamID, Field: "name", OldValue: old.Name, NewValue: name})
-	})
-}
-
-// SetIconRendering picks which rendering of the fixed icon set this team's
-// surfaces use. It is presentation and MUST NOT change which icon a bucket
-// carries (SPEC.md §6.2).
-func (s *Service) SetIconRendering(ctx context.Context, a Actor, teamID int64, rendering string) error {
-	if rendering != "mono" && rendering != "colour" {
-		return invalidField("iconRendering", "icon rendering is mono or colour")
-	}
-	return s.write(ctx, a, func(t *wtx) error {
-		if err := s.requireTeamAdmin(ctx, t.Tx, a, teamID); err != nil {
-			return err
-		}
-		if err := store.SetIconRendering(ctx, t.Tx, teamID, rendering); err != nil {
-			return err
-		}
-		return t.log(ctx, store.Event{Kind: store.EvTeamUpdated, Entity: "team",
-			EntityID: teamID, TeamID: teamID, Field: "icon_rendering", NewValue: rendering})
 	})
 }
 

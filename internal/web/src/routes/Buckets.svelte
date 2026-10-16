@@ -174,8 +174,7 @@
             ? Math.round((b.progress.accepted / b.progress.total) * 100) : 0}
           <a class="bucket-card" href="/{b.identifier}">
             <div style="display:flex;align-items:center;gap:8px">
-              <BucketIcon name={b.icon} size={13} color={b.color}
-                          rendering={b.teamShortCode === team?.shortCode ? team.iconRendering : "mono"} />
+              <BucketIcon name={b.icon} size={13} color={b.color} />
               <span class="ident">{b.identifier}</span>
               <span class="column-count" style="margin-left:auto">{b.teamShortCode}</span>
             </div>

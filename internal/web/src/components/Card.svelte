@@ -17,7 +17,7 @@
   // never as a fill. A filled chip on most cards outshouts the one P1 tile.
   //
   // A drag is the board's: the card only says where the pointer went down.
-  let { item, selected = false, focused = false, dragging = false, rendering = "mono",
+  let { item, selected = false, focused = false, dragging = false,
          ontoggle, ongrab, onpreview, onmenu } = $props();
 
   let tint = $derived(BUCKET_COLOURS[item.bucketColor] || null);
@@ -53,7 +53,7 @@
   {#if item.bucketIdentifier}
     <span class="card-bucket" title="{item.bucketIdentifier}  {item.bucketTitle}" use:hug={item.bucketTitle}
           style={tint ? `border-color:${tint};color:${tint}` : ""}>
-      <BucketIcon name={item.bucketIcon} size={10} {rendering} color={item.bucketColor} />
+      <BucketIcon name={item.bucketIcon} size={10} color={item.bucketColor} />
       <span class="name">{item.bucketTitle}</span>
     </span>
   {/if}

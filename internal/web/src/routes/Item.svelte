@@ -213,7 +213,7 @@
   }
 
   async function pickBucket() {
-    const picked = await openModal(BucketDialog, { value: item.bucketId || 0, rendering: team?.iconRendering });
+    const picked = await openModal(BucketDialog, { value: item.bucketId || 0 });
     if (picked !== undefined) patch({ bucketId: picked });
   }
 

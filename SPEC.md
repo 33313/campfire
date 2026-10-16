@@ -149,7 +149,7 @@ Three roles exist. Others WILL NOT be added in v1.
 | Role | Can |
 |---|---|
 | **Instance administrator** | Create users and teams, issue invitations and password resets, read the global log, reassign bucket ownership, act as a team administrator anywhere. |
-| **Team administrator** | Manage one team: membership, work states, bucket icon rendering, team name, picture and description, archival of the team's items. |
+| **Team administrator** | Manage one team: membership, work states, team name, picture and description, archival of the team's items. |
 | **Member** | Create and edit tickets in teams they belong to. |
 
 Any authenticated user may comment on any item, regardless of team membership.
@@ -158,8 +158,8 @@ A user may belong to any number of teams, with a different role in each.
 
 ### 5.3 Teams
 
-A team owns a name, a short code, members, work states ([§7](#7-work-states-and-lifecycle)), the
-rendering it uses for bucket icons ([§6.2](#62-buckets)), and an optional picture and description.
+A team owns a name, a short code, members, work states ([§7](#7-work-states-and-lifecycle)), and an
+optional picture and description.
 The picture and description are presentation: nothing derives from them.
 
 A team WILL NOT own a list of ticket types. A ticket is described by the bucket it sits in, its title
@@ -221,15 +221,16 @@ as a count of items in a terminal state (`37 / 50`). This is a view, not a field
 A bucket's assignee is presented as its **owner**: the person accountable for the milestone. It is
 optional and empty by default.
 
-A bucket carries an **icon**, chosen from a fixed set when it is created and editable afterwards. It
-stands in for the bucket wherever the bucket is named — on a card, in the bucket index, in the log —
-so that a card's bucket line is recognised before it is read. The set is fixed and WILL NOT be
-extended or uploaded to; an open set is a second thing for a team to administer. A bucket that has
-not been given one shows the default. The icon is recognition and nothing more: it MUST NOT be given
-meaning, and nothing reads it, filters on it, or derives behaviour from it. The set ships in two
-renderings, monochrome and coloured, and a team picks the one its own surfaces use — the same kind of
-per-team choice as its work states. Which rendering is in force is presentation and MUST NOT change
-which icon a bucket carries.
+A bucket carries an **icon**, chosen when it is created and editable afterwards. It stands in for
+the bucket wherever the bucket is named — on a card, in the bucket index, in the log — so that a
+card's bucket line is recognised before it is read. A bucket that has not been given one shows the
+default. A bucket MAY also carry a **colour**, which tints its icon and its chip on a card; a bucket
+without one is drawn as it always was. The icon and the colour are recognition and nothing more:
+they MUST NOT be given meaning, and nothing reads them, filters on them, or derives behaviour from
+them.
+
+Icon and colour keys are stored on every bucket and named by the API. After v1 a key MAY be added and
+MUST NOT be renamed or removed.
 
 Buckets use their owning team's work states. The client WILL hide them from board columns by
 default and show them by a per-board toggle, so that an engineering board is not diluted by
@@ -983,7 +984,7 @@ reopened without new information.
 | Bucket identity | The owning team's counter (`SOL-42`) | A separate global code (`REL10`) | A second namespace makes every bucket creation a naming negotiation, and blocks converting a ticket into a bucket without breaking links. |
 | Bucket lifecycle | The owning team's work states | A separate `open`/`done`/`cancelled` lifecycle | One lifecycle mechanism. Board clutter is solved by a display toggle ([§6.2](#62-buckets)). |
 | Ticket classification | The bucket, the title and the description | A per-team `type` field | A type is a taxonomy every team has to administer, and `SOL-96 · task` says nothing the title and the bucket have not already said. It was the one card field nobody filtered on, and removing it takes a column off the card and a page out of team settings. |
-| Bucket recognition | One icon per bucket, from a fixed set | An uploaded image, or a colour per bucket | A fixed set needs no storage, no upload path and no moderation, and it stays legible at the size a card gives it. Colour is spoken for elsewhere, by state and by priority. |
+| Bucket recognition | One icon per bucket, and optionally one colour | An uploaded image per bucket | An icon stays legible at the size a card gives it, and a picture does not. A bucket's colour stays off red and the accent, which state and priority have already spoken for. |
 | Duplicating and dividing work | Clone and split, each leaving a relation | Parent and child tickets, or subtasks | Subtasks are a second containment mechanism beside buckets ([§3.2](#32-out-of-scope-permanently)). A *follows up* edge says the same thing with the relation model that already exists, and does not make a ticket's identity depend on another ticket. |
 | Acting on many items | A bulk edit of one field over a selection | A form editing several fields at once | One field is a change the actor can state before making it and reverse afterwards; a multi-field form over a selection is the one place a mis-click is both easy and invisible. The fields left out are deferred, not refused ([§3.3](#33-deferred-to-a-later-specification)). |
 | Ordering | Lexical string ranks | Fractional numeric ranks | A float between two neighbours exhausts double precision after roughly fifty drops on the same midpoint, and repairing it needs a background job the application otherwise does not have. |

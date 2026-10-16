@@ -277,7 +277,7 @@ tokens.
 ### Team settings
 
 Team administrators find **Team settings** in the sidebar: *Work states*, *Members*, *Identity* (name,
-picture, description and bucket icon style) and *Archive*.
+picture and description) and *Archive*.
 
 ## Agents (MCP)
 

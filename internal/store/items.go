@@ -22,18 +22,26 @@ const (
 	ReasonDuplicate = "duplicate"
 )
 
-// BucketIcons is the fixed set (DESIGN.md §4). It is not extensible and not
-// uploadable, and nothing reads an icon or derives behaviour from it: it is
-// recognition and nothing more (SPEC.md §6.2).
-var BucketIcons = []string{"check", "bug", "bookmark", "page", "pen", "wrench", "lens", "flag"}
+// BucketIcons is the built-in set (DESIGN.md §4), in the picker's order:
+// planning, signals, work, places. A key is stored on every bucket, so after
+// v1 one may be added but never renamed or removed. Nothing reads an icon or
+// derives behaviour from it: it is recognition and nothing more (SPEC.md §6.2).
+var BucketIcons = []string{
+	"flag", "bookmark", "milestone", "target", "rocket", "hourglass", "chart", "inbox", "archive", "trophy",
+	"lens", "bolt", "star", "sparkle", "bell", "heart", "chat", "bulb", "coin", "key", "lock",
+	"check", "bug", "wrench", "pen", "page", "code", "terminal", "database", "beaker", "box", "layers",
+	"flame", "tent", "mountain", "leaf", "sun", "moon", "globe", "map", "anchor", "home",
+}
 
 // DefaultBucketIcon is what a bucket shows when it has not been given one.
 const DefaultBucketIcon = "bookmark"
 
-// BucketColours is the fixed set a bucket may be given, on the same terms as
-// the icons: buckets only, not extensible, and nothing derives behaviour from
-// one. A bucket without a colour is drawn as it always was.
-var BucketColours = []string{"amber", "rust", "olive", "steel", "mauve", "sage", "stone"}
+// BucketColours is the set a bucket may be given, in hue order, on the same
+// terms as the icons. A bucket without a colour is drawn as it always was.
+var BucketColours = []string{
+	"amber", "straw", "olive", "moss", "sage", "teal", "sky", "steel",
+	"dusk", "plum", "mauve", "rose", "rust", "sand", "stone", "slate",
+}
 
 func valid(set []string, v string) bool {
 	for _, s := range set {

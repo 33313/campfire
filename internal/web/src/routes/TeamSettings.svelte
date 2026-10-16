@@ -14,7 +14,6 @@
 
   import Icon from "../components/Icon.svelte";
   import Avatar from "../components/Avatar.svelte";
-  import BucketIcon from "../components/BucketIcon.svelte";
   import StatePip from "../components/StatePip.svelte";
   import RoleBadge from "../components/RoleBadge.svelte";
   import Section from "../components/Section.svelte";
@@ -269,21 +268,6 @@
                     Set at creation and never changed. It is the prefix of every identifier
                     this team has minted, and it is never reused.
                   </span>
-                </div>
-              </div>
-              <!-- Which rendering the team's surfaces use is presentation, and
-                   never changes which icon a bucket carries (SPEC.md §6.2). -->
-              <div class="field">
-                <span class="field-label">Bucket icons</span>
-                <div style="display:flex;gap:8px;align-items:center">
-                  {#each ["mono", "colour"] as r}
-                    <button class="chip" class:on={team.iconRendering === r}
-                            onclick={() => guard(() => api.updateTeam(teamId, { iconRendering: r }))}>
-                      <BucketIcon name="bug" size={14} rendering={r} />
-                      <BucketIcon name="flag" size={14} rendering={r} />
-                      <span>{r}</span>
-                    </button>
-                  {/each}
                 </div>
               </div>
               <button class="btn primary" style="margin-top:12px;align-self:flex-start"

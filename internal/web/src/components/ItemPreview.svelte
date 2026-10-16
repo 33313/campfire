@@ -33,7 +33,7 @@
   import PullRequestList from "./PullRequestList.svelte";
   import MoveDialog from "../dialogs/MoveDialog.svelte";
 
-  let { item: it, comments = [], history = [], rendering = "mono", onclose, onchange } = $props();
+  let { item: it, comments = [], history = [], onclose, onchange } = $props();
 
   // What was said and what happened, in the aside rather than only on the
   // detail view. The counts alone said an argument had taken place without
@@ -91,7 +91,7 @@
   }
 
   async function pickBucket() {
-    const picked = await openModal(BucketDialog, { value: it.bucketId || 0, rendering });
+    const picked = await openModal(BucketDialog, { value: it.bucketId || 0 });
     if (picked !== undefined) patch({ bucketId: picked });
   }
 
@@ -216,7 +216,7 @@
       <div style="display:flex;gap:6px">
         {#if it.bucketIdentifier}
           <a class="aside-control" href="/{it.bucketIdentifier}">
-            <BucketIcon name={it.bucketIcon} size={13} {rendering} color={it.bucketColor} />
+            <BucketIcon name={it.bucketIcon} size={13} color={it.bucketColor} />
             <span>{it.bucketTitle}</span>
             <span class="note">{it.bucketIdentifier}</span>
           </a>

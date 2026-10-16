@@ -154,11 +154,11 @@
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           {#each Object.keys(BUCKET_ICONS) as name}
             <button class="chip" class:on={icon === name} title={name} onclick={() => (icon = name)}>
-              <BucketIcon {name} size={16} rendering={team.iconRendering} />
+              <BucketIcon {name} size={16} />
             </button>
           {/each}
         </div>
-        <span class="explain">One of the eight. It stands in for the bucket wherever it is named.</span>
+        <span class="explain">It stands in for the bucket wherever it is named.</span>
         {@render complaint("icon")}
       </div>
       <div class="field">
@@ -178,7 +178,7 @@
     {:else}
       <div class="field">
         <span class="field-label">Bucket</span>
-        <BucketPicker value={bucketId} rendering={team.iconRendering} invalid={invalid?.field === "bucketId"}
+        <BucketPicker value={bucketId} invalid={invalid?.field === "bucketId"}
                       onpick={(id) => { bucketId = id; clearIf("bucketId")(); }} />
         {@render complaint("bucketId")}
       </div>
