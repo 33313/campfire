@@ -33,6 +33,10 @@ var BucketIcons = []string{
 	"flame", "tent", "mountain", "leaf", "sun", "moon", "globe", "map", "anchor", "home",
 }
 
+// BucketIconGroups are the built-in icons' groups, which an administrator may
+// hide from pickers (DEV-79). The icons in each are the client's to draw.
+var BucketIconGroups = []string{"planning", "signals", "work", "places"}
+
 // DefaultBucketIcon is what a bucket shows when it has not been given one.
 const DefaultBucketIcon = "bookmark"
 

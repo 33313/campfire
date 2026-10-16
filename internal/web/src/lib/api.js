@@ -96,6 +96,7 @@ export const api = {
   // Instance and authentication
   getInstance: () => get("/api/instance"),
   getUpdates: () => get("/api/instance/updates"),
+  setAppearance: (body) => put("/api/instance/appearance", body),
   bootstrap: (username, password) => post("/api/instance/bootstrap", { username, password }),
   signIn: (username, password, code) => post("/api/auth/signin", { username, password, code }),
   signOut: () => post("/api/auth/signout"),

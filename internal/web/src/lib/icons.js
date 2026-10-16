@@ -120,6 +120,10 @@ export const BUCKET_COLOURS = {
   rust: "#a27459", sand: "#b7a587", stone: "#8f8578", slate: "#737d87",
 };
 
+// What a bucket's colour draws in: a palette key's hex, or a hex of the
+// instance's own where it takes them. Anything else is no colour.
+export const colourOf = (c) => BUCKET_COLOURS[c] || (/^#[0-9a-f]{6}$/.test(c || "") ? c : null);
+
 export const RELATION_LABELS = {
   blocks: "blocks", blocked_by: "blocked by",
   follows_up: "follows up", followed_up_by: "followed up by",

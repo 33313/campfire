@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/33313/campfire/internal/core"
 	"github.com/33313/campfire/internal/store"
@@ -255,15 +256,16 @@ func (s *Server) toolset() []tool {
 			Name: "create_item", Operation: "createItem",
 			Description: "Create a ticket or a bucket in a team you belong to. It enters the " +
 				"default state, or the accepted state if accepted is true. A bucket carries " +
-				"an icon and optionally a colour from the fixed sets; a ticket has neither " +
+				"an icon and optionally a colour; a ticket has neither " +
 				"and may sit in a bucket. Relations, each a kind as add_relation takes it " +
 				"and a toId, are made with it.",
 			Schema: obj(map[string]any{
 				"kind":   map[string]any{"type": "string", "enum": []string{"ticket", "bucket"}},
 				"teamId": pInt, "title": pString, "description": pString,
 				"assigneeId": pInt, "priority": pInt, "bucketId": pInt,
-				"icon":       map[string]any{"type": "string", "enum": store.BucketIcons},
-				"color":      map[string]any{"type": "string", "enum": store.BucketColours},
+				"icon": map[string]any{"type": "string", "enum": store.BucketIcons},
+				"color": map[string]any{"type": "string", "description": "One of " +
+					strings.Join(store.BucketColours, ", ") + ", or #rrggbb where the instance takes hex colours"},
 				"plannedEnd": pString, "labels": pStrList, "accepted": pBool,
 				"relations": map[string]any{"type": "array",
 					"items": obj(map[string]any{"kind": pRelationKind, "toId": pInt}, "kind", "toId")},

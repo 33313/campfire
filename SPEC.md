@@ -148,7 +148,7 @@ Three roles exist. Others WILL NOT be added in v1.
 
 | Role | Can |
 |---|---|
-| **Instance administrator** | Create users and teams, issue invitations and password resets, read the global log, reassign bucket ownership, act as a team administrator anywhere. |
+| **Instance administrator** | Create users and teams, issue invitations and password resets, read the global log, reassign bucket ownership, decide which bucket icons and colours are offered, act as a team administrator anywhere. |
 | **Team administrator** | Manage one team: membership, work states, team name, picture and description, archival of the team's items. |
 | **Member** | Create and edit tickets in teams they belong to. |
 
@@ -231,6 +231,11 @@ them.
 
 Icon and colour keys are stored on every bucket and named by the API. After v1 a key MAY be added and
 MUST NOT be renamed or removed.
+
+An instance administrator decides what the pickers offer. They MAY hide groups of the built-in icons
+and colours of the palette, and MAY let a bucket take any colour as `#rrggbb` that reads on a card, or
+no colour at all. Hiding is presentation: a bucket that carries a hidden icon or colour keeps it, and
+its key stays valid. A hex colour that does not stand 3:1 off the card is refused.
 
 Buckets use their owning team's work states. The client WILL hide them from board columns by
 default and show them by a per-board toggle, so that an engineering board is not diluted by
