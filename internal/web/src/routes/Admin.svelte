@@ -8,7 +8,7 @@
   import { newTeam } from "../lib/teams.js";
   import { when, ago } from "../lib/format.js";
   import { NAV, BUCKET_ICON_GROUPS, BUCKET_ICONS, BUCKET_COLOURS } from "../lib/icons.js";
-  import { app } from "../lib/state.svelte.js";
+  import { app, setIconSets } from "../lib/state.svelte.js";
 
   import Icon from "../components/Icon.svelte";
   import BucketIcon from "../components/BucketIcon.svelte";
@@ -88,6 +88,39 @@
   const flip = (list, key) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]);
   async function setLooks(body) {
     try { app.appearance = await api.setAppearance(body); } catch (err) { failure(err); }
+  }
+
+  // The instance's own icon sets. A prefix is the administrator's to choose:
+  // it is the first half of every key in the set, and never changes.
+  let setName = $state("");
+  let setPrefix = $state("");
+  let setFiles = $state([]);
+  let fileInput = $state(null);
+  let skipped = $state([]);
+  const reloadSets = async () => setIconSets((await api.getInstance()).iconSets);
+  async function addSet(e) {
+    e.preventDefault();
+    try {
+      const files = await Promise.all(setFiles.map(async (f) => ({ name: f.name, svg: await f.text() })));
+      const res = await api.createIconSet({ name: setName, prefix: setPrefix, files });
+      skipped = res.skipped;
+      setName = setPrefix = "";
+      setFiles = [];
+      fileInput.value = "";
+      await reloadSets();
+    } catch (err) { failure(err); }
+  }
+  async function hideSet(set) {
+    try { await api.updateIconSet(set.id, { hidden: !set.hidden }); await reloadSets(); } catch (err) { failure(err); }
+  }
+  async function deleteSet(set) {
+    const ok = await openModal(ConfirmDialog, {
+      title: `Delete ${set.name}`,
+      lines: [`Buckets that wear one of its ${set.icons.length} icons keep the key and show the default icon. ` +
+        `Adding a set with the prefix ${set.prefix} again brings them back.`],
+      consequence: "It leaves every picker", action: "Delete",
+    });
+    if (ok) try { await api.deleteIconSet(set.id); await reloadSets(); } catch (err) { failure(err); }
   }
 
   // GitHub (DEV-13).
@@ -303,6 +336,53 @@
                   {/each}
                 </tbody>
               </table>
+            {/snippet}
+          </Section>
+          <Section title="Icon sets" sub="{app.iconSets.length} of the instance's own">
+            {#snippet children()}
+              <p class="explain">
+                Icons of your own, as SVGs. Each set has a prefix, and an icon's key is
+                <code>prefix.name</code>, the name taken from its file. Only stroked shapes are kept,
+                drawn at the weight of the built-in icons; a file with fills or anything else is skipped.
+              </p>
+              {#if app.iconSets.length}
+                <table class="table" style="margin-top:8px">
+                  <tbody>
+                    {#each app.iconSets as set (set.id)}
+                      <tr>
+                        <td style="width:46px">
+                          <button class="toggle" class:on={!set.hidden} aria-label="Offer {set.name}"
+                                  aria-pressed={!set.hidden} onclick={() => hideSet(set)}><i></i></button>
+                        </td>
+                        <td style="width:110px">{set.name}</td>
+                        <td style="width:110px"><span class="code-badge">{set.prefix}.*</span></td>
+                        <td>
+                          <span style="display:flex;gap:8px;flex-wrap:wrap;opacity:{set.hidden ? 0.35 : 1}">
+                            {#each set.icons as i (i.key)}<span title={i.key}><BucketIcon name={i.key} size={14} /></span>{/each}
+                          </span>
+                        </td>
+                        <td style="width:80px"><button class="btn quiet small" onclick={() => deleteSet(set)}>Delete</button></td>
+                      </tr>
+                    {/each}
+                  </tbody>
+                </table>
+              {/if}
+              <form class="icon-set-form" onsubmit={addSet}>
+                <label class="field"><span class="field-label">Name</span>
+                  <input class="input" bind:value={setName} placeholder="Ops" /></label>
+                <label class="field"><span class="field-label">Prefix</span>
+                  <input class="input" bind:value={setPrefix} placeholder="ops" spellcheck="false" /></label>
+                <label class="field"><span class="field-label">SVG files, at most 100</span>
+                  <input class="input" type="file" multiple accept=".svg,image/svg+xml" bind:this={fileInput}
+                         onchange={(e) => (setFiles = [...e.currentTarget.files])} /></label>
+                <button class="btn primary small" disabled={!setName.trim() || !setPrefix.trim() || !setFiles.length}>Add set</button>
+              </form>
+              {#if skipped.length}
+                <p class="explain" style="margin-top:8px">Skipped {skipped.length}:</p>
+                <ul class="explain icon-set-skipped">
+                  {#each skipped as s (s.file)}<li><code>{s.file}</code>: {s.reason}</li>{/each}
+                </ul>
+              {/if}
             {/snippet}
           </Section>
           <Section title="Bucket colours" sub={MODES.find(([m]) => m === app.appearance.colourMode)?.[1]}>

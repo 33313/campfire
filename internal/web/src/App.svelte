@@ -2,7 +2,7 @@
   // The client: boot, routing and the shell.
 
   import { api, ApiError, forget } from "./lib/api.js";
-  import { app, reloadContext } from "./lib/state.svelte.js";
+  import { app, reloadContext, setIconSets } from "./lib/state.svelte.js";
   import { route, navigate } from "./lib/router.svelte.js";
   import { stream, openStream, configure } from "./lib/stream.svelte.js";
 
@@ -37,6 +37,7 @@
       configure(instance.hiddenTabGrace);
       app.imageMaxSize = instance.imageMaxSize;
       app.appearance = instance.appearance;
+      setIconSets(instance.iconSets);
       if (instance.needsBootstrap) {
         needsBootstrap = true;
         booted = true;

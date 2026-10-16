@@ -1,0 +1,3 @@
+kind: Added
+body: "An instance administrator can add bucket icon sets of their own as SVGs under a prefix they choose; only stroked shapes are kept, drawn at the built-in icons' weight, and a deleted set's buckets keep their keys"
+time: 2026-10-17T12:03:00.000000+00:00

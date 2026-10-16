@@ -201,6 +201,12 @@ navigation — the pail, calendar, clock, shield and people, the search magnifie
 not a bucket icon, so a bucket never reads as somewhere to go. An icon is drawn in `muted-soft`, or in
 its bucket's colour.
 
+An instance may add sets of its own (`SPEC.md` §6.2), offered in the picker after the built-in groups,
+each under its name. They keep their own grid: an icon is drawn in its own viewBox with the stroke
+scaled to it (1.5 at 16 units, 2.25 at 24), so a 24-unit set weighs what the built-in one does. Only
+their stroked shapes survive the upload, so they share the built-in set's square, unfilled look as
+far as their drawing allows.
+
 ### A bucket's colour
 
 A bucket may also carry one colour, on the same terms as the icon: recognition only, nothing reads
@@ -283,7 +289,7 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | `BucketDetail.dc.html` | Bucket detail | Contents grouped by owning team, per-row remove ×. `Icon` and `Colour` are fields here. The screen is the item detail screen — a bucket and a ticket are one namespace. |
 | `Log.dc.html` | Log | Keyset paging: the footer says "load older from 41192", never a page number. Agent actions carry a small accent glyph beside the actor. |
 | `TeamSettings.dc.html` | Team settings | Work states, Members, Identity, Archive. **No ticket types tab.** |
-| `Admin.dc.html` | Administration | Users, backup/restore, agent access. *Appearance* (never drawn): a toggle row per built-in icon group with its icons beside it, the colour mode as chips, and the palette as swatches, a hidden one at a quarter opacity. |
+| `Admin.dc.html` | Administration | Users, backup/restore, agent access. *Appearance* (never drawn): a toggle row per built-in icon group with its icons beside it, the same rows for the instance's own sets with their `prefix.*` and Delete, then a form to add one (name, prefix, SVG files) that lists what it skipped and why, the colour mode as chips, and the palette as swatches, a hidden one at a quarter opacity. |
 | `Components.dc.html` | Foundations | The token and component reference this document describes. |
 | *(none)* | Docs | How the product works, at `/docs`, from `Documentation` at the foot of the sidebar: one page, written as Markdown (`internal/web/src/docs.md`) and drawn by the description renderer but set in Sans 14 at a 784px column, tables across it, `h2` 20px under a `rule-faint` line, `h3` 15px. Its sections sit in a settings rail that stays beside the scroll and marks the one being read. It runs from the concepts to everyday use to the agent interface and the HTTP API, in that order, and ends with *Source code*, the link AGPL-3.0 §13 asks for. `/docs#filtering` opens at a section; the query box's cheat sheet links there. A line under the sign-in card links the source too. Never drawn. |
 | *(none)* | Account | Settings that are not about how you appear: password, second factor, and the tokens that act as you. Reached from Settings on your own profile, not from the sidebar. Never drawn. |
