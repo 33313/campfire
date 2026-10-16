@@ -19,7 +19,7 @@
   import { fieldName, eventChange, actorName } from "../lib/events.svelte.js";
   import { ensure } from "../lib/catalog.svelte.js";
   import { pictures } from "../lib/pictures.js";
-  import { NAV, PRIORITY, BUCKET_COLOURS } from "../lib/icons.js";
+  import { NAV, PRIORITY } from "../lib/icons.js";
 
   import Icon from "../components/Icon.svelte";
   import Avatar from "../components/Avatar.svelte";
@@ -39,7 +39,7 @@
   import RelationDialog from "../dialogs/RelationDialog.svelte";
   import FormDialog from "../dialogs/FormDialog.svelte";
   import ConfirmDialog from "../dialogs/ConfirmDialog.svelte";
-  import IconPickDialog from "../dialogs/IconPickDialog.svelte";
+  import IconPicker from "../components/IconPicker.svelte";
 
   let { identifier = null, bucketId = null } = $props();
 
@@ -224,10 +224,6 @@
     if (picked !== undefined) patch({ priority: picked });
   }
 
-  async function pickIcon() {
-    const picked = await openModal(IconPickDialog);
-    if (picked) patch({ icon: picked });
-  }
 
   async function editComment(c) {
     const res = await openModal(FormDialog, {
@@ -383,27 +379,11 @@
           </div>
 
           {#if isBucket}
+            <!-- What its tickets wear on a board. Recognition only: nothing
+                 reads it (SPEC.md §6.2). -->
             <div class="aside-field">
-              <span class="field-label">Icon</span>
-              <button class="aside-control" onclick={pickIcon}>
-                <BucketIcon name={item.icon} size={16} color={item.color} />
-                <span>{item.icon}</span>
-                <Icon body={NAV.chevron} size={11} color="var(--faint)" />
-              </button>
-            </div>
-            <!-- The colour is what its tickets wear on a board. Recognition
-                 only: nothing reads it (SPEC.md §6.2). -->
-            <div class="aside-field">
-              <span class="field-label">Colour</span>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                <button class="swatch" class:on={!item.color} title="No colour"
-                        aria-label="No colour" onclick={() => patch({ color: "" })}></button>
-                {#each Object.entries(BUCKET_COLOURS) as [name, hex]}
-                  <button class="swatch" class:on={item.color === name} title={name} aria-label={name}
-                          style="background:{hex};border-color:{hex}"
-                          onclick={() => patch({ color: name })}></button>
-                {/each}
-              </div>
+              <span class="field-label">Icon &amp; colour</span>
+              <IconPicker icon={item.icon} color={item.color} onpick={patch} />
             </div>
             <div class="aside-field" style="grid-column:1/-1">
               <span class="field-label">Owning team</span>

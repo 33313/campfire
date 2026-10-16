@@ -203,7 +203,15 @@ test("a bucket carries an icon and its tickets", async ({ page }) => {
   const bucket = page.getByRole("dialog");
   await bucket.getByRole("button", { name: "Bucket", exact: true }).click();
   await bucket.getByLabel("Title").fill("Winter readiness");
-  await bucket.getByRole("button", { name: "rust", exact: true }).click();
+  // The icon and the colour hang from one field, and the panel stays up
+  // between the two; Escape closes it and leaves the form.
+  await bucket.getByRole("button", { name: /bookmark/ }).click();
+  const looks = page.getByRole("dialog", { name: "Icon and colour" });
+  await looks.getByRole("button", { name: "rocket", exact: true }).click();
+  await looks.getByRole("button", { name: "rust", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(looks).toBeHidden();
+  await expect(bucket.getByRole("button", { name: /rocket.*rust/ })).toBeVisible();
   await bucket.getByRole("button", { name: "Create" }).click();
 
   await expect(page).toHaveURL(/\/buckets$/);
