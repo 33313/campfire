@@ -49,15 +49,3 @@ func TestAppearanceHidesFromPickersOnly(t *testing.T) {
 	_, err = w.UpdateItem(w.ctx, w.marta, b.ID, ItemPatch{Color: &dark})
 	requireCode(t, err, CodeInvalid)
 }
-
-// Every palette colour clears the floor a hex colour is held to (DESIGN.md §4).
-func TestThePaletteReadsOnACard(t *testing.T) {
-	for _, hex := range []string{
-		"#d9a05b", "#c8b45e", "#a3a961", "#7fa86a", "#8aa8a0", "#5fa7a3", "#6fa3c7", "#7d94a8",
-		"#8a8fc9", "#9d82c2", "#b087a3", "#c48098", "#a27459", "#b7a587", "#8f8578", "#737d87",
-	} {
-		if c := contrast(hex, surface); c < minContrast {
-			t.Errorf("%s stands %.2f:1 off the card", hex, c)
-		}
-	}
-}

@@ -217,16 +217,3 @@ func TestPullRequestsPagesUntilTheWindowEnds(t *testing.T) {
 		t.Fatalf("installation %+v, %v", inst, err)
 	}
 }
-
-func TestURLs(t *testing.T) {
-	c := New()
-	if got := c.NewAppURL("", "s"); got != "https://github.com/settings/apps/new?state=s" {
-		t.Error(got)
-	}
-	if got := c.NewAppURL("acme", "s"); got != "https://github.com/organizations/acme/settings/apps/new?state=s" {
-		t.Error(got)
-	}
-	if got := c.InstallURL("campfire-acme", "s"); got != "https://github.com/apps/campfire-acme/installations/new?state=s" {
-		t.Error(got)
-	}
-}

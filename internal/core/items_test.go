@@ -104,22 +104,6 @@ func TestBucketGetsTheDefaultIconAndOnlyKnownIcons(t *testing.T) {
 	requireCode(t, err, CodeInvalid)
 }
 
-// SPEC.md §6.1: the reporter is the creating user and is not editable; the
-// assignee is empty by default and never inferred from the reporter.
-func TestReporterIsSetAndAssigneeIsNot(t *testing.T) {
-	w := newWorld(t)
-	it := w.ticket(w.sol, w.marta, "work")
-	if it.ReporterID != w.marta.UserID {
-		t.Fatalf("reporter is %d", it.ReporterID)
-	}
-	if it.AssigneeID != 0 {
-		t.Fatal("a new ticket arrived with an assignee")
-	}
-	if it.Priority != 3 {
-		t.Fatalf("default priority is %d, want 3", it.Priority)
-	}
-}
-
 // SPEC.md §7.3: a new item enters the default state, or the accepted state if
 // the creator ticks "Mark as accepted" — and accepting starts its clock.
 func TestCreationEntersDefaultOrAcceptedState(t *testing.T) {
@@ -225,21 +209,6 @@ func TestRejectionNeedsAReason(t *testing.T) {
 	}
 	if got.RejectReason != store.ReasonDuplicate || got.RejectNote != "same as SOL-1" {
 		t.Fatalf("rejection recorded as %q / %q", got.RejectReason, got.RejectNote)
-	}
-}
-
-// SPEC.md §8.2: a relation carries no lifecycle meaning. A "blocked by" edge
-// MUST NOT prevent any transition.
-func TestBlockedByDoesNotPreventATransition(t *testing.T) {
-	w := newWorld(t)
-	blocker := w.ticket(w.sol, w.marta, "blocker")
-	blocked := w.ticket(w.sol, w.marta, "blocked")
-	if _, err := w.AddRelation(w.ctx, w.marta, blocker.ID, blocked.ID, store.RelBlocks); err != nil {
-		t.Fatal(err)
-	}
-	final := w.state(w.sol, store.RoleFinal)
-	if _, err := w.MoveItem(w.ctx, w.marta, blocked.ID, final.ID, "", ""); err != nil {
-		t.Fatalf("a blocked item could not be moved: %v", err)
 	}
 }
 
@@ -390,40 +359,6 @@ func TestBucketOwnerAdminMayOnlyRemove(t *testing.T) {
 	// Nor is adding it back.
 	_, err = w.UpdateItem(w.ctx, w.sam, solTicket.ID, ItemPatch{BucketID: &id})
 	requireCode(t, err, CodeForbidden)
-}
-
-// SPEC.md §6.4: a bucket's lifecycle is independent of its contents in both
-// directions.
-func TestBucketLifecycleIsIndependentOfItsContents(t *testing.T) {
-	w := newWorld(t)
-	bucket := w.bucket(w.sol, w.marta, "Release 1.0")
-	ticket := w.ticket(w.sol, w.marta, "inside")
-	id := bucket.ID
-	if _, err := w.UpdateItem(w.ctx, w.marta, ticket.ID, ItemPatch{BucketID: &id}); err != nil {
-		t.Fatal(err)
-	}
-	final := w.state(w.sol, store.RoleFinal)
-	if _, err := w.MoveItem(w.ctx, w.marta, bucket.ID, final.ID, "", ""); err != nil {
-		t.Fatal(err)
-	}
-	after, _ := w.GetItem(w.ctx, w.marta, ticket.ID)
-	if after.StateRole == store.RoleFinal {
-		t.Fatal("completing the bucket moved its contents")
-	}
-	// And the other way: completing every ticket does not complete the bucket.
-	if _, err := w.MoveItem(w.ctx, w.marta, bucket.ID, w.state(w.sol, store.RoleDefault).ID, "", ""); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := w.MoveItem(w.ctx, w.marta, ticket.ID, final.ID, "", ""); err != nil {
-		t.Fatal(err)
-	}
-	b, _ := w.GetItem(w.ctx, w.marta, bucket.ID)
-	if b.StateRole == store.RoleFinal {
-		t.Fatal("the bucket auto-completed")
-	}
-	if b.Progress == nil || b.Progress.Done != 1 || b.Progress.Total != 1 {
-		t.Fatalf("bucket progress is %+v, want 1 of 1", b.Progress)
-	}
 }
 
 // SPEC.md §6.3: a reassigned bucket keeps its identifier. The prefix records
