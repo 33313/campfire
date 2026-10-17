@@ -44,7 +44,7 @@ Two principles govern every decision in this document:
 | **Item** | A ticket or a bucket. Both are stored in one table and share almost all fields. |
 | **Ticket** | A unit of work. May belong to one bucket. |
 | **Bucket** | A milestone that groups related work, e.g. "Release: 1.0". Cannot contain other buckets. |
-| **Icon** | One of a fixed set of glyphs, carried by a bucket. Tickets have none. |
+| **Icon** | A glyph carried by a bucket: one of the built-in set, or of a set the instance adds. Tickets have none. |
 | **Identifier** | An item's permanent public name, e.g. `SOL-42`. Also its permalink. |
 | **Work state** | A column on a board, defined per team, e.g. "In Progress". |
 | **State role** | A lifecycle meaning attached to one work state: `default`, `accepted`, `rejected`, or `final`. |
@@ -185,7 +185,7 @@ Every item, ticket or bucket, has:
 | Reporter | Set automatically to the creating user. Not editable. |
 | Assignee | Optional, single, empty by default. Never inferred from the reporter. |
 | Priority | `P1`–`P4`, default `P3`. |
-| Icon | Buckets only. One of a fixed set ([§6.2](#62-buckets)). A ticket WILL NOT have one. |
+| Icon | Buckets only. A built-in icon or one of the instance's own ([§6.2](#62-buckets)). A ticket WILL NOT have one. |
 | Work state | From the owning team's states. |
 | Planned end | Optional date. |
 | Actual start | Set automatically on the item's first move out of the default state. |
@@ -236,6 +236,13 @@ An instance administrator decides what the pickers offer. They MAY hide groups o
 and colours of the palette, and MAY let a bucket take any colour as `#rrggbb` that reads on a card, or
 no colour at all. Hiding is presentation: a bucket that carries a hidden icon or colour keeps it, and
 its key stays valid. A hex colour that does not stand 3:1 off the card is refused.
+
+An instance administrator MAY also add **icon sets** of the instance's own, as SVGs, each under a
+prefix they choose. An icon's key is `prefix.name`, its name taken from its file, so it can never
+collide with a built-in key, which has no dot. An uploaded SVG MUST NOT be stored as it came: only
+its stroked shapes are kept, written out again from the attributes that place them, and a file with
+fills or any other element is refused. A set MAY be hidden like a built-in group. A deleted set
+leaves its buckets their keys, drawn as the default until a set with that prefix comes back.
 
 Buckets use their owning team's work states. The client WILL hide them from board columns by
 default and show them by a per-board toggle, so that an engineering board is not diluted by
@@ -989,7 +996,7 @@ reopened without new information.
 | Bucket identity | The owning team's counter (`SOL-42`) | A separate global code (`REL10`) | A second namespace makes every bucket creation a naming negotiation, and blocks converting a ticket into a bucket without breaking links. |
 | Bucket lifecycle | The owning team's work states | A separate `open`/`done`/`cancelled` lifecycle | One lifecycle mechanism. Board clutter is solved by a display toggle ([§6.2](#62-buckets)). |
 | Ticket classification | The bucket, the title and the description | A per-team `type` field | A type is a taxonomy every team has to administer, and `SOL-96 · task` says nothing the title and the bucket have not already said. It was the one card field nobody filtered on, and removing it takes a column off the card and a page out of team settings. |
-| Bucket recognition | One icon per bucket, and optionally one colour | An uploaded image per bucket | An icon stays legible at the size a card gives it, and a picture does not. A bucket's colour stays off red and the accent, which state and priority have already spoken for. |
+| Bucket recognition | One icon per bucket, from the built-in set or an instance's own stroked SVGs, and optionally one colour | An uploaded image per bucket | An icon stays legible at the size a card gives it, and a picture does not. A bucket's colour stays off red and the accent, which state and priority have already spoken for. |
 | Duplicating and dividing work | Clone and split, each leaving a relation | Parent and child tickets, or subtasks | Subtasks are a second containment mechanism beside buckets ([§3.2](#32-out-of-scope-permanently)). A *follows up* edge says the same thing with the relation model that already exists, and does not make a ticket's identity depend on another ticket. |
 | Acting on many items | A bulk edit of one field over a selection | A form editing several fields at once | One field is a change the actor can state before making it and reverse afterwards; a multi-field form over a selection is the one place a mis-click is both easy and invisible. The fields left out are deferred, not refused ([§3.3](#33-deferred-to-a-later-specification)). |
 | Ordering | Lexical string ranks | Fractional numeric ranks | A float between two neighbours exhausts double precision after roughly fifty drops on the same midpoint, and repairing it needs a background job the application otherwise does not have. |

@@ -32,7 +32,7 @@ paths:
   /api/instance:
     get:
       operationId: getInstance
-      summary: Whether the instance needs its first account, the icon and colour sets and how they are offered, how long a hidden tab keeps its stream, and the largest picture it takes
+      summary: Whether the instance needs its first account, the icon and colour sets, the instance's own icon sets and how they are all offered, how long a hidden tab keeps its stream, and the largest picture it takes
       x-agent: false
       security: []
       responses:
@@ -60,6 +60,44 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Ok" }
         "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/icon-sets:
+    post:
+      operationId: createIconSet
+      summary: Add a set of bucket icons under a prefix, from SVGs that are kept as their stroked shapes only; files that are not icons are skipped and named
+      x-agent: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NewIconSet" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/icon-sets/{id}:
+    patch:
+      operationId: updateIconSet
+      summary: Hide an icon set from pickers, or offer it again
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [hidden], properties: { hidden: { type: boolean } } }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "403": { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteIconSet
+      summary: Delete an icon set; buckets keep its keys and draw the default icon
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "204": { description: Deleted }
         "403": { $ref: "#/components/responses/Error" }
 
   /api/instance/bootstrap:
@@ -932,6 +970,22 @@ components:
         colourMode: { type: string, enum: [palette, hex, off] }
         hiddenGroups: { type: array, items: { type: string, enum: [planning, signals, work, places] } }
         hiddenColours: { type: array, items: { type: string } }
+
+    NewIconSet:
+      type: object
+      required: [name, prefix, files]
+      properties:
+        name: { type: string, maxLength: 40 }
+        prefix: { type: string, pattern: "^[a-z][a-z0-9-]{1,15}$", description: "Each icon's key is prefix.name, the name taken from its file" }
+        files:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [name, svg]
+            properties:
+              name: { type: string, examples: ["pager.svg"] }
+              svg: { type: string, maxLength: 8192 }
 
     NewItem:
       type: object

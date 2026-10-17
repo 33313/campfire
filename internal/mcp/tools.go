@@ -263,7 +263,8 @@ func (s *Server) toolset() []tool {
 				"kind":   map[string]any{"type": "string", "enum": []string{"ticket", "bucket"}},
 				"teamId": pInt, "title": pString, "description": pString,
 				"assigneeId": pInt, "priority": pInt, "bucketId": pInt,
-				"icon": map[string]any{"type": "string", "enum": store.BucketIcons},
+				"icon": map[string]any{"type": "string", "description": "One of " +
+					strings.Join(store.BucketIcons, ", ") + ", or prefix.name from one of the instance's own icon sets"},
 				"color": map[string]any{"type": "string", "description": "One of " +
 					strings.Join(store.BucketColours, ", ") + ", or #rrggbb where the instance takes hex colours"},
 				"plannedEnd": pString, "labels": pStrList, "accepted": pBool,

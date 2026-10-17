@@ -248,6 +248,31 @@ CREATE TABLE appearance (
     hidden_colours TEXT    NOT NULL
 ) STRICT;
 
+-- An instance's own bucket icons (DEV-79), uploaded by an administrator as a
+-- set under a prefix they choose. A bucket stores its icon as prefix.name, so
+-- a set's key can never collide with a built-in one, which has no dot. A
+-- bucket keeps its key when the set is hidden or deleted; a deleted one is
+-- drawn as the default until a set with that key comes back.
+CREATE TABLE icon_sets (
+    id          INTEGER PRIMARY KEY,
+    name        TEXT    NOT NULL,
+    prefix      TEXT    NOT NULL UNIQUE,
+    -- Hidden from pickers only, as a built-in group can be.
+    hidden      INTEGER NOT NULL DEFAULT 0 CHECK (hidden IN (0, 1)),
+    uploader_id INTEGER NOT NULL REFERENCES users (id),
+    created_at  INTEGER NOT NULL
+) STRICT;
+
+-- One icon of a set: the markup of an SVG's shapes, rebuilt from the elements
+-- and attributes that draw a stroke and nothing else.
+CREATE TABLE icons (
+    set_id   INTEGER NOT NULL REFERENCES icon_sets (id) ON DELETE CASCADE,
+    name     TEXT    NOT NULL,
+    view_box TEXT    NOT NULL,
+    body     TEXT    NOT NULL,
+    PRIMARY KEY (set_id, name)
+) STRICT;
+
 CREATE TABLE images (
     id           INTEGER PRIMARY KEY,
     uploader_id  INTEGER NOT NULL REFERENCES users (id),

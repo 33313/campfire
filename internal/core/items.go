@@ -122,9 +122,6 @@ func (s *Service) CreateItem(ctx context.Context, a Actor, in NewItem) (*Item, e
 		if in.Icon == "" {
 			in.Icon = store.DefaultBucketIcon
 		}
-		if !store.ValidIcon(in.Icon) {
-			return nil, invalidField("icon", "that is not one of the bucket icons")
-		}
 	} else if in.Icon != "" {
 		// A ticket carries nothing of the kind (SPEC.md §6.1).
 		return nil, invalidField("icon", "a ticket has no icon")
@@ -141,6 +138,11 @@ func (s *Service) CreateItem(ctx context.Context, a Actor, in NewItem) (*Item, e
 	err = s.write(ctx, a, func(t *wtx) error {
 		if err := s.requireTeamMember(ctx, t.Tx, a, in.TeamID); err != nil {
 			return err
+		}
+		if in.Kind == store.KindBucket {
+			if err := validIcon(ctx, t.Tx, in.Icon); err != nil {
+				return err
+			}
 		}
 		color, err := validColour(ctx, t.Tx, in.Color)
 		if err != nil {
@@ -343,8 +345,8 @@ func (s *Service) UpdateItem(ctx context.Context, a Actor, id int64, p ItemPatch
 			if it.Kind != store.KindBucket {
 				return invalidField("icon", "a ticket has no icon")
 			}
-			if !store.ValidIcon(*p.Icon) {
-				return invalidField("icon", "that is not one of the bucket icons")
+			if err := validIcon(ctx, t.Tx, *p.Icon); err != nil {
+				return err
 			}
 			it.Icon = *p.Icon
 		}

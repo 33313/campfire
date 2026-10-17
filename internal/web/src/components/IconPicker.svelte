@@ -20,11 +20,17 @@
   let at = $state({ left: 0, top: 0 });
   let hex = $state("");
 
-  // What the administrator hides leaves the panel, except what this bucket
-  // already wears (DEV-79).
+  // The built-in groups, then the instance's own sets. What the administrator
+  // hides leaves the panel, except what this bucket already wears.
   const looks = $derived(app.appearance);
-  const groups = $derived(Object.entries(BUCKET_ICON_GROUPS)
-    .filter(([g, set]) => !looks.hiddenGroups.includes(g) || icon in set));
+  const groups = $derived([
+    ...Object.entries(BUCKET_ICON_GROUPS)
+      .filter(([g, set]) => !looks.hiddenGroups.includes(g) || icon in set)
+      .map(([g, set]) => ({ id: g, name: NAMES[g], keys: Object.keys(set) })),
+    ...app.iconSets
+      .filter((set) => !set.hidden || set.icons.some((i) => i.key === icon))
+      .map((set) => ({ id: `set-${set.id}`, name: set.name, keys: set.icons.map((i) => i.key) })),
+  ]);
   const colours = $derived(looks.colourMode === "off" ? [] : Object.entries(BUCKET_COLOURS)
     .filter(([name]) => !looks.hiddenColours.includes(name) || name === color));
   const own = $derived(color?.startsWith("#") ? color : "");
@@ -62,10 +68,10 @@
   <div class="pop icon-pop" role="dialog" aria-label="Icon and colour" bind:this={panel}
        style="left:{at.left}px;top:{at.top}px;width:{WIDTH}px">
     <div class="icon-groups">
-      {#each groups as [group, set] (group)}
-        <span class="menu-head">{NAMES[group]}</span>
+      {#each groups as group (group.id)}
+        <span class="menu-head">{group.name}</span>
         <div class="icon-grid">
-          {#each Object.keys(set) as name (name)}
+          {#each group.keys as name (name)}
             <button class="icon-option" class:on={icon === name} title={name} aria-label={name}
                     aria-pressed={icon === name} onclick={() => onpick({ icon: name })}>
               <BucketIcon {name} size={16} color={icon === name ? color : null} />

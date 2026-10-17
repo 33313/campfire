@@ -53,3 +53,26 @@ test("a hidden group and colour leave the picker, and a bucket that wears them k
   await looks.getByRole("button", { name: "Use" }).click();
   await expect(page.getByRole("button", { name: /rocket.*#ff88cc/ })).toBeVisible();
 });
+
+test("an icon set of the instance's own is offered under its name, and its buckets outlive it", async ({ page }) => {
+  await page.request.post("/api/auth/signin", { data: ROOT });
+  const svg = (d) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="${d}"/></svg>`;
+  const res = await page.request.post("/api/icon-sets", { data: { name: "Ops", prefix: "ops", files: [
+    { name: "pager.svg", svg: svg("M3 5h18v14H3Z") },
+    { name: "logo.svg", svg: `<svg viewBox="0 0 24 24"><path fill="red" d="M0 0h24"/></svg>` },
+  ] } });
+  expect(res.ok()).toBeTruthy();
+  const { set, skipped } = await res.json();
+  expect(set.icons.map((i) => i.key)).toEqual(["ops.pager"]);
+  expect(skipped).toEqual([{ file: "logo.svg", reason: "it has fills, and an icon is strokes only" }]);
+
+  await page.goto(`/${bucket.identifier}`);
+  await page.getByRole("button", { name: /rocket/ }).click();
+  const looks = page.getByRole("dialog", { name: "Icon and colour" });
+  await looks.getByRole("button", { name: "ops.pager", exact: true }).click();
+  await expect(page.getByRole("button", { name: /ops\.pager ·/ })).toBeVisible();
+
+  // Gone, the set leaves the bucket its key, drawn as the default.
+  await page.request.delete(`/api/icon-sets/${set.id}`);
+  expect((await (await page.request.get(`/api/items/${bucket.id}`)).json()).icon).toBe("ops.pager");
+});

@@ -17,7 +17,14 @@ export const app = $state({
   imageMaxSize: 0,    // the largest picture the instance takes, in bytes
   // What the bucket pickers offer (DEV-79); hidden keys stay valid.
   appearance: { colourMode: "palette", hiddenGroups: [], hiddenColours: [] },
+  iconSets: [],       // the instance's own bucket icons
+  customIcons: {},    // ...by key: { viewBox, body }
 });
+
+export function setIconSets(sets) {
+  app.iconSets = sets;
+  app.customIcons = Object.fromEntries(sets.flatMap((s) => s.icons.map((i) => [i.key, i])));
+}
 
 export async function reloadContext(teamId) {
   const [session, teams] = await Promise.all([api.getSession(), api.listTeams()]);
