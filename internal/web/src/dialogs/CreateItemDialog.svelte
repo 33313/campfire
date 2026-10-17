@@ -2,7 +2,7 @@
   import { untrack } from "svelte";
 
   import Dialog from "../components/Dialog.svelte";
-  import BucketIcon from "../components/BucketIcon.svelte";
+  import IconPicker from "../components/IconPicker.svelte";
   import Icon from "../components/Icon.svelte";
   import LabelEditor from "../components/LabelEditor.svelte";
   import BucketPicker from "../components/BucketPicker.svelte";
@@ -10,7 +10,7 @@
   import ItemSearch from "../components/ItemSearch.svelte";
   import { api } from "../lib/api.js";
   import { app } from "../lib/state.svelte.js";
-  import { BUCKET_ICONS, BUCKET_COLOURS, PRIORITY, NAV, RELATION_LABELS } from "../lib/icons.js";
+  import { PRIORITY, NAV, RELATION_LABELS } from "../lib/icons.js";
   import { pictures } from "../lib/pictures.js";
 
   /** Create a ticket or a bucket. A bucket carries an icon; a ticket does not. */
@@ -150,29 +150,10 @@
     </div>
     {#if chosen === "bucket"}
       <div class="field">
-        <span class="field-label">Icon</span>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          {#each Object.keys(BUCKET_ICONS) as name}
-            <button class="chip" class:on={icon === name} title={name} onclick={() => (icon = name)}>
-              <BucketIcon {name} size={16} />
-            </button>
-          {/each}
-        </div>
-        <span class="explain">It stands in for the bucket wherever it is named.</span>
+        <span class="field-label">Icon &amp; colour</span>
+        <IconPicker {icon} {color} boxed onpick={(p) => { if ("icon" in p) icon = p.icon; else color = p.color; }} />
+        <span class="explain">It stands in for the bucket wherever it is named, and its tickets wear the colour on the board.</span>
         {@render complaint("icon")}
-      </div>
-      <div class="field">
-        <span class="field-label">Colour</span>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="swatch" class:on={!color} title="No colour" aria-label="No colour"
-                  onclick={() => (color = "")}></button>
-          {#each Object.entries(BUCKET_COLOURS) as [name, hex]}
-            <button class="swatch" class:on={color === name} title={name} aria-label={name}
-                    style="background:{hex};border-color:{hex}"
-                    onclick={() => (color = name)}></button>
-          {/each}
-        </div>
-        <span class="explain">Optional. Its tickets wear it on the board.</span>
         {@render complaint("color")}
       </div>
     {:else}
