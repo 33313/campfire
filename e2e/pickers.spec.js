@@ -70,7 +70,7 @@ test("an icon set of the instance's own is offered under its name, and its bucke
   await page.getByRole("button", { name: /rocket/ }).click();
   const looks = page.getByRole("dialog", { name: "Icon and colour" });
   await looks.getByRole("button", { name: "ops.pager", exact: true }).click();
-  await expect(page.getByRole("button", { name: /ops\.pager/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /ops\.pager ·/ })).toBeVisible();
 
   // Gone, the set leaves the bucket its key, drawn as the default.
   await page.request.delete(`/api/icon-sets/${set.id}`);
