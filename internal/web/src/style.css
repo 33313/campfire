@@ -300,19 +300,13 @@ a, .btn, .chip, .nav-item, .card, .bucket-card, .input, .bare, .label-input, .to
    default, rather than the desktop's: GTK's default is 600ms, and it read as
    sluggish (DEV-74). main.js restarts the blink on every keystroke, so the
    caret is never caught dark while you type. Under reduced motion it stops
-   blinking altogether. A browser that cannot hand the blink over (Firefox,
-   Safari) gets a caret drawn by lib/caret.js on the same beat instead. */
+   blinking altogether. Firefox and Safari cannot hand the blink over and keep
+   the desktop's. */
 @supports (caret-animation: manual) {
   input, textarea { caret-animation: manual; }
   input:focus, textarea:focus { animation: caret 1s step-end infinite; }
 }
 @keyframes caret { 50% { caret-color: transparent; } }
-.caret-drawn { caret-color: transparent !important; }
-.drawn-caret {
-  position: fixed; left: 0; top: 0; width: 1px; z-index: 90; pointer-events: none;
-  animation: drawn-caret 1s step-end infinite;
-}
-@keyframes drawn-caret { 50% { opacity: 0; } }
 
 /* A property edited where it is drawn: no fill and no border until the pointer
    is on it, and the type of the thing it stands in for rather than a form
