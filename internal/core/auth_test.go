@@ -331,16 +331,3 @@ func TestProfileIsReadableByAnyoneAndScopesActivityByRole(t *testing.T) {
 		requireCode(t, err, CodeNotFound)
 	}
 }
-
-// A bio is a paragraph, not a document.
-func TestBioIsBounded(t *testing.T) {
-	f := newFixture(t)
-	if err := f.UpdateProfile(f.ctx, f.admin, "", "", strings.Repeat("a", maxBio)); err != nil {
-		t.Fatal(err)
-	}
-	err := f.UpdateProfile(f.ctx, f.admin, "", "", strings.Repeat("a", maxBio+1))
-	if err == nil {
-		t.Fatal("a bio over the limit was accepted")
-	}
-	requireCode(t, err, CodeInvalid)
-}

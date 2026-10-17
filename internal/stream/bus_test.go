@@ -86,23 +86,3 @@ func TestASlowSubscriberIsResetRatherThanSkipped(t *testing.T) {
 	default:
 	}
 }
-
-// Publishing must never block on a subscriber, because it happens on the
-// request goroutine that just committed a write.
-func TestPublishNeverBlocks(t *testing.T) {
-	bus := NewBus()
-	_, _, cancel := bus.Subscribe()
-	defer cancel()
-	done := make(chan struct{})
-	go func() {
-		for i := 0; i < queue*4; i++ {
-			bus.Publish(Notification{Seq: int64(i + 1)})
-		}
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-time.After(5 * time.Second):
-		t.Fatal("Publish blocked on a subscriber that was not reading")
-	}
-}

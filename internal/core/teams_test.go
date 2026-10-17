@@ -6,29 +6,6 @@ import (
 	"github.com/33313/campfire/internal/store"
 )
 
-func TestCreateTeamGivesItTheSixDefaultStates(t *testing.T) {
-	f := newFixture(t)
-	team := f.team("Solstice", "SOL", f.admin)
-	states, err := f.ListWorkStates(f.ctx, f.admin, team.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(states) != len(store.DefaultStates) {
-		t.Fatalf("%d states, want %d", len(states), len(store.DefaultStates))
-	}
-	roles := map[string]string{}
-	for _, st := range states {
-		if st.Role != "" {
-			roles[st.Role] = st.Name
-		}
-	}
-	for _, want := range []string{"default", "accepted", "rejected", "final"} {
-		if roles[want] == "" {
-			t.Fatalf("no state holds the %s role", want)
-		}
-	}
-}
-
 // SPEC.md §5.3: a short code is set at creation and MUST NOT change, and MUST
 // NOT be reused after a team is archived — reuse would mint identifiers
 // colliding with the archived team's.

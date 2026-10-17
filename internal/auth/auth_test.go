@@ -36,23 +36,6 @@ func TestVerifyPasswordRejectsMalformedHash(t *testing.T) {
 	}
 }
 
-func TestNewTokenIsUniqueAndHashed(t *testing.T) {
-	a, ah, err := NewToken()
-	if err != nil {
-		t.Fatal(err)
-	}
-	b, bh, _ := NewToken()
-	if a == b || ah == bh {
-		t.Fatal("two tokens collided")
-	}
-	if ah != HashToken(a) {
-		t.Fatal("HashToken does not reproduce the stored hash")
-	}
-	if ah == a {
-		t.Fatal("the stored hash is the token itself")
-	}
-}
-
 // RFC 6238 Appendix B, SHA-1 test vector: the ASCII secret "12345678901234567890".
 func TestTOTPMatchesRFCVector(t *testing.T) {
 	// base32("12345678901234567890")

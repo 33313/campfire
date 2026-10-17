@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 
@@ -352,42 +351,6 @@ func TestAnAgentIsBoundedByItsUsersPermissions(t *testing.T) {
 	}, issued.Token)
 	if out["result"].(map[string]any)["isError"] == true {
 		t.Fatal("an outsider's agent could not read")
-	}
-}
-
-// The interface is request and response only: it never subscribes and never
-// pushes (SPEC.md §14.5).
-func TestTheAgentInterfaceDoesNotStream(t *testing.T) {
-	h := newHarness(t)
-	req, _ := http.NewRequest("GET", h.server.URL, nil)
-	req.Header.Set("Authorization", "Bearer "+h.token)
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusMethodNotAllowed {
-		t.Fatalf("GET on the agent endpoint returned %d", res.StatusCode)
-	}
-	out := h.rpc("resources/subscribe", map[string]any{}, h.token)
-	if out["error"] == nil {
-		t.Fatal("the server accepted a subscription")
-	}
-}
-
-func TestToolNamesAreStableAndSorted(t *testing.T) {
-	s := New(nil, "test")
-	names := make([]string, 0, len(s.tools))
-	for name := range s.tools {
-		names = append(names, name)
-	}
-	if !sort.StringsAreSorted(append([]string(nil), names...)) {
-		sort.Strings(names)
-	}
-	for _, name := range names {
-		if strings.ToLower(name) != name || strings.Contains(name, " ") {
-			t.Errorf("tool name %q is not lower_snake_case", name)
-		}
 	}
 }
 

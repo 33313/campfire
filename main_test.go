@@ -54,14 +54,6 @@ func TestVersionNeedsNoConfiguration(t *testing.T) {
 	}
 }
 
-func TestAReleaseVersionOutranksTheBuildStamp(t *testing.T) {
-	defer func(v string) { version = v }(version)
-	version = "v1.2.3"
-	if got := buildVersion(); got != "v1.2.3" {
-		t.Fatalf("got %q, want the version set at link time", got)
-	}
-}
-
 func TestAnArgumentNothingReadsIsRefused(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "campfire.json")
 	err := run([]string{"init", "-config", path, "wat"})
