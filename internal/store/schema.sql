@@ -234,6 +234,20 @@ CREATE INDEX comments_item ON comments (item_id, id);
 -- the database like everything else, so a backup is still one file, and the
 -- Markdown that shows it names it by id: ![name](/api/images/12). Raster
 -- types only: an SVG is a document that can run script.
+-- How bucket icons and colours are offered (DEV-79): one row, an instance
+-- administrator's. It hides from pickers only. A bucket that carries a hidden
+-- icon or colour keeps it, and every key stays valid. With no row, nothing is
+-- hidden and the colours are the palette.
+CREATE TABLE appearance (
+    id             INTEGER PRIMARY KEY CHECK (id = 1),
+    -- palette: the sixteen. hex: those and any #rrggbb that reads on a card.
+    -- off: no colour is offered.
+    colour_mode    TEXT    NOT NULL CHECK (colour_mode IN ('palette', 'hex', 'off')),
+    -- Space-separated keys: built-in icon groups, and palette colours.
+    hidden_groups  TEXT    NOT NULL,
+    hidden_colours TEXT    NOT NULL
+) STRICT;
+
 CREATE TABLE images (
     id           INTEGER PRIMARY KEY,
     uploader_id  INTEGER NOT NULL REFERENCES users (id),

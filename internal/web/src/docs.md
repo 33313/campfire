@@ -73,7 +73,9 @@ use, then connecting your own tools.
 ## Buckets
 
 A bucket is a milestone. Create one with **Create** → **Bucket**. It has an icon and an optional
-colour, and its tickets show both on their cards.
+colour, picked together from one field, and its tickets show both on their cards. An instance
+administrator chooses which icons and colours are offered under **Administration** → *Appearance*,
+and may allow any hex colour that reads on a card.
 
 - **Add a ticket** by setting the ticket's *Bucket* field. A bucket takes tickets from any team.
 - **The bucket's page** lists its tickets by team, with progress as finished over total (`37 / 50`).
@@ -264,7 +266,7 @@ while connected, dimming while disconnected. After a disconnect the board catche
 |---|---|
 | Member | Create and edit items in their teams; comment on any item. |
 | Team administrator | Also manage the team: members, work states, name, picture and description. |
-| Instance administrator | Also create accounts and teams, send invitations and password resets, manage backups, see when a newer release is out, connect GitHub, and read the log of every team. |
+| Instance administrator | Also create accounts and teams, send invitations and password resets, manage backups, see when a newer release is out, connect GitHub, choose which bucket icons and colours are offered, and read the log of every team. |
 
 Your role can differ from team to team.
 

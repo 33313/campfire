@@ -3,7 +3,7 @@
   import BucketIcon from "./BucketIcon.svelte";
   import Avatar from "./Avatar.svelte";
   import Icon from "./Icon.svelte";
-  import { BUCKET_COLOURS, NAV } from "../lib/icons.js";
+  import { colourOf, NAV } from "../lib/icons.js";
   import { whenDay, daysUntil } from "../lib/format.js";
   import { hug } from "../lib/hug.js";
 
@@ -20,7 +20,7 @@
   let { item, selected = false, focused = false, dragging = false,
          ontoggle, ongrab, onpreview, onmenu } = $props();
 
-  let tint = $derived(BUCKET_COLOURS[item.bucketColor] || null);
+  let tint = $derived(colourOf(item.bucketColor));
   // A deadline three days away or less is drawn in the accent so it is seen
   // before it is missed, and one already past in the alert colour. A done
   // ticket's deadline is greyed out: there is nothing left to be late for.

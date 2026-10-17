@@ -15,6 +15,8 @@ export const app = $state({
   users: [],
   backlogCount: 0,
   imageMaxSize: 0,    // the largest picture the instance takes, in bytes
+  // What the bucket pickers offer (DEV-79); hidden keys stay valid.
+  appearance: { colourMode: "palette", hiddenGroups: [], hiddenColours: [] },
 });
 
 export async function reloadContext(teamId) {

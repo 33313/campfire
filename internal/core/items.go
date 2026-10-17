@@ -125,9 +125,6 @@ func (s *Service) CreateItem(ctx context.Context, a Actor, in NewItem) (*Item, e
 		if !store.ValidIcon(in.Icon) {
 			return nil, invalidField("icon", "that is not one of the bucket icons")
 		}
-		if in.Color != "" && !store.ValidColour(in.Color) {
-			return nil, invalidField("color", "that is not one of the bucket colours")
-		}
 	} else if in.Icon != "" {
 		// A ticket carries nothing of the kind (SPEC.md §6.1).
 		return nil, invalidField("icon", "a ticket has no icon")
@@ -145,6 +142,11 @@ func (s *Service) CreateItem(ctx context.Context, a Actor, in NewItem) (*Item, e
 		if err := s.requireTeamMember(ctx, t.Tx, a, in.TeamID); err != nil {
 			return err
 		}
+		color, err := validColour(ctx, t.Tx, in.Color)
+		if err != nil {
+			return err
+		}
+		in.Color = color
 		if in.AssigneeID != 0 {
 			if _, err := store.UserByID(ctx, t.Tx, in.AssigneeID); err != nil {
 				return err
@@ -351,10 +353,11 @@ func (s *Service) UpdateItem(ctx context.Context, a Actor, id int64, p ItemPatch
 				return invalidField("color", "a ticket has no colour")
 			}
 			// Empty clears it: a bucket may go back to having no colour.
-			if *p.Color != "" && !store.ValidColour(*p.Color) {
-				return invalidField("color", "that is not one of the bucket colours")
+			c, err := validColour(ctx, t.Tx, *p.Color)
+			if err != nil {
+				return err
 			}
-			it.Color = *p.Color
+			it.Color = c
 		}
 		if p.PlannedEnd != nil {
 			if err := validatePlannedEnd(*p.PlannedEnd); err != nil {

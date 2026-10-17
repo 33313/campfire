@@ -36,6 +36,7 @@
       const instance = await api.getInstance();
       configure(instance.hiddenTabGrace);
       app.imageMaxSize = instance.imageMaxSize;
+      app.appearance = instance.appearance;
       if (instance.needsBootstrap) {
         needsBootstrap = true;
         booted = true;

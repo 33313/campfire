@@ -7,9 +7,11 @@
   import { openModal, failure } from "../lib/ui.svelte.js";
   import { newTeam } from "../lib/teams.js";
   import { when, ago } from "../lib/format.js";
-  import { NAV } from "../lib/icons.js";
+  import { NAV, BUCKET_ICON_GROUPS, BUCKET_ICONS, BUCKET_COLOURS } from "../lib/icons.js";
+  import { app } from "../lib/state.svelte.js";
 
   import Icon from "../components/Icon.svelte";
+  import BucketIcon from "../components/BucketIcon.svelte";
   import Avatar from "../components/Avatar.svelte";
   import Section from "../components/Section.svelte";
   import SettingsRail from "../components/SettingsRail.svelte";
@@ -22,6 +24,7 @@
   const SECTIONS = [
     { id: "users", label: "Users" },
     { id: "teams", label: "Teams" },
+    { id: "appearance", label: "Appearance" },
     { id: "backup", label: "Backup and restore" },
     { id: "agents", label: "Agent access" },
     { id: "updates", label: "Updates" },
@@ -70,6 +73,22 @@
   const guard = async (fn) => {
     try { await fn(); await load(); } catch (err) { failure(err); }
   };
+
+  // What the bucket pickers offer (DEV-79). Hiding leaves a picker only: a
+  // bucket that wears a hidden icon or colour keeps it.
+  const GROUP_NAMES = { planning: "Planning", signals: "Signals", work: "Work", places: "Places" };
+  const MODES = [
+    ["palette", "Palette", "The sixteen colours, less any hidden below."],
+    ["hex", "Palette and hex", "Also any #rrggbb that reads on a card."],
+    ["off", "Off", "No colour is offered. Buckets that have one keep it."],
+  ];
+  const offered = $derived(Object.entries(BUCKET_ICON_GROUPS)
+    .filter(([g]) => !app.appearance.hiddenGroups.includes(g))
+    .reduce((n, [, set]) => n + Object.keys(set).length, 0));
+  const flip = (list, key) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]);
+  async function setLooks(body) {
+    try { app.appearance = await api.setAppearance(body); } catch (err) { failure(err); }
+  }
 
   // GitHub (DEV-13).
   let org = $state("");
@@ -258,6 +277,54 @@
                   {/each}
                 </tbody>
               </table>
+            {/snippet}
+          </Section>
+
+        {:else if tab === "appearance"}
+          <Section title="Bucket icons" sub="{offered} of {Object.keys(BUCKET_ICONS).length} offered">
+            {#snippet children()}
+              <p class="explain">A hidden group leaves the icon pickers. Buckets that wear one of its icons keep it.</p>
+              <table class="table" style="margin-top:8px">
+                <tbody>
+                  {#each Object.entries(BUCKET_ICON_GROUPS) as [group, set] (group)}
+                    {@const on = !app.appearance.hiddenGroups.includes(group)}
+                    <tr>
+                      <td style="width:46px">
+                        <button class="toggle" class:on aria-label="Offer {GROUP_NAMES[group]}" aria-pressed={on}
+                                onclick={() => setLooks({ hiddenGroups: flip(app.appearance.hiddenGroups, group) })}><i></i></button>
+                      </td>
+                      <td style="width:110px">{GROUP_NAMES[group]}</td>
+                      <td>
+                        <span style="display:flex;gap:8px;flex-wrap:wrap;opacity:{on ? 1 : 0.35}">
+                          {#each Object.keys(set) as name (name)}<BucketIcon {name} size={14} />{/each}
+                        </span>
+                      </td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            {/snippet}
+          </Section>
+          <Section title="Bucket colours" sub={MODES.find(([m]) => m === app.appearance.colourMode)?.[1]}>
+            {#snippet children()}
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                {#each MODES as [mode, label] (mode)}
+                  <button class="chip" class:on={app.appearance.colourMode === mode}
+                          onclick={() => setLooks({ colourMode: mode })}>{label}</button>
+                {/each}
+              </div>
+              <p class="explain" style="margin-top:6px">{MODES.find(([m]) => m === app.appearance.colourMode)?.[2]}</p>
+              {#if app.appearance.colourMode !== "off"}
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px">
+                  {#each Object.entries(BUCKET_COLOURS) as [name, value] (name)}
+                    {@const on = !app.appearance.hiddenColours.includes(name)}
+                    <button class="swatch" aria-pressed={on} title="{on ? '' : 'Hidden: '}{name}"
+                            aria-label="Offer {name}" style="background:{value};border-color:{value};opacity:{on ? 1 : 0.25}"
+                            onclick={() => setLooks({ hiddenColours: flip(app.appearance.hiddenColours, name) })}></button>
+                  {/each}
+                </div>
+                <p class="explain" style="margin-top:6px">A click hides a colour from the pickers, or offers it again.</p>
+              {/if}
             {/snippet}
           </Section>
 

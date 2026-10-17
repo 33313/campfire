@@ -219,6 +219,10 @@ because on a card red means late or P1, and so is the accent orange, which means
 | `sky` | `#6fa3c7` | `stone` | `#8f8578` |
 | `steel` | `#7d94a8` | `slate` | `#737d87` |
 
+An instance administrator may also let a bucket take any `#rrggbb` (`SPEC.md` §6.2), typed under
+the swatches in the picker. One is refused unless it stands at least 3:1 off `surface`, the floor
+every palette colour clears; the rest of the rule is theirs to keep.
+
 A bucket's colour tints the bucket chip on a card — border and text in the colour, never a fill: a
 filled chip on most cards outshouts the priority glyph beside it — and the bucket's icon wherever
 that is drawn.
@@ -279,7 +283,7 @@ Each entry lists what exists. States not listed do not exist yet — ask before 
 | `BucketDetail.dc.html` | Bucket detail | Contents grouped by owning team, per-row remove ×. `Icon` and `Colour` are fields here. The screen is the item detail screen — a bucket and a ticket are one namespace. |
 | `Log.dc.html` | Log | Keyset paging: the footer says "load older from 41192", never a page number. Agent actions carry a small accent glyph beside the actor. |
 | `TeamSettings.dc.html` | Team settings | Work states, Members, Identity, Archive. **No ticket types tab.** |
-| `Admin.dc.html` | Administration | Users, backup/restore, agent access. |
+| `Admin.dc.html` | Administration | Users, backup/restore, agent access. *Appearance* (never drawn): a toggle row per built-in icon group with its icons beside it, the colour mode as chips, and the palette as swatches, a hidden one at a quarter opacity. |
 | `Components.dc.html` | Foundations | The token and component reference this document describes. |
 | *(none)* | Docs | How the product works, at `/docs`, from `Documentation` at the foot of the sidebar: one page, written as Markdown (`internal/web/src/docs.md`) and drawn by the description renderer but set in Sans 14 at a 784px column, tables across it, `h2` 20px under a `rule-faint` line, `h3` 15px. Its sections sit in a settings rail that stays beside the scroll and marks the one being read. It runs from the concepts to everyday use to the agent interface and the HTTP API, in that order, and ends with *Source code*, the link AGPL-3.0 §13 asks for. `/docs#filtering` opens at a section; the query box's cheat sheet links there. A line under the sign-in card links the source too. Never drawn. |
 | *(none)* | Account | Settings that are not about how you appear: password, second factor, and the tokens that act as you. Reached from Settings on your own profile, not from the sidebar. Never drawn. |

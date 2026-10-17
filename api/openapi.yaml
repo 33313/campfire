@@ -32,7 +32,7 @@ paths:
   /api/instance:
     get:
       operationId: getInstance
-      summary: Whether the instance needs its first account, the fixed icon and colour sets, how long a hidden tab keeps its stream, and the largest picture it takes
+      summary: Whether the instance needs its first account, the icon and colour sets and how they are offered, how long a hidden tab keeps its stream, and the largest picture it takes
       x-agent: false
       security: []
       responses:
@@ -45,6 +45,21 @@ paths:
       x-agent: false
       responses:
         "200": { $ref: "#/components/responses/Ok" }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/instance/appearance:
+    put:
+      operationId: setAppearance
+      summary: Hide built-in icon groups and palette colours from pickers, and say whether buckets take a colour from the palette, any readable hex, or none
+      x-agent: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppearancePatch" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
 
   /api/instance/bootstrap:
@@ -897,8 +912,8 @@ components:
         reporterId: { type: integer }
         assigneeId: { type: integer }
         priority: { type: integer, minimum: 1, maximum: 4 }
-        icon: { type: string, description: Buckets only, one of the fixed set }
-        color: { type: string, description: Buckets only, one of the fixed set. Optional. }
+        icon: { type: string, description: Buckets only. One of the instance's icon keys. }
+        color: { type: string, description: "Buckets only. Optional. A palette key, or #rrggbb while the instance takes hex colours." }
         bucketId: { type: integer, description: Tickets only }
         stateId: { type: integer }
         plannedEnd: { type: string, format: date }
@@ -909,6 +924,14 @@ components:
         rank: { type: string, description: Lexical rank over 0-9A-Za-z }
         version: { type: integer }
         labels: { type: array, items: { type: string } }
+
+    AppearancePatch:
+      type: object
+      description: A field left out is left alone. Hidden keys leave pickers only; a bucket that carries one keeps it.
+      properties:
+        colourMode: { type: string, enum: [palette, hex, off] }
+        hiddenGroups: { type: array, items: { type: string, enum: [planning, signals, work, places] } }
+        hiddenColours: { type: array, items: { type: string } }
 
     NewItem:
       type: object

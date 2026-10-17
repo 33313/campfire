@@ -1,8 +1,9 @@
 <script>
   import BucketIcon from "./BucketIcon.svelte";
   import Icon from "./Icon.svelte";
-  import { BUCKET_ICON_GROUPS, BUCKET_COLOURS, NAV } from "../lib/icons.js";
+  import { BUCKET_ICON_GROUPS, BUCKET_COLOURS, NAV, colourOf } from "../lib/icons.js";
   import { dismiss, under } from "../lib/dismiss.js";
+  import { app } from "../lib/state.svelte.js";
 
   // A bucket's icon and colour, picked together because they are seen
   // together (DEV-79). The field names both; under it hang the icons in their
@@ -17,8 +18,19 @@
   let panel = $state(null);
   let open = $state(false);
   let at = $state({ left: 0, top: 0 });
+  let hex = $state("");
+
+  // What the administrator hides leaves the panel, except what this bucket
+  // already wears (DEV-79).
+  const looks = $derived(app.appearance);
+  const groups = $derived(Object.entries(BUCKET_ICON_GROUPS)
+    .filter(([g, set]) => !looks.hiddenGroups.includes(g) || icon in set));
+  const colours = $derived(looks.colourMode === "off" ? [] : Object.entries(BUCKET_COLOURS)
+    .filter(([name]) => !looks.hiddenColours.includes(name) || name === color));
+  const own = $derived(color?.startsWith("#") ? color : "");
 
   function show() {
+    hex = own;
     at = under(field, WIDTH);
     open = true;
   }
@@ -40,7 +52,9 @@
         aria-haspopup="dialog" aria-expanded={open} onclick={() => (open ? (open = false) : show())}>
   <BucketIcon name={icon} size={16} {color} />
   <span>{icon}</span>
-  <span class="icon-field-colour">· {color || "no colour"}</span>
+  {#if color || looks.colourMode !== "off"}
+    <span class="icon-field-colour">· {color || "no colour"}</span>
+  {/if}
   <span style="margin-left:auto;display:flex"><Icon body={NAV.chevron} size={11} color="var(--faint)" /></span>
 </button>
 
@@ -48,7 +62,7 @@
   <div class="pop icon-pop" role="dialog" aria-label="Icon and colour" bind:this={panel}
        style="left:{at.left}px;top:{at.top}px;width:{WIDTH}px">
     <div class="icon-groups">
-      {#each Object.entries(BUCKET_ICON_GROUPS) as [group, set] (group)}
+      {#each groups as [group, set] (group)}
         <span class="menu-head">{NAMES[group]}</span>
         <div class="icon-grid">
           {#each Object.keys(set) as name (name)}
@@ -60,13 +74,28 @@
         </div>
       {/each}
     </div>
-    <div class="icon-colours">
-      <button class="swatch" class:on={!color} title="No colour" aria-label="No colour"
-              onclick={() => onpick({ color: "" })}></button>
-      {#each Object.entries(BUCKET_COLOURS) as [name, hex] (name)}
-        <button class="swatch" class:on={color === name} title={name} aria-label={name}
-                style="background:{hex};border-color:{hex}" onclick={() => onpick({ color: name })}></button>
-      {/each}
-    </div>
+    {#if looks.colourMode !== "off"}
+      <div class="icon-colours">
+        <button class="swatch" class:on={!color} title="No colour" aria-label="No colour"
+                onclick={() => onpick({ color: "" })}></button>
+        {#each colours as [name, value] (name)}
+          <button class="swatch" class:on={color === name} title={name} aria-label={name}
+                  style="background:{value};border-color:{value}" onclick={() => onpick({ color: name })}></button>
+        {/each}
+        {#if own}
+          <button class="swatch on" title={own} aria-label={own}
+                  style="background:{own};border-color:{own}"></button>
+        {/if}
+        {#if looks.colourMode === "hex"}
+          <!-- Any colour that reads on a card; the server says when one does not. -->
+          <form class="icon-hex" onsubmit={(e) => { e.preventDefault(); onpick({ color: hex.trim().toLowerCase() }); }}>
+            <span class="swatch" style="background:{colourOf(hex.trim().toLowerCase()) || "none"}"></span>
+            <input class="input" aria-label="Hex colour" placeholder="#rrggbb" maxlength="7"
+                   spellcheck="false" bind:value={hex} />
+            <button class="btn small" disabled={!colourOf(hex.trim().toLowerCase())}>Use</button>
+          </form>
+        {/if}
+      </div>
+    {/if}
   </div>
 {/if}

@@ -17,6 +17,7 @@ func (s *Server) routes() {
 	s.handle("GET /api/instance", s.getInstance)
 	s.handle("POST /api/instance/bootstrap", s.bootstrap)
 	s.handle("GET /api/instance/updates", s.getUpdates)
+	s.handle("PUT /api/instance/appearance", s.setAppearance)
 	s.handle("POST /api/auth/signin", s.signIn)
 	s.handle("POST /api/auth/signout", s.signOut)
 	s.handle("GET /api/auth/session", s.session)
@@ -119,13 +120,28 @@ func (s *Server) getInstance(w http.ResponseWriter, r *http.Request, a core.Acto
 	if err != nil {
 		return nil, err
 	}
+	ap, err := s.svc.Appearance(r.Context())
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
 		"needsBootstrap": needs,
 		"bucketIcons":    store.BucketIcons,
 		"bucketColors":   store.BucketColours,
+		"appearance":     ap,
 		"hiddenTabGrace": s.HiddenTabGrace.Milliseconds(),
 		"imageMaxSize":   s.MaxImage,
 	}, nil
+}
+
+// setAppearance hides icon groups and colours from pickers and picks the
+// colour mode (DEV-79).
+func (s *Server) setAppearance(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	var in core.AppearancePatch
+	if err := decode(r, &in); err != nil {
+		return nil, err
+	}
+	return s.svc.SetAppearance(r.Context(), a, in)
 }
 
 // getUpdates says which version this is and whether a newer release exists.
