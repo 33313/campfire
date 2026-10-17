@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { NAV, PRIORITY, BUCKET_ICONS, ICON_COLOURS, BUCKET_COLOURS }
+import { NAV, PRIORITY, BUCKET_ICON_GROUPS, BUCKET_ICONS, BUCKET_COLOURS }
   from "../internal/web/src/lib/icons.js";
 
 // The glyph sets, checked as data. Three header actions once shared one mark,
@@ -21,22 +21,32 @@ test("no two glyphs in a set share their path data", () => {
   }
 });
 
-test("the bucket sets are the fixed eight, and every one has a colour", () => {
-  const icons = ["check", "bug", "bookmark", "page", "pen", "wrench", "lens", "flag"];
-  expect(Object.keys(BUCKET_ICONS)).toEqual(icons); // DESIGN.md §4, in order
-  expect(Object.keys(ICON_COLOURS).sort()).toEqual([...icons].sort());
+// The keys are stored on every bucket and named by the API, so they match
+// store.BucketIcons and store.BucketColours, in order (DESIGN.md §4).
+test("the bucket sets are the built-in groups and colours, in order", () => {
+  expect(Object.keys(BUCKET_ICON_GROUPS)).toEqual(["planning", "signals", "work", "places"]);
+  expect(Object.keys(BUCKET_ICONS)).toEqual([
+    "flag", "bookmark", "milestone", "target", "rocket", "hourglass", "chart", "inbox", "archive", "trophy",
+    "lens", "bolt", "star", "sparkle", "bell", "heart", "chat", "bulb", "coin", "key", "lock",
+    "check", "bug", "wrench", "pen", "page", "code", "terminal", "database", "beaker", "box", "layers",
+    "flame", "tent", "mountain", "leaf", "sun", "moon", "globe", "map", "anchor", "home",
+  ]);
+  expect(Object.keys(BUCKET_COLOURS)).toEqual([
+    "amber", "straw", "olive", "moss", "sage", "teal", "sky", "steel",
+    "dusk", "plum", "mauve", "rose", "rust", "sand", "stone", "slate",
+  ]);
 });
 
 test("every glyph is well-formed and off no colour but the token list", () => {
   const hex = /^#[0-9a-f]{6}$/;
   for (const body of [...Object.values(NAV), ...Object.values(BUCKET_ICONS)]) {
-    expect(body).toMatch(/^<(path|rect|circle)\b/);
+    expect(body).toMatch(/^<(path|rect|circle|ellipse)\b/);
     // Round caps are off-language (DESIGN.md §1), and a glyph never carries
     // its own colour: the component that draws it decides.
     expect(body).not.toContain("round");
     expect(body).not.toContain("fill=");
   }
-  for (const value of [...Object.values(ICON_COLOURS), ...Object.values(BUCKET_COLOURS)]) {
+  for (const value of Object.values(BUCKET_COLOURS)) {
     expect(value).toMatch(hex);
   }
 });

@@ -7,25 +7,24 @@ import (
 )
 
 type Team struct {
-	ID            int64  `json:"id"`
-	Name          string `json:"name"`
-	ShortCode     string `json:"shortCode"`
-	IconRendering string `json:"iconRendering"` // "mono" or "colour"
-	Avatar        string `json:"avatar,omitempty"`
-	Description   string `json:"description,omitempty"`
-	NextNumber    int64  `json:"-"`
-	ArchivedAt    int64  `json:"archivedAt,omitempty"`
-	CreatedAt     int64  `json:"createdAt"`
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	ShortCode   string `json:"shortCode"`
+	Avatar      string `json:"avatar,omitempty"`
+	Description string `json:"description,omitempty"`
+	NextNumber  int64  `json:"-"`
+	ArchivedAt  int64  `json:"archivedAt,omitempty"`
+	CreatedAt   int64  `json:"createdAt"`
 }
 
-const teamColumns = `id, name, short_code, icon_rendering, avatar, description, next_number,
+const teamColumns = `id, name, short_code, avatar, description, next_number,
 	archived_at, created_at`
 
 func scanTeam(row interface{ Scan(...any) error }) (Team, error) {
 	var t Team
 	var archived sql.NullInt64
 	var avatar, description sql.NullString
-	err := row.Scan(&t.ID, &t.Name, &t.ShortCode, &t.IconRendering, &avatar, &description,
+	err := row.Scan(&t.ID, &t.Name, &t.ShortCode, &avatar, &description,
 		&t.NextNumber, &archived, &t.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Team{}, ErrNotFound
@@ -36,14 +35,11 @@ func scanTeam(row interface{ Scan(...any) error }) (Team, error) {
 }
 
 func CreateTeam(ctx context.Context, q Q, t Team) (int64, error) {
-	if t.IconRendering == "" {
-		t.IconRendering = "mono"
-	}
 	res, err := q.ExecContext(ctx, `
 		INSERT INTO teams (name, name_folded, short_code, short_code_folded,
-		                   icon_rendering, next_number, created_at)
-		VALUES (?, ?, ?, ?, ?, 1, ?)`,
-		t.Name, Fold(t.Name), t.ShortCode, Fold(t.ShortCode), t.IconRendering, t.CreatedAt)
+		                   next_number, created_at)
+		VALUES (?, ?, ?, ?, 1, ?)`,
+		t.Name, Fold(t.Name), t.ShortCode, Fold(t.ShortCode), t.CreatedAt)
 	if err != nil {
 		return 0, err
 	}
@@ -83,11 +79,6 @@ func RenameTeam(ctx context.Context, q Q, id int64, name string) error {
 	// NOT change (SPEC.md §5.3).
 	_, err := q.ExecContext(ctx, `UPDATE teams SET name = ?, name_folded = ? WHERE id = ?`,
 		name, Fold(name), id)
-	return err
-}
-
-func SetIconRendering(ctx context.Context, q Q, id int64, rendering string) error {
-	_, err := q.ExecContext(ctx, `UPDATE teams SET icon_rendering = ? WHERE id = ?`, rendering, id)
 	return err
 }
 

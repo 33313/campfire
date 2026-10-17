@@ -93,11 +93,6 @@ CREATE TABLE teams (
     name_folded      TEXT    NOT NULL,
     short_code       TEXT    NOT NULL,
     short_code_folded TEXT   NOT NULL,
-    -- Which rendering of the fixed bucket icon set this team's surfaces use
-    -- (SPEC.md §6.2). Presentation only; it never changes which icon a bucket
-    -- carries.
-    icon_rendering   TEXT    NOT NULL DEFAULT 'mono'
-                     CHECK (icon_rendering IN ('mono', 'colour')),
     -- One counter per team, shared by tickets and buckets (SPEC.md §6.3).
     next_number      INTEGER NOT NULL DEFAULT 1,
     -- A picture and a paragraph for the team's profile page. Nothing reads them.

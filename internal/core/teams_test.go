@@ -102,7 +102,6 @@ func TestOnlyTeamAdministratorsChangeATeam(t *testing.T) {
 	f.join(team, marta, "member")
 
 	requireCode(t, f.RenameTeam(f.ctx, marta, team.ID, "Renamed"), CodeForbidden)
-	requireCode(t, f.SetIconRendering(f.ctx, marta, team.ID, "colour"), CodeForbidden)
 	requireCode(t, f.SetMember(f.ctx, marta, team.ID, marta.UserID, "admin"), CodeForbidden)
 	if _, err := f.CreateWorkState(f.ctx, marta, team.ID, "Blocked", ""); err == nil {
 		t.Fatal("a member added a work state")
@@ -141,26 +140,6 @@ func TestRolesAreIndependentPerTeam(t *testing.T) {
 		t.Fatalf("team administrator refused in their own team: %v", err)
 	}
 	requireCode(t, f.RenameTeam(f.ctx, marta, ter.ID, "Terra II"), CodeForbidden)
-}
-
-// SPEC.md §6.2: which rendering is in force is presentation. It is a per-team
-// choice, like the team's work states.
-func TestIconRenderingIsPerTeam(t *testing.T) {
-	f := newFixture(t)
-	sol := f.team("Solstice", "SOL", f.admin)
-	ter := f.team("Terra", "TER", f.admin)
-	if err := f.SetIconRendering(f.ctx, f.admin, sol.ID, "colour"); err != nil {
-		t.Fatal(err)
-	}
-	got, _ := f.Team(f.ctx, f.admin, sol.ID)
-	if got.IconRendering != "colour" {
-		t.Fatalf("SOL rendering %q", got.IconRendering)
-	}
-	other, _ := f.Team(f.ctx, f.admin, ter.ID)
-	if other.IconRendering != "mono" {
-		t.Fatalf("TER rendering changed to %q", other.IconRendering)
-	}
-	requireCode(t, f.SetIconRendering(f.ctx, f.admin, sol.ID, "rainbow"), CodeInvalid)
 }
 
 // A team's picture and description are a team administrator's to write, and

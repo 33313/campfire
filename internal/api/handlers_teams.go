@@ -27,7 +27,7 @@ func (s *Server) getTeam(w http.ResponseWriter, r *http.Request, a core.Actor) (
 	return s.svc.Team(r.Context(), a, id)
 }
 
-// updateTeam changes the name, the icon rendering, the picture and the
+// updateTeam changes the name, the picture and the
 // description. The short code is not here: it is set at creation and MUST NOT
 // change (SPEC.md §5.3).
 func (s *Server) updateTeam(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
@@ -36,21 +36,15 @@ func (s *Server) updateTeam(w http.ResponseWriter, r *http.Request, a core.Actor
 		return nil, err
 	}
 	var in struct {
-		Name          *string
-		IconRendering *string
-		Avatar        *string
-		Description   *string
+		Name        *string
+		Avatar      *string
+		Description *string
 	}
 	if err := decode(r, &in); err != nil {
 		return nil, err
 	}
 	if in.Name != nil {
 		if err := s.svc.RenameTeam(r.Context(), a, id, *in.Name); err != nil {
-			return nil, err
-		}
-	}
-	if in.IconRendering != nil {
-		if err := s.svc.SetIconRendering(r.Context(), a, id, *in.IconRendering); err != nil {
 			return nil, err
 		}
 	}

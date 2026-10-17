@@ -99,7 +99,7 @@ func TestBucketGetsTheDefaultIconAndOnlyKnownIcons(t *testing.T) {
 	if b.Icon != store.DefaultBucketIcon {
 		t.Fatalf("a new bucket carries icon %q", b.Icon)
 	}
-	bad := "rocket"
+	bad := "unicorn"
 	_, err := w.UpdateItem(w.ctx, w.marta, b.ID, ItemPatch{Icon: &bad})
 	requireCode(t, err, CodeInvalid)
 }

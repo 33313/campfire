@@ -260,8 +260,7 @@
                          beside it; the row click still focuses the ticket. -->
                     <a style="display:flex;align-items:center;gap:6px;color:var(--text)"
                        href="/{item.bucketIdentifier}" onclick={(e) => e.stopPropagation()}>
-                      <BucketIcon name={item.bucketIcon} size={11} rendering={team.iconRendering}
-                                  color={item.bucketColor} />
+                      <BucketIcon name={item.bucketIcon} size={11} color={item.bucketColor} />
                       <span style="font-size:12px">{item.bucketTitle}</span>
                     </a>
                   {:else}
@@ -291,7 +290,7 @@
 
       {#if focused}
         <ItemPreview item={focused.item} comments={focused.comments} history={focused.history}
-                     rendering={team.iconRendering} onclose={() => (focused = null)}
+                     onclose={() => (focused = null)}
                      onchange={() => load()} />
       {/if}
     </div>

@@ -11,7 +11,7 @@
   import { byUse, usedBucket } from "../lib/options.js";
   import BucketIcon from "./BucketIcon.svelte";
 
-  let { value = 0, rendering = "mono", invalid = false, label = "Bucket", onpick } = $props();
+  let { value = 0, invalid = false, label = "Bucket", onpick } = $props();
 
   let all = $state([]);
   buckets().then((list) => (all = byUse(list)));
@@ -90,7 +90,7 @@
 
 <div class="bucket-picker">
   {#if chosen}
-    <span class="bucket-picker-icon"><BucketIcon name={chosen.icon} size={13} {rendering} color={chosen.color} /></span>
+    <span class="bucket-picker-icon"><BucketIcon name={chosen.icon} size={13} color={chosen.color} /></span>
   {/if}
   <input class="input" class:error={invalid} class:iconed={!!chosen} bind:this={input} bind:value={text}
          aria-label={label} placeholder="None" autocomplete="off" spellcheck="false"
@@ -106,7 +106,7 @@
       <button class="search-suggestion" class:on={i === active} role="option" aria-selected={i === active}
               onmousedown={(e) => { e.preventDefault(); pick(b); }} onmouseenter={() => (active = i)}>
         {#if b.id}
-          <BucketIcon name={b.icon} size={13} {rendering} color={b.color} />
+          <BucketIcon name={b.icon} size={13} color={b.color} />
           <span class="ident">{b.identifier}</span>
           <span class="title">{b.title}</span>
         {:else}
