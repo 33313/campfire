@@ -5,6 +5,12 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v0.14.1 - 2026-10-17
+
+### Fixed
+
+- In Firefox and Safari the caret is the browser's own again, blinking at the desktop's pace; the drawn one jumped ahead where a line wrapped after a hyphen
+
 ## v0.14.0 - 2026-10-17
 
 ### Added
