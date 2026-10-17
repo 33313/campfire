@@ -99,11 +99,17 @@
   // A field patch leaves edit mode alone: the pickers patch while the title and
   // description drafts are still open, and collapsing the editor would discard
   // them.
-  async function patch(body) {
-    try {
-      item = await api.updateItem(item.id, { ...body, version: item.version });
-      await load();
-    } catch (err) { failure(err); }
+  // One at a time, each with the version the last one returned: the icon
+  // picker sends an icon and a colour as fast as they are clicked, and the
+  // second would otherwise carry a stale version and be refused.
+  let patching = Promise.resolve();
+  function patch(body) {
+    return (patching = patching.then(async () => {
+      try {
+        item = await api.updateItem(item.id, { ...body, version: item.version });
+        await load();
+      } catch (err) { failure(err); }
+    }));
   }
 
   const guard = async (fn) => {
