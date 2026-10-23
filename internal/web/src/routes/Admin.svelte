@@ -4,7 +4,7 @@
   import { api } from "../lib/api.js";
   import { navigate } from "../lib/router.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
-  import { openModal, failure } from "../lib/ui.svelte.js";
+  import { openModal, failure, toast } from "../lib/ui.svelte.js";
   import { newTeam } from "../lib/teams.js";
   import { when, ago } from "../lib/format.js";
   import { NAV, BUCKET_ICON_GROUPS, BUCKET_ICONS, BUCKET_COLOURS } from "../lib/icons.js";
@@ -28,38 +28,35 @@
     { id: "backup", label: "Backup and restore" },
     { id: "agents", label: "Agent access" },
     { id: "updates", label: "Updates" },
-    { id: "github", label: "GitHub" },
+    { id: "forges", label: "Pull requests" },
     { id: "log", label: "Global log", onclick: () => navigate("/log") },
   ];
 
-  // A round trip through GitHub comes back to its section, saying what went
-  // wrong when something did.
   const query = new URLSearchParams(location.search);
   let tab = $state(query.get("tab") || "users");
-  let returned = $state(query.get("error"));
   if (query.size) history.replaceState(history.state, "", location.pathname);
   let users = $state([]);
   let teams = $state([]);
   let snapshots = $state(null);
   let tokens = $state([]);
   let updates = $state(null);
-  let github = $state(null);
+  let forges = $state(null);
   let error = $state(null);
   let loaded = $state(false);
 
   async function load() {
     try {
-      [users, teams, snapshots, tokens, updates, github] = await Promise.all([
+      [users, teams, snapshots, tokens, updates, forges] = await Promise.all([
         api.listUsers(), api.listTeams(true),
         api.listSnapshots().catch(() => null),
         api.listAgentTokens(0).catch(() => []),
         api.getUpdates().catch(() => null),
-        api.getGitHub().catch(() => null),
+        api.listForges().catch(() => null),
       ]);
       loaded = true;
-      // A newly linked account has never been read: read it now, once.
-      for (const i of (github?.apps || []).flatMap((app) => app.installations)) {
-        if (!i.syncedAt && !autoSynced.has(i.id)) { autoSynced.add(i.id); sync(i); }
+      // A new forge has never been read: read it now, once.
+      for (const f of forges || []) {
+        if (!f.syncedAt && !autoSynced.has(f.id)) { autoSynced.add(f.id); sync(f); }
       }
       error = null;
     } catch (err) {
@@ -123,41 +120,94 @@
     if (ok) try { await api.deleteIconSet(set.id); await reloadSets(); } catch (err) { failure(err); }
   }
 
-  // GitHub (DEV-13).
-  let org = $state("");
-  let publicApp = $state(false);
+  // Forges (DEV-114).
+  const FORGES = {
+    github: { name: "GitHub", token: "Token scope: pull requests read (classic: repo).",
+      hook: "Add the webhook to an organisation or repository (Settings → Webhooks), with Pull requests events. GitHub has none for personal accounts: poll those." },
+    forgejo: { name: "Forgejo or Gitea", token: "Token scopes: read:repository, read:user.",
+      hook: "Add the webhook under Settings → Webhooks on your profile, an organisation or a repository, with Pull request events." },
+    gitlab: { name: "GitLab", token: "Token scope: read_api.",
+      hook: "Add the webhook to a project or group (Settings → Webhooks), with Merge request events." },
+  };
+  // What the form offers: the hosted forges, at their own address, and the
+  // self-hosted ones, at the one you give.
+  const CHOICES = [
+    { id: "github", kind: "github", name: "GitHub", url: "https://github.com" },
+    { id: "gitlab", kind: "gitlab", name: "GitLab", url: "https://gitlab.com" },
+    { id: "codeberg", kind: "forgejo", name: "Codeberg", url: "https://codeberg.org" },
+    { id: "forgejo", kind: "forgejo", name: "Forgejo or Gitea" },
+    { id: "gitlab-own", kind: "gitlab", name: "GitLab, self-hosted" },
+    { id: "github-own", kind: "github", name: "GitHub Enterprise" },
+  ];
+  // GitHub and GitLab are polled or send webhooks. Forgejo takes webhooks
+  // everywhere, profiles included, so it only sends them.
+  const pollable = (kind) => kind !== "forgejo";
+  let choice = $state(CHOICES[0]);
+  let forgeURL = $state("");
+  let forgeToken = $state("");
+  let mode = $state("poll");
+  let pollMinutes = $state(5);
   let syncing = $state({});
   const autoSynced = new Set();
-  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+  const hookOf = (f) => `${location.origin}/api/forges/${f.id}/webhook`;
+  const copy = (text) => { navigator.clipboard?.writeText(text); toast("Copied"); };
 
-  // GitHub creates the app from a manifest posted by the browser, and sends
-  // it back here with the credentials to collect.
-  async function createApp() {
-    const out = await api.createGitHubApp(org.trim(), publicApp).catch(failure);
-    if (!out) return;
-    const form = Object.assign(document.createElement("form"), { method: "post", action: out.action });
-    form.append(Object.assign(document.createElement("input"), { type: "hidden", name: "manifest", value: out.manifest }));
-    document.body.append(form);
-    form.submit();
+  const nameOf = (f) => CHOICES.find((c) => c.kind === f.kind && c.url === f.url)?.name || FORGES[f.kind].name;
+
+  async function addForge(e) {
+    e.preventDefault();
+    try {
+      const how = pollable(choice.kind) ? mode : "webhook";
+      const f = await api.addForge({ kind: choice.kind, mode: how, url: choice.url || forgeURL,
+        token: forgeToken, pollMinutes: how === "poll" ? pollMinutes : 0 });
+      forgeToken = "";
+      await load();
+      if (f.webhookSecret) showSecret(f, f.webhookSecret);
+    } catch (err) { failure(err); }
   }
 
-  async function sync(i) {
-    syncing[i.id] = true;
-    try { await api.syncInstallation(i.id); await load(); } catch (err) { failure(err); }
-    delete syncing[i.id];
-  }
-
-  async function forgetApp(app) {
-    const ok = await openModal(ConfirmDialog, {
-      title: `Forget ${app.slug}`,
-      lines: ["Its pull requests stop arriving, and the accounts linked through it are unlinked. " +
-        "Those already listed stay on their items.", "The app stays on GitHub until you delete it there."],
-      consequence: "Creating it again starts over", action: "Forget",
+  // The webhook secret is shown once; rotating makes a new one.
+  function showSecret(f, secret) {
+    return openModal(ShowOnceDialog, {
+      title: "Webhook secret",
+      explain: `Shown once. Use it with ${hookOf(f)}.`,
+      value: secret,
     });
-    if (ok) guard(() => api.deleteGitHubApp(app.id));
   }
 
-  const kindOf = (i) => (i.accountType === "Organization" ? "organisation" : "account");
+  async function rotate(f) {
+    const ok = await openModal(ConfirmDialog, {
+      title: `New secret for ${f.url}`,
+      lines: ["The current secret stops working. Put the new one in the forge's webhook."],
+      consequence: "Deliveries fail until you do", action: "Rotate",
+    });
+    if (!ok) return;
+    try { showSecret(f, (await api.rotateForgeSecret(f.id)).webhookSecret); } catch (err) { failure(err); }
+  }
+
+  async function sync(f) {
+    syncing[f.id] = true;
+    try { await api.syncForge(f.id); await load(); } catch (err) { failure(err); }
+    delete syncing[f.id];
+  }
+
+  async function newToken(f) {
+    const res = await openModal(FormDialog, {
+      title: `New token for ${f.url}`, action: "Replace",
+      fields: [{ name: "token", label: "Access token", type: "password", explain: FORGES[f.kind].token }],
+    });
+    if (res) guard(() => api.setForgeToken(f.id, res.token));
+  }
+
+  async function removeForge(f) {
+    const ok = await openModal(ConfirmDialog, {
+      title: `Remove ${f.url}`,
+      lines: ["Its pull requests stop arriving. Those already listed stay on their items.",
+        "Delete its webhook there, and revoke the token."],
+      consequence: "Adding it again makes a new webhook", action: "Remove",
+    });
+    if (ok) guard(() => api.deleteForge(f.id));
+  }
 
   const usernameOf = (id) => users.find((u) => u.id === id)?.username || `user ${id}`;
 
@@ -499,89 +549,87 @@
             {/snippet}
           </Section>
 
-        {:else if tab === "github"}
-          <Section title="GitHub" sub={github?.apps.length ? `${github.apps.length} apps` : "off"}>
+        {:else if tab === "forges"}
+          <Section title="Pull requests" sub={forges?.length ? `${forges.length} ${forges.length === 1 ? "forge" : "forges"}` : "off"}>
             {#snippet children()}
-              {#if returned}<p class="explain" style="color:var(--alert)">{returned}</p>{/if}
-              {#if !github}
-                <p class="explain">GitHub is unavailable.</p>
+              {#if !forges}
+                <p class="explain">Forges are unavailable.</p>
               {:else}
                 <p class="explain">
-                  A pull request whose title starts or ends with an identifier, as in
-                  <code>DEV-12: fix it</code> or <code>fix it [DEV-12]</code>, is listed on that item with
-                  its state. Campfire reads them through GitHub Apps of its own, private repositories
-                  included: one per organisation or account, installed there.
+                  Links pull requests to tickets automatically: start or end a title with the ticket, as in
+                  <code>DEV-12: fix it</code>.
                 </p>
-                {#if loopback}
-                  <p class="explain">
-                    GitHub can't reach {location.host}, so an app created here has no webhook, and its pull
-                    requests arrive only when you sync. Create apps from the instance's public address to get
-                    them as they happen.
-                  </p>
-                {:else if github.apps.length}
-                  <p class="explain">Deliveries go to <code>{github.webhook}</code>.</p>
-                {/if}
 
-                {#each github.apps as app (app.id)}
+                {#each forges as f (f.id)}
                   <div style="display:flex;align-items:center;gap:8px;margin:18px 0 6px">
-                    <a href={app.htmlUrl} target="_blank" rel="noopener">{app.slug}</a>
-                    <span class="explain">
-                      owned by {app.owner} · {app.public ? "public" : "private"}{app.webhook ? "" : " · no webhook, Sync to update"}
+                    <a href={f.url} target="_blank" rel="noopener">{f.url}</a>
+                    <span class="explain" title={f.syncError || ""}>
+                      {nameOf(f)} · as {f.account} · {f.mode === "poll" ? `polled every ${f.pollMinutes} min` : "webhook"} ·
+                      {syncing[f.id] ? "syncing…" : f.syncError ? `sync failed: ${f.syncError}` : f.syncedAt ? `synced ${ago(f.syncedAt)}` : "not synced yet"}
                     </span>
                     <span style="margin-left:auto"></span>
-                    <button class="btn quiet small" onclick={() => location.assign(`/api/github/apps/${app.id}/install`)}>
-                      {app.public ? "Install on an account" : "Install"}
-                    </button>
-                    <button class="btn quiet small" onclick={() => forgetApp(app)}>Forget</button>
+                    <button class="btn quiet small" disabled={syncing[f.id]} onclick={() => sync(f)}>Sync</button>
+                    <button class="btn quiet small" onclick={() => newToken(f)}>New token</button>
+                    <button class="btn quiet small" onclick={() => removeForge(f)}>Remove</button>
                   </div>
-                  {#if app.error}<p class="explain">GitHub did not answer: {app.error}</p>{/if}
-                  <table class="table">
-                    <tbody>
-                      {#each app.installations as i (i.id)}
+                  {#if f.mode === "webhook"}
+                    <table class="table">
+                      <tbody>
                         <tr>
-                          <td>{i.account}</td>
-                          <td class="explain" style="width:120px">{kindOf(i)}</td>
-                          <td class="explain" style="width:240px" title={i.syncError || ""}>
-                            {syncing[i.id] ? "syncing…" : i.syncError ? `sync failed: ${i.syncError}` : i.syncedAt ? `synced ${ago(i.syncedAt)}` : "not synced yet"}
-                          </td>
-                          <td style="width:150px">
-                            <button class="btn quiet small" disabled={syncing[i.id]} onclick={() => sync(i)}>Sync</button>
-                            <button class="btn quiet small" onclick={() => guard(() => api.unlinkInstallation(i.id))}>Unlink</button>
-                          </td>
+                          <td class="explain" style="width:120px">Webhook</td>
+                          <td><code>{hookOf(f)}</code></td>
+                          <td style="width:80px"><button class="btn quiet small" onclick={() => copy(hookOf(f))}>Copy</button></td>
                         </tr>
-                      {/each}
-                      {#each app.available as i (i.id)}
                         <tr>
-                          <td>{i.account}</td>
-                          <td class="explain" style="width:120px">{kindOf(i)}</td>
-                          <td class="explain" style="width:240px">installed, not linked</td>
-                          <td style="width:150px">
-                            <button class="btn quiet small" onclick={() => guard(() => api.linkInstallation(i.id))}>Link</button>
-                          </td>
+                          <td class="explain">Secret</td>
+                          <td class="explain">shown once</td>
+                          <td><button class="btn quiet small" onclick={() => rotate(f)}>Rotate</button></td>
                         </tr>
-                      {/each}
-                      {#if !app.installations.length && !app.available.length}
-                        <tr><td colspan="4"><div class="empty-note">Not installed yet.</div></td></tr>
-                      {/if}
-                    </tbody>
-                  </table>
+                      </tbody>
+                    </table>
+                    <p class="explain" style="margin-top:6px">{FORGES[f.kind].hook}</p>
+                  {/if}
                 {/each}
 
-                <div style="margin-top:22px">
-                  <span class="field-label">{github.apps.length ? "Add an app for another organisation or account" : "Create a GitHub App"}</span>
-                  <div style="display:flex;gap:12px;align-items:center;margin-top:8px">
-                    <input class="input" style="width:240px" placeholder="Organisation, or blank for your account"
-                           aria-label="Organisation to own the app" bind:value={org} />
-                    <label class="explain" style="display:flex;gap:6px;align-items:center">
-                      <input type="checkbox" bind:checked={publicApp} /> Public: installable on any account
-                    </label>
-                    <button class="btn primary small" onclick={createApp}>Create on GitHub</button>
+                <form style="margin-top:22px" onsubmit={addForge}>
+                  <span class="field-label">{forges.length ? "Add another forge" : "Add a forge"}</span>
+                  <div style="display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap">
+                    <select class="input" style="width:200px" aria-label="Kind of forge"
+                            value={choice.id} onchange={(e) => (choice = CHOICES.find((c) => c.id === e.currentTarget.value))}>
+                      <optgroup label="Hosted">
+                        {#each CHOICES.filter((c) => c.url) as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
+                      </optgroup>
+                      <optgroup label="Self-hosted">
+                        {#each CHOICES.filter((c) => !c.url) as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
+                      </optgroup>
+                    </select>
+                    {#if !choice.url}
+                      <input class="input" style="width:240px" aria-label="Address" placeholder="https://git.example.com"
+                             bind:value={forgeURL} />
+                    {/if}
+                    <input class="input" style="width:240px" type="password" aria-label="Access token"
+                           placeholder="Access token" autocomplete="off" bind:value={forgeToken} />
+                    <button class="btn primary small" disabled={!(choice.url || forgeURL) || !forgeToken}>Add</button>
                   </div>
-                  <p class="explain" style="margin-top:8px">
-                    A private app installs only on the organisation or account that owns it. Creating one
-                    for an organisation needs its owner.
-                  </p>
-                </div>
+                  {#if pollable(choice.kind)}
+                    <div class="explain" style="display:flex;gap:6px;align-items:center;margin-top:8px">
+                      Updates by
+                      <select class="input" style="width:120px" aria-label="How it updates" bind:value={mode}>
+                        <option value="poll">Polling</option>
+                        <option value="webhook">Webhook</option>
+                      </select>
+                      {#if mode === "poll"}
+                        every
+                        <input class="input" style="width:64px" type="number" min="1" max="1440"
+                               aria-label="Minutes between checks" bind:value={pollMinutes} />
+                        minutes
+                      {:else if choice.kind === "github"}
+                        — for organisations and repositories; GitHub has none for personal accounts.
+                      {/if}
+                    </div>
+                  {/if}
+                  <p class="explain" style="margin-top:8px">{FORGES[choice.kind].token}</p>
+                </form>
               {/if}
             {/snippet}
           </Section>

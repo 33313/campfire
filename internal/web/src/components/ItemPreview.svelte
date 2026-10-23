@@ -248,7 +248,7 @@
       <div><RelationList relations={it.relations} compact /></div>
     </div>
   {/if}
-  <!-- Only where GitHub has linked some (DEV-13): an instance without it
+  <!-- Only where a forge has linked some (DEV-114): an instance without it
        never sees the field. -->
   {#if it.pullRequests?.length}
     <div class="aside-field">

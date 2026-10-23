@@ -430,17 +430,17 @@ any transition.
 
 ### 8.3 Pull requests
 
-An instance MAY be connected to GitHub through GitHub Apps of its own, created from a manifest by
-an instance administrator, each installed on the account or organisation it serves; a private app
-installs only on its owner, a public one anywhere. A pull request in a repository an app can read
-is listed on every item its title names — identifiers at the start or the end of the title, bare
-or in brackets — with its state: open, draft, merged or closed. Forgetting an app unlinks the
-accounts linked through it.
+An instance MAY be connected to forges — GitHub, Forgejo (or Gitea) and GitLab — by an instance
+administrator, each with an access token, and either polled at an interval of the administrator's
+choosing or sent changes by a webhook whose secret the instance makes. A pull request (a merge
+request, on GitLab) in a repository the token can read is listed on every item its title names —
+identifiers at the start or the end of the title, bare or in brackets — with its state: open, draft,
+merged or closed.
 
 The title is the whole link. Retitling a pull request moves it; one that names nothing is not kept.
 A pull request MUST NOT change an item's state: like a relation, it is information. Its link and
-its state changes are written to the item's history with no actor. Deliveries from an installation
-that is not linked are ignored. Unlinking an account keeps what it already listed.
+its state changes are written to the item's history with no actor. Deliveries for a forge that is
+not connected are refused. Removing a forge keeps what it already listed.
 
 ---
 

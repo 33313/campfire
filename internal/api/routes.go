@@ -97,17 +97,14 @@ func (s *Server) routes() {
 	s.handle("POST /api/snapshots", s.createSnapshot)
 	s.handle("POST /api/restore", s.restoreSnapshot)
 
-	// GitHub (DEV-13).
-	s.handle("GET /api/github", s.getGitHub)
-	s.handle("POST /api/github/apps", s.createGitHubApp)
-	s.handle("DELETE /api/github/apps/{id}", s.deleteGitHubApp)
-	s.handle("GET /api/github/apps/{id}/install", s.installGitHubApp)
-	s.handle("GET /api/github/manifest", s.gitHubManifest)
-	s.handle("GET /api/github/setup", s.gitHubSetup)
-	s.handle("PUT /api/github/installations/{id}", s.linkInstallation)
-	s.handle("DELETE /api/github/installations/{id}", s.unlinkInstallation)
-	s.handle("POST /api/github/installations/{id}/sync", s.syncInstallation)
-	s.handle("POST /api/github/webhook", s.gitHubWebhook)
+	// Forges (DEV-114).
+	s.handle("GET /api/forges", s.listForges)
+	s.handle("POST /api/forges", s.addForge)
+	s.handle("PATCH /api/forges/{id}", s.setForgeToken)
+	s.handle("DELETE /api/forges/{id}", s.deleteForge)
+	s.handle("POST /api/forges/{id}/secret", s.rotateForgeSecret)
+	s.handle("POST /api/forges/{id}/sync", s.syncForge)
+	s.handle("POST /api/forges/{id}/webhook", s.forgeWebhook)
 
 	// The audit log, and the stream that resumes from it.
 	s.handle("GET /api/log", s.log)

@@ -180,13 +180,13 @@ export const api = {
   lookupItem: (identifier) => get(`/api/lookup/${encodeURIComponent(identifier)}`),
   listLabels: () => get("/api/labels"),
 
-  // GitHub (DEV-13)
-  getGitHub: () => get("/api/github"),
-  createGitHubApp: (organization, isPublic) => post("/api/github/apps", { organization, public: isPublic }),
-  deleteGitHubApp: (id) => del(`/api/github/apps/${id}`),
-  linkInstallation: (id) => put(`/api/github/installations/${id}`),
-  unlinkInstallation: (id) => del(`/api/github/installations/${id}`),
-  syncInstallation: (id) => post(`/api/github/installations/${id}/sync`),
+  // Forges (DEV-114)
+  listForges: () => get("/api/forges"),
+  addForge: (body) => post("/api/forges", body),
+  setForgeToken: (id, token) => patch(`/api/forges/${id}`, { token }),
+  rotateForgeSecret: (id) => post(`/api/forges/${id}/secret`),
+  deleteForge: (id) => del(`/api/forges/${id}`),
+  syncForge: (id) => post(`/api/forges/${id}/sync`),
 
   // The log, and the snapshots screen
   getLog: (params) => get(`/api/log?${new URLSearchParams(params)}`),

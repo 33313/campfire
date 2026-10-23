@@ -127,7 +127,7 @@ func (s *Service) RedeemInvitation(ctx context.Context, token, username, passwor
 	}
 	var out *User
 	err := s.write(ctx, Actor{}, func(t *wtx) error {
-		l, err := store.OneTimeLinkByToken(ctx, t.Tx, auth.HashToken(token), t.now, "invite", "reset")
+		l, err := store.OneTimeLinkByToken(ctx, t.Tx, auth.HashToken(token), t.now)
 		if errors.Is(err, store.ErrNotFound) {
 			return errf(CodeNotFound, "that link is not valid any more")
 		}

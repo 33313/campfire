@@ -765,7 +765,7 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
   font-size: 12.5px; }
 .relation-row.compact { gap: 8px; padding: 6px 0; }
 .relation-row.compact .relation-kind { width: 92px; flex-basis: 92px; }
-/* A pull request's repo#number: GitHub's names keep their case. */
+/* A pull request's repo#number: a forge's names keep their case. */
 .relation-kind.pr-ref { text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--accent);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Comments and history in the preview aside. The detail view has a column to

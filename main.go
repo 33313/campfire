@@ -263,6 +263,7 @@ func serve(cfg config.Config) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
+	go apiServer.PollForges(ctx)
 	if cfg.Updates.Check {
 		go apiServer.Updates.Run(ctx)
 	} else {

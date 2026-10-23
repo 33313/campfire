@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 )
 
 // Sessions and agent tokens are credentials, not entities (SPEC.md §4, §14.2).
@@ -165,7 +164,7 @@ func ListAgentTokens(ctx context.Context, q Q, userID int64) ([]AgentToken, erro
 // link and hands it over out of band.
 type OneTimeLink struct {
 	ID        int64
-	Kind      string // "invite", "reset", or "github" for a GitHub round trip
+	Kind      string // "invite" or "reset"
 	UserID    int64  // the account a reset targets; 0 for an invitation
 	CreatedBy int64
 	CreatedAt int64
@@ -184,20 +183,14 @@ func CreateOneTimeLink(ctx context.Context, q Q, l OneTimeLink, tokenHash string
 	return res.LastInsertId()
 }
 
-// OneTimeLinkByToken finds a live link of one of the given kinds. Naming them
-// is what keeps a GitHub round trip's state from redeeming as an invitation.
-func OneTimeLinkByToken(ctx context.Context, q Q, tokenHash string, now int64, kinds ...string) (OneTimeLink, error) {
+// OneTimeLinkByToken finds a live link.
+func OneTimeLinkByToken(ctx context.Context, q Q, tokenHash string, now int64) (OneTimeLink, error) {
 	var l OneTimeLink
 	var userID, usedAt sql.NullInt64
-	args := []any{tokenHash, now}
-	for _, k := range kinds {
-		args = append(args, k)
-	}
 	err := q.QueryRowContext(ctx, `
 		SELECT id, kind, user_id, created_by, created_at, expires_at, used_at
 		FROM one_time_links
-		WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?
-		  AND kind IN (`+strings.TrimSuffix(strings.Repeat("?,", len(kinds)), ",")+`)`, args...).
+		WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?`, tokenHash, now).
 		Scan(&l.ID, &l.Kind, &userID, &l.CreatedBy, &l.CreatedAt, &l.ExpiresAt, &usedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return OneTimeLink{}, ErrNotFound

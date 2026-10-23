@@ -728,99 +728,76 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Ok" }
 
-  /api/github:
+  /api/forges:
     get:
-      operationId: getGitHub
-      summary: The instance's GitHub Apps, each with the accounts linked through it and those it is installed on but not linked to
+      operationId: listForges
+      summary: The forges pull requests are read from; never their tokens or webhook secrets
       x-agent: false
       responses:
         "200": { $ref: "#/components/responses/Ok" }
         "403": { $ref: "#/components/responses/Error" }
-
-  /api/github/apps:
     post:
-      operationId: createGitHubApp
-      summary: The form that asks GitHub to create an app from a manifest, private or public, under an organisation or the signed-in user
+      operationId: addForge
+      summary: Connect GitHub, Forgejo or GitLab with an access token, which is tried first; the answer carries the webhook secret, once
       x-agent: false
       requestBody: { $ref: "#/components/requestBodies/Json" }
       responses:
         "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
 
-  /api/github/apps/{id}:
-    delete:
-      operationId: deleteGitHubApp
-      summary: Forget an app and the accounts linked through it; pull requests stay on their items
+  /api/forges/{id}:
+    patch:
+      operationId: setForgeToken
+      summary: Replace a forge's access token, keeping its webhook
       x-agent: false
       parameters: [{ $ref: "#/components/parameters/Id" }]
-      responses:
-        "204": { description: Forgotten }
-        "403": { $ref: "#/components/responses/Error" }
-
-  /api/github/apps/{id}/install:
-    get:
-      operationId: installGitHubApp
-      summary: Redirect to GitHub to install an app on an account or organisation
-      x-agent: false
-      parameters: [{ $ref: "#/components/parameters/Id" }]
-      responses:
-        "303": { description: To GitHub }
-
-  /api/github/manifest:
-    get:
-      operationId: gitHubManifest
-      summary: Where GitHub returns once an app exists; keeps its credentials and goes on to install it
-      x-agent: false
-      responses:
-        "303": { description: To the administration screen }
-
-  /api/github/setup:
-    get:
-      operationId: gitHubSetup
-      summary: Where GitHub returns after an installation; links it when the round trip started here
-      x-agent: false
-      responses:
-        "303": { description: To the administration screen }
-
-  /api/github/installations/{id}:
-    put:
-      operationId: linkInstallation
-      summary: Link an account or organisation the app is installed on
-      x-agent: false
-      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { $ref: "#/components/requestBodies/Json" }
       responses:
         "200": { $ref: "#/components/responses/Ok" }
         "400": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
     delete:
-      operationId: unlinkInstallation
-      summary: Stop reading an account's pull requests; those already listed stay
+      operationId: deleteForge
+      summary: Stop reading a forge; pull requests stay on their items
       x-agent: false
       parameters: [{ $ref: "#/components/parameters/Id" }]
       responses:
-        "204": { description: Unlinked }
+        "204": { description: Removed }
         "403": { $ref: "#/components/responses/Error" }
 
-  /api/github/installations/{id}/sync:
+  /api/forges/{id}/secret:
     post:
-      operationId: syncInstallation
-      summary: Read back the last 90 days of an account's pull requests
+      operationId: rotateForgeSecret
+      summary: Make a new webhook secret, shown once; the old one stops working
       x-agent: false
       parameters: [{ $ref: "#/components/parameters/Id" }]
       responses:
         "200": { $ref: "#/components/responses/Ok" }
         "403": { $ref: "#/components/responses/Error" }
 
-  /api/github/webhook:
+  /api/forges/{id}/sync:
     post:
-      operationId: gitHubWebhook
-      summary: GitHub's deliveries, signed with the app's webhook secret
+      operationId: syncForge
+      summary: Read back the last 90 days of a forge's pull requests
+      x-agent: false
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /api/forges/{id}/webhook:
+    post:
+      operationId: forgeWebhook
+      summary: A forge's deliveries, signed with its webhook secret (GitLab sends the secret itself)
       x-agent: false
       security: []
+      parameters: [{ $ref: "#/components/parameters/Id" }]
       requestBody: { $ref: "#/components/requestBodies/Json" }
       responses:
         "204": { description: Taken }
         "401": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
 
   /api/log:
     get:

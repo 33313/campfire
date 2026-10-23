@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/33313/campfire/internal/core"
-	"github.com/33313/campfire/internal/github"
+	"github.com/33313/campfire/internal/forge"
 	"github.com/33313/campfire/internal/stream"
 	"github.com/33313/campfire/internal/updates"
 )
@@ -42,11 +42,11 @@ type Server struct {
 	// MaxImage bounds a pasted picture, in bytes; 0 takes none (DEV-40).
 	MaxImage int64
 	Updates  *updates.Checker
-	GitHub   *github.Client
+	Forges   *forge.Client
 }
 
 func New(svc *core.Service, bus *stream.Bus) *Server {
-	s := &Server{svc: svc, bus: bus, mux: http.NewServeMux(), GitHub: github.New()}
+	s := &Server{svc: svc, bus: bus, mux: http.NewServeMux(), Forges: forge.New()}
 	s.routes()
 	return s
 }
@@ -96,10 +96,6 @@ func (s *Server) handle(pattern string, h handler) {
 		}
 		if f, ok := body.(file); ok {
 			sendFile(w, f)
-			return
-		}
-		if to, ok := body.(redirect); ok {
-			http.Redirect(w, r, string(to), http.StatusSeeOther)
 			return
 		}
 		if body == nil {
