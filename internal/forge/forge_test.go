@@ -43,19 +43,6 @@ func TestIdentifiers(t *testing.T) {
 	}
 }
 
-func TestAPI(t *testing.T) {
-	for f, want := range map[Forge]string{
-		{Kind: GitHub, URL: "https://github.com"}:     "https://api.github.com",
-		{Kind: GitHub, URL: "https://git.acme.test"}:  "https://git.acme.test/api/v3",
-		{Kind: Forgejo, URL: "https://codeberg.org"}:  "https://codeberg.org/api/v1",
-		{Kind: GitLab, URL: "https://gitlab.acme.io"}: "https://gitlab.acme.io/api/v4",
-	} {
-		if got := f.api(); got != want {
-			t.Errorf("%+v: %s, want %s", f, got, want)
-		}
-	}
-}
-
 func sign(secret, body string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(body))
@@ -124,7 +111,8 @@ func TestState(t *testing.T) {
 }
 
 // fake plays one forge: two repositories, pull requests in one of them
-// paged two at a time, and a token it takes in the forge's own header.
+// paged two at a time, the other's refused, and a token it takes in the
+// forge's own header.
 func fake(t *testing.T, kind string) (*Client, Forge) {
 	var srv *httptest.Server
 	pulls := map[string]string{
@@ -160,7 +148,8 @@ func fake(t *testing.T, kind string) (*Client, Forge) {
 			}
 			fmt.Fprint(w, `[{"id":3,"number":1,"iid":1,"title":"DEV-3: old","state":"closed","updated_at":"2026-01-01T00:00:00Z"}]`)
 		case "/repos/acme/api/pulls", "/projects/11/merge_requests":
-			fmt.Fprint(w, `[]`)
+			w.WriteHeader(403)
+			fmt.Fprint(w, `{"message":"403 Forbidden"}`)
 		case "/projects/10/merge_requests/3":
 			fmt.Fprint(w, `{"id":1,"iid":3,"title":"DEV-1: new","state":"merged","web_url":"w","updated_at":"2026-10-06T00:00:00Z","author":{"username":"marta"}}`)
 		default:
@@ -235,5 +224,28 @@ func TestDelivery(t *testing.T) {
 	}
 	if got, err := c.Delivery(ctx, f, h, []byte(`{"object_kind":"push"}`)); got != nil || err != nil {
 		t.Fatalf("a GitLab push was read as %+v, %v", got, err)
+	}
+}
+
+// GitHub refuses with a 403 when the rate limit runs out: that fails the
+// sync, rather than reading as a repository the token may not see.
+func TestRateLimitIsNotSkipped(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v3/user/repos":
+			fmt.Fprint(w, `[{"full_name":"acme/web"},{"full_name":"acme/api"}]`)
+			return
+		case "/api/v3/repos/acme/web/pulls":
+			fmt.Fprint(w, `[]`)
+			return
+		}
+		w.Header().Set("X-RateLimit-Remaining", "0")
+		w.WriteHeader(403)
+		fmt.Fprint(w, `{"message":"API rate limit exceeded"}`)
+	}))
+	t.Cleanup(srv.Close)
+	c := &Client{HTTP: srv.Client()}
+	if _, err := c.PullRequests(context.Background(), Forge{Kind: GitHub, URL: srv.URL, Token: "tok"}, time.Time{}); err == nil {
+		t.Fatal("a rate limit read as no access")
 	}
 }

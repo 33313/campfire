@@ -38,25 +38,20 @@ func (s *Server) PollForges(ctx context.Context) {
 	}
 }
 
-// pollOnce reads each polled forge that is due from a little before its last
-// good sync: what changed since. One that never synced, or whose last sync
-// failed, is read over the whole window. How it ended shows on the
-// administration screen.
+// pollOnce reads each polled forge that is due over the whole window. That
+// costs no more requests than reading only what changed, one per repository
+// either way, and re-applying a pull request that did not change is a no-op.
+// How it ended shows on the administration screen.
 func (s *Server) pollOnce(ctx context.Context, now time.Time) {
 	forges, err := s.svc.LoadForges(ctx)
 	if err != nil {
 		return
 	}
 	for _, f := range forges {
-		last := time.UnixMicro(f.SyncedAt)
-		if f.Mode != "poll" || (f.SyncedAt != 0 && now.Sub(last) < time.Duration(f.PollMinutes)*time.Minute) {
-			continue
+		due := f.SyncedAt == 0 || now.Sub(time.UnixMicro(f.SyncedAt)) >= time.Duration(f.PollMinutes)*time.Minute
+		if f.Mode == "poll" && due {
+			s.svc.MarkSynced(ctx, f.ID, s.sync(ctx, f, now.Add(-syncWindow)))
 		}
-		since := now.Add(-syncWindow)
-		if f.SyncedAt != 0 && f.SyncError == "" {
-			since = last.Add(-10 * time.Minute)
-		}
-		s.svc.MarkSynced(ctx, f.ID, s.sync(ctx, f, since))
 	}
 }
 
@@ -92,7 +87,7 @@ func (s *Server) addForge(w http.ResponseWriter, r *http.Request, a core.Actor) 
 	if err := core.RequireInstanceAdmin(a); err != nil {
 		return nil, err
 	}
-	url, err := core.ForgeURL(in.URL)
+	url, err := core.ForgeURL(in.Kind, in.URL)
 	if err != nil {
 		return nil, err
 	}

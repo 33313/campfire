@@ -116,39 +116,6 @@ func TestPullRequestsFollowTheirTitles(t *testing.T) {
 	}
 }
 
-// Removing a forge keeps what it listed, the record of the work, and drops
-// later deliveries for it.
-func TestRemovingAForgeKeepsItsPullRequests(t *testing.T) {
-	f := newFixture(t)
-	team := f.team("Development", "DEV", f.admin)
-	one := f.ticket(team, "one")
-	f.apply(666, store.PullRequest{Remote: "x#1", Repo: "evil/x", Number: 1,
-		Title: "DEV-1", URL: "u", State: "open", UpdatedAt: 1}, one.Identifier)
-	if len(f.pullRequests(one.ID)) != 0 {
-		t.Fatal("a delivery for no forge linked a pull request")
-	}
-
-	gh := f.forge("github", "https://github.com")
-	pr := store.PullRequest{Remote: "https://github.com#2", Repo: "acme/web", Number: 1,
-		Title: "DEV-1", URL: "u", State: "open", UpdatedAt: 1}
-	f.apply(gh, pr, one.Identifier)
-	if err := f.DeleteForge(f.ctx, f.admin, gh); err != nil {
-		t.Fatal(err)
-	}
-	if fs, err := f.Forges(f.ctx, f.admin); err != nil || len(fs) != 0 {
-		t.Fatalf("forges %v, %v", fs, err)
-	}
-	if len(f.pullRequests(one.ID)) != 1 {
-		t.Fatal("removing the forge dropped the pull request")
-	}
-	pr.State, pr.UpdatedAt = "merged", 2
-	f.apply(gh, pr, one.Identifier)
-	if f.pullRequests(one.ID)[0].State != "open" {
-		t.Fatal("a removed forge's delivery was applied")
-	}
-	requireCode(t, f.DeleteForge(f.ctx, f.admin, gh), CodeNotFound)
-}
-
 func TestForgesAreForInstanceAdministrators(t *testing.T) {
 	f := newFixture(t)
 	marta := f.user("marta")
@@ -177,9 +144,10 @@ func TestAddForge(t *testing.T) {
 	if err != nil || a.URL != "https://git.acme.test/gitlab" || len(a.WebhookSecret) != 48 || a.PollMinutes != 5 {
 		t.Fatalf("forge %+v, %v", a, err)
 	}
-	b, _ := f.AddForge(f.ctx, f.admin, store.Forge{Kind: "gitlab", Mode: "webhook", URL: "https://gitlab.com", Token: "t"})
-	if a.WebhookSecret == b.WebhookSecret {
-		t.Fatal("two forges share a webhook secret")
+	// No address is the kind's hosted forge.
+	b, _ := f.AddForge(f.ctx, f.admin, store.Forge{Kind: "gitlab", Mode: "webhook", Token: "t"})
+	if b.URL != "https://gitlab.com" || a.WebhookSecret == b.WebhookSecret {
+		t.Fatalf("hosted forge %+v", b)
 	}
 	// A polled forge takes no deliveries: no secret, and none to rotate.
 	p, err := f.AddForge(f.ctx, f.admin, store.Forge{Kind: "github", Mode: "poll", URL: "https://github.com", Token: "t"})

@@ -109,7 +109,9 @@ func (c *Client) Account(ctx context.Context, f Forge) (string, error) {
 }
 
 // PullRequests reads the pull requests updated since `since` in every
-// repository the token can see.
+// repository the token can see. A repository it may list but not read pull
+// requests in (a GitLab project with merge requests off, or where the token's
+// user is a guest) is skipped; if every one is, the token is wrong for the job.
 //
 // ponytail: one request per repository and page; a token that sees thousands
 // of repositories wants a search API instead, where the forge has one.
@@ -119,6 +121,8 @@ func (c *Client) PullRequests(ctx context.Context, f Forge, since time.Time) ([]
 		return nil, err
 	}
 	var out []PullRequest
+	var denied error
+	skipped := 0
 	for _, r := range repos {
 		next := f.api() + "/repos/" + r.name + "/pulls?state=all&sort=updated&direction=desc&per_page=100"
 		switch f.Kind {
@@ -142,6 +146,12 @@ func (c *Client) PullRequests(ctx context.Context, f Forge, since time.Time) ([]
 					page = append(page, p.value(f, r.name))
 				}
 			}
+			var se *statusError
+			if errors.As(err, &se) && (se.status == 403 || se.status == 404) {
+				denied = fmt.Errorf("%s: %w", r.name, err)
+				skipped++
+				break
+			}
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", r.name, err)
 			}
@@ -153,6 +163,9 @@ func (c *Client) PullRequests(ctx context.Context, f Forge, since time.Time) ([]
 				out = append(out, pr)
 			}
 		}
+	}
+	if skipped > 0 && skipped == len(repos) {
+		return nil, denied
 	}
 	return out, nil
 }
@@ -417,13 +430,25 @@ func (c *Client) do(ctx context.Context, f Forge, url string, out any) (string, 
 		} else if e.Error != "" {
 			msg = e.Error
 		}
-		return "", fmt.Errorf("%s: %s", Names[f.Kind], msg)
+		status := res.StatusCode
+		if res.Header.Get("X-RateLimit-Remaining") == "0" || res.Header.Get("Retry-After") != "" {
+			status = http.StatusTooManyRequests // GitHub says so with a 403
+		}
+		return "", &statusError{status, Names[f.Kind] + ": " + msg}
 	}
 	if err := json.NewDecoder(bytes.NewReader(body)).Decode(out); err != nil {
 		return "", err
 	}
 	return nextPage(res.Header.Get("Link")), nil
 }
+
+// statusError is a forge's refusal, with its HTTP status.
+type statusError struct {
+	status int
+	msg    string
+}
+
+func (e *statusError) Error() string { return e.msg }
 
 var linkNext = regexp.MustCompile(`<([^>]+)>;\s*rel="next"`)
 

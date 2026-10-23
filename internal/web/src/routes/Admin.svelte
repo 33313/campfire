@@ -124,17 +124,17 @@
   const FORGES = {
     github: { name: "GitHub", token: "Token scope: pull requests read (classic: repo).",
       hook: "Add the webhook to an organisation or repository (Settings → Webhooks), with Pull requests events. GitHub has none for personal accounts: poll those." },
-    forgejo: { name: "Forgejo or Gitea", token: "Token scopes: read:repository, read:user.",
+    forgejo: { name: "Forgejo", token: "Token scopes: read:repository, read:user.",
       hook: "Add the webhook under Settings → Webhooks on your profile, an organisation or a repository, with Pull request events." },
     gitlab: { name: "GitLab", token: "Token scope: read_api.",
       hook: "Add the webhook to a project or group (Settings → Webhooks), with Merge request events." },
   };
-  // What the form offers: the hosted forges, at their own address, and the
-  // self-hosted ones, at the one you give.
+  // What the form offers: the hosted forges, whose address the server knows,
+  // and the self-hosted ones, at the one you give.
   const CHOICES = [
-    { id: "github", kind: "github", name: "GitHub", url: "https://github.com" },
-    { id: "gitlab", kind: "gitlab", name: "GitLab", url: "https://gitlab.com" },
-    { id: "codeberg", kind: "forgejo", name: "Codeberg", url: "https://codeberg.org" },
+    { id: "github", kind: "github", name: "GitHub", hosted: true },
+    { id: "gitlab", kind: "gitlab", name: "GitLab", hosted: true },
+    { id: "codeberg", kind: "forgejo", name: "Codeberg", hosted: true },
     { id: "forgejo", kind: "forgejo", name: "Forgejo or Gitea" },
     { id: "gitlab-own", kind: "gitlab", name: "GitLab, self-hosted" },
     { id: "github-own", kind: "github", name: "GitHub Enterprise" },
@@ -152,13 +152,11 @@
   const hookOf = (f) => `${location.origin}/api/forges/${f.id}/webhook`;
   const copy = (text) => { navigator.clipboard?.writeText(text); toast("Copied"); };
 
-  const nameOf = (f) => CHOICES.find((c) => c.kind === f.kind && c.url === f.url)?.name || FORGES[f.kind].name;
-
   async function addForge(e) {
     e.preventDefault();
     try {
       const how = pollable(choice.kind) ? mode : "webhook";
-      const f = await api.addForge({ kind: choice.kind, mode: how, url: choice.url || forgeURL,
+      const f = await api.addForge({ kind: choice.kind, mode: how, url: choice.hosted ? "" : forgeURL,
         token: forgeToken, pollMinutes: how === "poll" ? pollMinutes : 0 });
       forgeToken = "";
       await load();
@@ -564,7 +562,7 @@
                   <div style="display:flex;align-items:center;gap:8px;margin:18px 0 6px">
                     <a href={f.url} target="_blank" rel="noopener">{f.url}</a>
                     <span class="explain" title={f.syncError || ""}>
-                      {nameOf(f)} · as {f.account} · {f.mode === "poll" ? `polled every ${f.pollMinutes} min` : "webhook"} ·
+                      {FORGES[f.kind].name} · as {f.account} · {f.mode === "poll" ? `polled every ${f.pollMinutes} min` : "webhook"} ·
                       {syncing[f.id] ? "syncing…" : f.syncError ? `sync failed: ${f.syncError}` : f.syncedAt ? `synced ${ago(f.syncedAt)}` : "not synced yet"}
                     </span>
                     <span style="margin-left:auto"></span>
@@ -597,19 +595,19 @@
                     <select class="input" style="width:200px" aria-label="Kind of forge"
                             value={choice.id} onchange={(e) => (choice = CHOICES.find((c) => c.id === e.currentTarget.value))}>
                       <optgroup label="Hosted">
-                        {#each CHOICES.filter((c) => c.url) as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
+                        {#each CHOICES.filter((c) => c.hosted) as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
                       </optgroup>
                       <optgroup label="Self-hosted">
-                        {#each CHOICES.filter((c) => !c.url) as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
+                        {#each CHOICES.filter((c) => !c.hosted) as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
                       </optgroup>
                     </select>
-                    {#if !choice.url}
+                    {#if !choice.hosted}
                       <input class="input" style="width:240px" aria-label="Address" placeholder="https://git.example.com"
                              bind:value={forgeURL} />
                     {/if}
                     <input class="input" style="width:240px" type="password" aria-label="Access token"
                            placeholder="Access token" autocomplete="off" bind:value={forgeToken} />
-                    <button class="btn primary small" disabled={!(choice.url || forgeURL) || !forgeToken}>Add</button>
+                    <button class="btn primary small" disabled={!(choice.hosted || forgeURL) || !forgeToken}>Add</button>
                   </div>
                   {#if pollable(choice.kind)}
                     <div class="explain" style="display:flex;gap:6px;align-items:center;margin-top:8px">

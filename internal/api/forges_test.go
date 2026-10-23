@@ -149,9 +149,9 @@ func TestPollReadsPolledForges(t *testing.T) {
 	team := c.must("POST", "/api/teams", map[string]string{"name": "Solstice", "shortCode": "SOL"})
 	c.must("POST", "/api/items", map[string]any{"kind": "ticket", "teamId": id(team["id"]), "title": "one"})
 	gh := c.must("POST", "/api/forges", map[string]any{"kind": "github", "mode": "poll", "url": fake.URL, "token": "tok", "pollMinutes": 15})
-	fj := c.must("POST", "/api/forges", map[string]string{"kind": "github", "mode": "webhook", "url": fake.URL, "token": "tok"})
-	if gh["webhookSecret"] != nil || fj["webhookSecret"] == nil {
-		t.Fatalf("secrets: polled %v, webhook %v", gh["webhookSecret"], fj["webhookSecret"])
+	hooked := c.must("POST", "/api/forges", map[string]string{"kind": "github", "mode": "webhook", "url": fake.URL, "token": "tok"})
+	if gh["webhookSecret"] != nil || hooked["webhookSecret"] == nil {
+		t.Fatalf("secrets: polled %v, webhook %v", gh["webhookSecret"], hooked["webhookSecret"])
 	}
 	// A polled forge refuses deliveries: nothing could sign them.
 	if code := c.deliver(fmt.Sprintf("/api/forges/%d/webhook", id(gh["id"])), "", `{}`); code != http.StatusUnauthorized {
@@ -168,7 +168,7 @@ func TestPollReadsPolledForges(t *testing.T) {
 		return out
 	}
 	first := synced(time.Now())
-	if first[id(gh["id"])] == nil || first[id(fj["id"])] != nil {
+	if first[id(gh["id"])] == nil || first[id(hooked["id"])] != nil {
 		t.Fatalf("after a poll, synced %v", first)
 	}
 	// Not due again until its 15 minutes are up.

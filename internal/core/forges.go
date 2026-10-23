@@ -19,7 +19,8 @@ import (
 // Pull requests are written by nobody: the events carry no actor, the way
 // the forge, not a user, made the change.
 
-var forgeKinds = map[string]bool{"github": true, "forgejo": true, "gitlab": true}
+// hosted is each kind's own public forge, used when no address is given.
+var hosted = map[string]string{"github": "https://github.com", "forgejo": "https://codeberg.org", "gitlab": "https://gitlab.com"}
 
 // Forges are the connections, for the administration screen.
 func (s *Service) Forges(ctx context.Context, a Actor) ([]store.Forge, error) {
@@ -55,9 +56,17 @@ func (s *Service) LoadForges(ctx context.Context) ([]store.Forge, error) {
 	return out, mapErr(err)
 }
 
-// ForgeURL is the address a forge is reached at, as entered: a scheme and a
-// host, and a path for one served under one.
-func ForgeURL(raw string) (string, error) {
+// ForgeURL is the address a forge of this kind is reached at: its hosted one
+// when none is given, otherwise a scheme and a host, and a path for one
+// served under one.
+func ForgeURL(kind, raw string) (string, error) {
+	def, ok := hosted[kind]
+	if !ok {
+		return "", errf(CodeInvalid, "a forge is GitHub, Forgejo or GitLab")
+	}
+	if strings.TrimSpace(raw) == "" {
+		return def, nil
+	}
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.RawQuery != "" {
 		return "", errf(CodeInvalid, "a forge's address is like https://codeberg.org")
@@ -70,9 +79,6 @@ func ForgeURL(raw string) (string, error) {
 func (s *Service) AddForge(ctx context.Context, a Actor, f store.Forge) (store.Forge, error) {
 	if err := RequireInstanceAdmin(a); err != nil {
 		return f, err
-	}
-	if !forgeKinds[f.Kind] {
-		return f, errf(CodeInvalid, "a forge is GitHub, Forgejo or GitLab")
 	}
 	if f.Mode != "poll" && f.Mode != "webhook" {
 		return f, errf(CodeInvalid, "a forge is polled or sends webhooks")
@@ -87,7 +93,7 @@ func (s *Service) AddForge(ctx context.Context, a Actor, f store.Forge) (store.F
 		return f, errf(CodeInvalid, "a forge is checked every 1 to 1440 minutes")
 	}
 	var err error
-	if f.URL, err = ForgeURL(f.URL); err != nil {
+	if f.URL, err = ForgeURL(f.Kind, f.URL); err != nil {
 		return f, err
 	}
 	if f.Mode == "webhook" {
@@ -137,7 +143,14 @@ func (s *Service) SetForgeToken(ctx context.Context, a Actor, id int64, account,
 		return errf(CodeInvalid, "an access token is required")
 	}
 	return s.write(ctx, a, func(t *wtx) error {
-		return store.SetForgeToken(ctx, t.Tx, id, account, token)
+		f, err := store.LoadForge(ctx, t.Tx, id)
+		if err != nil {
+			return err
+		}
+		if err := store.SetForgeToken(ctx, t.Tx, id, account, token); err != nil {
+			return err
+		}
+		return t.log(ctx, store.Event{Kind: store.EvInstance, Entity: "instance", Field: "forge_token", NewValue: f.URL})
 	})
 }
 
