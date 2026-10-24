@@ -1,0 +1,10 @@
+#!/bin/sh
+# The slow half of ci.yaml: the browser suite, the step CI fails on most.
+# Skip once with git push --no-verify.
+set -eu
+# ponytail: tests the checked-out tree, not each ref pushed; a stacked push
+# runs it once for the whole stack.
+git fetch -q origin main
+git diff --name-only origin/main... |
+  grep -qvE '(^|/)[^/]*\.md$|^\.changes/|^\.github/workflows/(release|changeset)\.yaml$|^LICENSE$' || exit 0
+npx playwright test

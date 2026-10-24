@@ -319,6 +319,10 @@ it; Node is needed for that step only. `./build.sh release <version>` builds eve
 into `dist/`. `go test ./...` covers the server; `npm test` runs the client's CSQL parser against the
 same corpus as the server's; `npx playwright test` drives the built binary in a browser.
 
+`npm ci` points git at `.githooks`: a commit runs formatting, vet and the unit tests, and a push
+runs the browser suite, so what CI would reject fails here first. A change to words alone skips
+them, as CI does; `--no-verify` skips them once.
+
 | Path | What is there |
 |---|---|
 | `main.go`, `backup.go`, `mcp.go` | The command: serve, init, check, snapshot, restore, version. |
