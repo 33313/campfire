@@ -1,0 +1,16 @@
+#!/bin/sh
+# The fast half of ci.yaml, so a commit CI would reject never leaves this
+# machine. Skip once with git commit --no-verify.
+set -eu
+# Words change nothing the checks can see (ci.yaml, "changes").
+git diff --cached --name-only |
+  grep -qvE '(^|/)[^/]*\.md$|^\.changes/|^\.github/workflows/(release|changeset)\.yaml$|^LICENSE$' || exit 0
+
+# Tracked files only: gofmt walks into .claude/worktrees, go vet does not.
+unformatted=$(git ls-files -z '*.go' | xargs -0 gofmt -l)
+if [ -n "$unformatted" ]; then
+  echo "not gofmt-clean:"; echo "$unformatted"; exit 1
+fi
+go vet ./...
+go test ./...
+npm test --silent
