@@ -250,7 +250,7 @@ func TestAgentTokensDoNotAuthenticateTheHTTPAPI(t *testing.T) {
 // SPEC.md §12: subscribe, then fetch, then apply. The stream carries thin
 // notifications and nothing else.
 func TestStreamPushesThinNotifications(t *testing.T) {
-	c, _, _ := newTestServer(t)
+	c, _, srv := newTestServer(t)
 	c.must("POST", "/api/instance/bootstrap", map[string]string{
 		"username": "root", "password": "correct horse battery"})
 	c.must("POST", "/api/auth/signin", map[string]string{
@@ -313,6 +313,24 @@ func TestStreamPushesThinNotifications(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("the creation was not pushed")
+	}
+
+	// A pull request's change is pushed though it is not logged: no Seq.
+	fj := fakeForgejo(t)
+	srv.Forges.HTTP = fj.Client()
+	f := c.must("POST", "/api/forges", map[string]string{"kind": "forgejo", "mode": "webhook", "url": fj.URL, "token": "tok"})
+	<-frames // the forge's addition
+	if code := c.deliver(fmt.Sprintf("/api/forges/%d/webhook", id(f["id"])), f["webhookSecret"].(string),
+		`{"repository":{"full_name":"acme/web"},"pull_request":{"id":1,"number":1,"title":"SOL-1: x","state":"open","updated_at":"2026-10-06T00:00:00Z"}}`); code != http.StatusNoContent {
+		t.Fatalf("delivery got %d", code)
+	}
+	select {
+	case n := <-frames:
+		if n.Kind != store.EvPullRequestChanged || n.Identifier != "SOL-1" || n.Seq != 0 {
+			t.Fatalf("pushed %+v", n)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("the pull request was not pushed")
 	}
 }
 

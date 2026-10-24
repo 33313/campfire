@@ -5,7 +5,7 @@
 <div class="settings-layout">
   <nav class="settings-rail">
     {#each sections as s}
-      <button class:on={active === s.id} onclick={() => (s.onclick ? s.onclick() : onpick(s.id))}>
+      <button class:on={active === s.id} onclick={() => onpick(s.id)}>
         {s.label}
       </button>
     {/each}

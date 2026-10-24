@@ -58,7 +58,7 @@ use, then connecting your own tools.
 - **Relations** link two items: *blocks* or *blocked by*, *follows up* or *followed up by*,
   *duplicates* or *duplicated by*, and *relates to*. Each shows on both items, the right way round,
   and in the preview. They are for reference and don't block any move.
-- **Pull requests** show when your instance is connected to GitHub. Start or end a pull request's
+- **Pull requests** show when your instance is connected to GitHub, Forgejo, Gitea or GitLab. Start or end a pull request's
   title with the identifier, as in `DEV-12: fix it` or `fix it [DEV-12]`, and it is listed on the
   item and in the preview with its state: open, draft, merged or closed. Retitle it to move it. It
   never moves the ticket for you.
@@ -267,7 +267,7 @@ while connected, dimming while disconnected. After a disconnect the board catche
 |---|---|
 | Member | Create and edit items in their teams; comment on any item. |
 | Team administrator | Also manage the team: members, work states, name, picture and description. |
-| Instance administrator | Also create accounts and teams, send invitations and password resets, manage backups, see when a newer release is out, connect GitHub, choose which bucket icons and colours are offered, and read the log of every team. |
+| Instance administrator | Also create accounts and teams, send invitations and password resets, manage backups, see when a newer release is out, connect forges, choose which bucket icons and colours are offered, and read the log of every team. |
 
 Your role can differ from team to team.
 

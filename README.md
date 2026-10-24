@@ -8,7 +8,7 @@ Backup is copying that file; recovery is putting it back.
 - [Commands](#commands)
 - [Configuration](#configuration)
 - [Agents (MCP)](#agents-mcp)
-- [GitHub](#github)
+- [Pull requests](#pull-requests)
 - [Behind a proxy](#behind-a-proxy)
 - [Backup and recovery](#backup-and-recovery)
 - [Scale](#scale)
@@ -170,31 +170,36 @@ agents did.
 An instance bound to loopback is reachable only from its own machine, by an agent as much as by a
 browser.
 
-## GitHub
+## Pull requests
 
 A pull request whose title starts or ends with an item's identifier (`DEV-12: fix it`,
-`[DEV-12] fix it`, `fix it DEV-12`) is listed on that item, with its state. Private repositories
-work: Campfire reads them through GitHub Apps of its own, one per organisation or account.
+`[DEV-12] fix it`, `fix it DEV-12`) is listed on that item, with its state. Campfire reads them from
+GitHub (and GitHub Enterprise), Forgejo, Gitea and GitLab, private repositories included.
 
-1. **Create an app.** *Administration → GitHub*: name the organisation (or leave it blank for your
-   own account) and press *Create on GitHub*. GitHub shows the app it is about to create (read
-   access to pull requests, nothing else) and asks you to confirm; creating one under an
-   organisation needs its owner. Do this from the address GitHub should deliver to: the app's
-   webhook and return addresses are the ones your browser used.
-2. **Install it.** You go straight on to installing it, where you pick all repositories or some, and
-   come back linked. A newly linked account is read back 90 days at once; *Sync* does it again.
-3. **Repeat** for each other organisation or account.
+1. **Make a token** on the forge, read-only:
+   - GitHub: a fine-grained token that can read pull requests on the repositories to list, or a
+     classic one with `repo`.
+   - Forgejo or Gitea: `read:repository` and `read:user`.
+   - GitLab: a personal, group or project token with `read_api`.
 
-Apps are private by default: a private app installs only on the account that owns it, and nothing
-about it is visible to anyone else. Tick *Public* to make one app installable on several accounts
-instead; anyone could then install it, and an installation you have not linked is ignored.
+   The token sees what its user sees, so a bot account limited to a few repositories keeps Campfire
+   to those.
+2. **Add it.** *Administration → Integrations*: pick the forge (GitHub, GitLab, Codeberg, or a
+   self-hosted one at its address, like `https://git.example.com`) and give the token. Campfire
+   tries the token, then reads back the last 90 days at once; *Sync* does it again. GitHub and
+   GitLab come two ways:
+   - **Poll**: Campfire checks every 5 minutes, or as often as you choose. Nothing to set up on the
+     forge, and it works for personal accounts, which GitHub can't send webhooks for, and for an
+     instance the forge can't reach.
+   - **Webhook**: instant, for organisations, groups and repositories.
+3. **For a webhook,** add the address the screen shows with its secret (shown once; *Rotate* makes a
+   new one), and Pull request events (Merge request events on GitLab). Forgejo and Gitea take one
+   on your profile, an organisation or a repository. A forge that can't reach Campfire can't
+   deliver; press *Sync*, or poll it instead.
 
-GitHub refuses a webhook it can't reach from the internet, so an app created from a loopback or
-private address has none, and the screen says so: press *Sync* to read its pull requests back. To
-get them as they happen, forget it and create it again from the instance's public address.
-
-Each app's private key and webhook secret are kept in the database, so a snapshot carries them. If a
-snapshot leaks, generate new keys on the apps' pages on GitHub.
+When a token expires, *New token* replaces it and keeps the webhook, if there is one. Tokens and webhook secrets are
+kept in the database, so a snapshot carries them. If a snapshot leaks, revoke the tokens on the
+forges.
 
 ## Behind a proxy
 

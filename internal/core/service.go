@@ -71,6 +71,10 @@ func (t *wtx) log(ctx context.Context, e store.Event) error {
 			e.ItemIdentifier = identifier
 		}
 	}
+	if e.Kind == store.EvPullRequestChanged {
+		t.pending = append(t.pending, e) // notified, not logged: no Seq
+		return nil
+	}
 	seq, err := store.AppendEvent(ctx, t.Tx, e)
 	if err != nil {
 		return err
