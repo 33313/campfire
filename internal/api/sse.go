@@ -106,7 +106,7 @@ func (s *Server) streamHandler(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			if n.Seq <= sent {
+			if n.Seq != 0 && n.Seq <= sent {
 				continue // already delivered by the replay above
 			}
 			// Authorization is evaluated per event, here, against current
@@ -115,7 +115,7 @@ func (s *Server) streamHandler(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			writeEvent(w, flusher, n.Seq, n)
-			sent = n.Seq
+			sent = max(sent, n.Seq) // an unlogged event has none
 		case <-ticker.C:
 			fmt.Fprint(w, ": heartbeat\n\n")
 			flusher.Flush()

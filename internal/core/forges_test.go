@@ -47,6 +47,17 @@ func TestPullRequestsFollowTheirTitles(t *testing.T) {
 	one, two := f.ticket(team, "one"), f.ticket(team, "two")
 	gh := f.forge("github", "https://github.com")
 	f.events = nil
+	// changed counts the items told to refetch since it was last asked.
+	changed := func() int {
+		n := 0
+		for _, e := range f.events {
+			if e.Kind == store.EvPullRequestChanged {
+				n++
+			}
+		}
+		f.events = nil
+		return n
+	}
 
 	pr := store.PullRequest{Remote: "https://github.com#100", Repo: "acme/web", Number: 4,
 		Title: "DEV-1: one", URL: "https://github.com/acme/web/pull/4", State: "open", Author: "marta", UpdatedAt: 10}
@@ -54,12 +65,18 @@ func TestPullRequestsFollowTheirTitles(t *testing.T) {
 	if got := f.pullRequests(one.ID); len(got) != 1 || got[0].Ref() != "acme/web#4" || got[0].State != "open" {
 		t.Fatalf("one lists %+v", got)
 	}
+	if n := changed(); n != 1 {
+		t.Fatalf("%d items told of a new pull request", n)
+	}
 
 	// Retitled to the other ticket: it moves.
 	pr.Title, pr.UpdatedAt = "DEV-2: two", 20
 	f.apply(gh, pr, two.Identifier)
 	if len(f.pullRequests(one.ID)) != 0 || len(f.pullRequests(two.ID)) != 1 {
 		t.Fatal("the pull request did not follow its title")
+	}
+	if n := changed(); n != 2 {
+		t.Fatalf("%d items told of a move", n)
 	}
 
 	// Merged: the state changes in place.
@@ -96,11 +113,16 @@ func TestPullRequestsFollowTheirTitles(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("%d pull requests kept", n)
 	}
+	// A poll reading it again tells nobody: nothing changed.
+	changed()
+	f.apply(gh, other, two.Identifier)
+	if n := changed(); n != 0 {
+		t.Fatalf("an unchanged pull request told %d items", n)
+	}
 	// None of it is logged: the forge is the record.
-	for _, e := range f.events {
-		if e.Entity == "item" {
-			t.Fatalf("a pull request logged %+v", e)
-		}
+	f.DB.R.QueryRow(`SELECT count(*) FROM events WHERE kind = ?`, store.EvPullRequestChanged).Scan(&n)
+	if n != 0 {
+		t.Fatalf("%d pull request changes logged", n)
 	}
 }
 

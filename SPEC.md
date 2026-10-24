@@ -439,8 +439,9 @@ merged or closed.
 
 The title is the whole link. Retitling a pull request moves it; one that names nothing is not kept.
 A pull request MUST NOT change an item's state: like a relation, it is information. Its link and
-its state changes are not written to the log: the forge is their record. Deliveries for a forge that is
-not connected are refused. Removing a forge keeps what it already listed.
+its state changes reach open screens as live updates but are not written to the log: the forge is
+their record. Deliveries for a forge that is not connected are refused. Removing a forge keeps what
+it already listed.
 
 ---
 
@@ -667,7 +668,9 @@ Requirements:
 ### 12.3 Payloads
 
 Pushed messages are **thin notifications**: sequence number, event kind, item identifier, owning
-team. They MUST NOT carry entity contents. The client refetches through the ordinary API.
+team. They MUST NOT carry entity contents. The client refetches through the ordinary API. A change
+that is not logged (a pull request's, [§8.3](#83-pull-requests)) is pushed with no sequence number,
+and a reconnecting client does not get it back; its refetch on reconnecting covers it.
 
 This does three things at once: it prevents the stream disclosing data the recipient may not read,
 it keeps the stream stable while entity shapes change, and it makes the refetch path the only path

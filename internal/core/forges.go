@@ -180,8 +180,9 @@ func (s *Service) MarkSynced(ctx context.Context, id int64, syncErr error) error
 }
 
 // ApplyPullRequest brings one pull request's links up to date with its
-// title, `identifiers` being the items the title names. It writes nothing to
-// the log: the forge is the record of what happened to a pull request.
+// title, `identifiers` being the items the title names. Items it changes are
+// notified, so open screens refetch, but nothing is written to the log: the
+// forge is the record of what happened to a pull request.
 //
 // A delivery for a forge that is gone is dropped. One older than what is
 // stored is dropped too: deliveries arrive out of order, and a sync reads
@@ -194,18 +195,20 @@ func (s *Service) ApplyPullRequest(ctx context.Context, forgeID int64, pr store.
 		} else if err != nil {
 			return err
 		}
-		want := map[int64]bool{}
+		want := map[int64]int64{} // item → its team
 		for _, id := range identifiers {
 			if it, err := store.ItemByIdentifier(ctx, t.Tx, id); err == nil {
-				want[it.ID] = true
+				want[it.ID] = it.TeamID
 			} else if !errors.Is(err, store.ErrNotFound) {
 				return err
 			}
 		}
-		prID, err := store.PullRequestByRemote(ctx, t.Tx, pr.Remote)
+		prID, at, err := store.PullRequestByRemote(ctx, t.Tx, pr.Remote)
 		if err != nil {
 			return err
 		}
+		// A poll re-reads what it already has; only a newer copy is news.
+		newer := prID == 0 || pr.UpdatedAt > at
 		var have []int64
 		if prID != 0 {
 			if have, err = store.PullRequestItems(ctx, t.Tx, prID); err != nil {
@@ -219,15 +222,36 @@ func (s *Service) ApplyPullRequest(ctx context.Context, forgeID int64, pr store.
 		if err != nil || prID == 0 {
 			return err
 		}
+		changed := func(id, team int64) error {
+			return t.log(ctx, store.Event{Kind: store.EvPullRequestChanged, Entity: "item",
+				EntityID: id, ItemID: id, TeamID: team})
+		}
 		for _, id := range have {
-			if want[id] {
+			if team, kept := want[id]; kept {
 				delete(want, id)
-			} else if err := store.UnlinkPullRequest(ctx, t.Tx, id, prID); err != nil {
+				if newer {
+					if err := changed(id, team); err != nil {
+						return err
+					}
+				}
+				continue
+			}
+			it, err := store.ItemByID(ctx, t.Tx, id)
+			if err != nil {
+				return err
+			}
+			if err := store.UnlinkPullRequest(ctx, t.Tx, id, prID); err != nil {
+				return err
+			}
+			if err := changed(id, it.TeamID); err != nil {
 				return err
 			}
 		}
-		for id := range want {
+		for id, team := range want {
 			if err := store.LinkPullRequest(ctx, t.Tx, id, prID); err != nil {
+				return err
+			}
+			if err := changed(id, team); err != nil {
 				return err
 			}
 		}
