@@ -1010,6 +1010,9 @@ test("a team has a profile: its picture, what it does, who is in it", async ({ p
   // The members, each a way through to their own profile, and the trail.
   await page.locator(".profile-teams").getByRole("link", { name: "root" }).click();
   await expect(page).toHaveURL(/\/users\/root$/);
+  // ...where the team wears the picture it was just given (DEV-119)...
+  await expect(page.locator(".profile-teams img.team-avatar").first())
+    .toHaveAttribute("src", /^data:image\//);
   // ...and a person's teams lead back.
   await page.locator(".profile-teams a[href='/t/1/profile']").click();
   await expect(page).toHaveURL(/\/t\/1\/profile$/);
