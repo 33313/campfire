@@ -212,6 +212,64 @@ func TestSnapshotRestoreAndCheckFromTheCommandLine(t *testing.T) {
 	})
 }
 
+// Opening an older file snapshots it before migrating. That snapshot restores
+// with the older schema, a newer binary's file is refused with its name, and
+// restoring it with this binary migrates it again, through the same path.
+func TestSnapshotBeforeMigrationIsTheWayBack(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "campfire.db")
+	snaps := filepath.Join(dir, "snapshots")
+	cfg := filepath.Join(dir, "campfire.json")
+	body := fmt.Sprintf(`{"database":%q,"snapshots":{"enabled":true,"dir":%q,"keep":3}}`, dbPath, snaps)
+	if err := os.WriteFile(cfg, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	setVersion := func(v int) {
+		t.Helper()
+		db, err := store.OpenMigrating(dbPath, func(*store.DB, int) error { return nil })
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer db.Close()
+		if _, err := db.W.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, v)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	taken := func() []string {
+		t.Helper()
+		paths, _ := filepath.Glob(filepath.Join(snaps, "before-migration-*.db"))
+		return paths
+	}
+
+	setVersion(0) // a file from before versions were recorded
+	if err := run([]string{"-config", cfg, "check"}); err != nil {
+		t.Fatal(err)
+	}
+	if v, _ := store.FileVersion(dbPath); v != store.Version() || len(taken()) != 1 {
+		t.Fatalf("after opening: version %d, snapshots %v", v, taken())
+	}
+	snap := taken()[0]
+	older := filepath.Join(dir, "older.db")
+	if err := backup.Restore(snap, older); err != nil {
+		t.Fatal(err)
+	}
+	if v, _ := store.FileVersion(older); v != 0 {
+		t.Fatalf("the snapshot restored at version %d, want the older 0", v)
+	}
+
+	setVersion(store.Version() + 1)
+	if err := run([]string{"-config", cfg, "check"}); err == nil || !strings.Contains(err.Error(), "campfire restore "+snap) {
+		t.Fatalf("a newer file was not refused with the way back: %v", err)
+	}
+
+	if err := run([]string{"-config", cfg, "restore", snap}); err != nil {
+		t.Fatal(err)
+	}
+	if v, _ := store.FileVersion(dbPath); v != store.Version() || len(taken()) != 2 {
+		t.Fatalf("after restoring: version %d, snapshots %v", v, taken())
+	}
+}
+
 // A moment is written with its zone or in this machine's, and -at belongs to
 // restore alone.
 func TestRestoreAtReadsAMoment(t *testing.T) {

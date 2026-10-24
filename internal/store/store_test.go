@@ -3,7 +3,11 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -36,6 +40,119 @@ func TestOpenCreatesTheSchemaOnce(t *testing.T) {
 	var n int
 	if err := again.R.QueryRow(`SELECT count(*) FROM teams`).Scan(&n); err != nil || n != 1 {
 		t.Fatalf("reopened with %d teams: %v", n, err)
+	}
+}
+
+// A file at every past schema version opens, migrates, and ends up with the
+// schema a new file gets. Past schemas are kept in testdata (see migrations).
+func TestEveryPastVersionMigrates(t *testing.T) {
+	want := shape(t, Testing(t))
+	for v := 0; v < Version(); v++ {
+		path := filepath.Join(t.TempDir(), "campfire.db")
+		old, err := sql.Open("sqlite", dsn(path, false))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := old.Exec(schemaAt(t, max(v, 1))); err != nil {
+			t.Fatalf("version %d schema: %v", v, err)
+		}
+		if _, err := old.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, v)); err != nil {
+			t.Fatal(err)
+		}
+		old.Close()
+
+		snapshots := 0
+		db, err := OpenMigrating(path, func(*DB, int) error { snapshots++; return nil })
+		if err != nil {
+			t.Fatalf("version %d: %v", v, err)
+		}
+		got, _ := userVersion(db.W)
+		if same := shape(t, db) == want; snapshots != 1 || got != Version() || !same {
+			t.Fatalf("version %d: %d snapshots, now version %d, schema matches a new file: %v", v, snapshots, got, same)
+		}
+		db.Close()
+	}
+}
+
+// schemaAt is the schema a binary wrote at version v.
+func schemaAt(t *testing.T, v int) string {
+	t.Helper()
+	if v == Version() {
+		return schema
+	}
+	b, err := os.ReadFile(fmt.Sprintf("testdata/v%d.sql", v))
+	if err != nil {
+		t.Fatalf("no schema for version %d: copy schema.sql to testdata/v%d.sql before adding a migration from it", v, v)
+	}
+	return string(b)
+}
+
+// shape is the tables' columns, and the indexes and triggers: what a migration
+// changes. ponytail: CHECK constraints are not compared; compare
+// sqlite_master.sql too if one ever drifts.
+func shape(t *testing.T, db *DB) string {
+	t.Helper()
+	rows, err := db.W.Query(`
+		SELECT m.type || ' ' || m.name || coalesce(' ' || p.name || ' ' || p.type || ' ' || p."notnull" || ' ' || coalesce(p.dflt_value, '') || ' ' || p.pk, '')
+		FROM sqlite_master m LEFT JOIN pragma_table_info(m.name) p ON m.type = 'table'
+		ORDER BY 1`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var b strings.Builder
+	for rows.Next() {
+		var line string
+		if err := rows.Scan(&line); err != nil {
+			t.Fatal(err)
+		}
+		b.WriteString(line + "\n")
+	}
+	return b.String()
+}
+
+// A migration runs only after its snapshot succeeds, in one transaction, and a
+// file newer than the binary is refused.
+func TestMigrationNeedsItsSnapshotAndRunsAtomically(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "campfire.db")
+	db, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.Close()
+	defer func(m []string) { migrations = m }(migrations)
+	migrations = append(migrations, `ALTER TABLE labels ADD COLUMN colour TEXT`)
+	colour := func() (n int) {
+		db, _ := sql.Open("sqlite", dsn(path, true))
+		defer db.Close()
+		db.QueryRow(`SELECT count(*) FROM pragma_table_info('labels') WHERE name = 'colour'`).Scan(&n)
+		return n
+	}
+
+	if _, err := Open(path); err == nil {
+		t.Fatal("migrated without a snapshot")
+	}
+	if _, err := OpenMigrating(path, func(*DB, int) error { return errors.New("disk full") }); err == nil || colour() != 0 {
+		t.Fatalf("migrated after the snapshot failed: %v", err)
+	}
+
+	migrations = append(migrations, `ALTER TABLE nowhere ADD COLUMN x TEXT`)
+	if _, err := OpenMigrating(path, func(*DB, int) error { return nil }); err == nil || colour() != 0 {
+		t.Fatalf("a failed migration left half its changes: %v", err)
+	}
+	migrations = migrations[:len(migrations)-1]
+
+	from := 0
+	db, err = OpenMigrating(path, func(_ *DB, v int) error { from = v; return nil })
+	if err != nil || from != 1 || colour() != 1 {
+		t.Fatalf("migrate: %v, snapshot saw version %d, colour columns %d", err, from, colour())
+	}
+	db.Close()
+
+	migrations = migrations[:len(migrations)-1]
+	var tooNew *TooNewError
+	if _, err := Open(path); !errors.As(err, &tooNew) || tooNew.File != 2 || tooNew.Binary != 1 {
+		t.Fatalf("opened a file newer than the binary: %v", err)
 	}
 }
 

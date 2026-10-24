@@ -45,13 +45,40 @@ type Snapshot struct {
 // The result is a complete, self-contained database file: restoring is putting
 // it back.
 func Take(ctx context.Context, db *store.DB, dir string) (Snapshot, error) {
+	return take(ctx, db, dir, namePrefix)
+}
+
+// beforeMigration names the snapshot taken before a migration. List does not
+// see it, so retention never removes it: it is the way back to the older
+// binary, and there is one per upgrade.
+const beforeMigration = "before-migration-"
+
+// TakeBeforeMigration is Take for the snapshot a migration needs first.
+func TakeBeforeMigration(ctx context.Context, db *store.DB, dir string) (Snapshot, error) {
+	return take(ctx, db, dir, beforeMigration)
+}
+
+// BeforeMigration finds the newest snapshot in dir taken before a migration
+// that a binary writing schema version can open, or "" when there is none.
+func BeforeMigration(dir string, version int) string {
+	paths, _ := filepath.Glob(filepath.Join(dir, beforeMigration+"*"+nameSuffix))
+	sort.Sort(sort.Reverse(sort.StringSlice(paths)))
+	for _, p := range paths {
+		if v, err := store.FileVersion(p); err == nil && v <= version {
+			return p
+		}
+	}
+	return ""
+}
+
+func take(ctx context.Context, db *store.DB, dir, prefix string) (Snapshot, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return Snapshot{}, err
 	}
 	// Names are timestamps to the second so that they sort chronologically and
 	// retention is a sort and a truncate. Snapshots taken inside one second —
 	// a manual one landing on a scheduled one — take a suffix.
-	stamp := namePrefix + time.Now().UTC().Format(nameLayout)
+	stamp := prefix + time.Now().UTC().Format(nameLayout)
 	path := filepath.Join(dir, stamp+nameSuffix)
 	for n := 1; n < 100; n++ {
 		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {

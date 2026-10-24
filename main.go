@@ -209,11 +209,34 @@ func open(cfg config.Config) (*store.DB, error) {
 	// Integrity is checked at startup; on detecting corruption the server
 	// refuses to start and names the snapshot to restore from
 	// (SPEC.md §13.3 rule 5).
-	db, err := store.Open(cfg.Database)
+	db, err := store.OpenMigrating(cfg.Database, func(db *store.DB, from int) error {
+		snap, err := backup.TakeBeforeMigration(context.Background(), db, cfg.Snapshots.Dir)
+		if err != nil {
+			return err
+		}
+		log.Printf("migrating %s from schema version %d to %d; to go back, restore %s with the older binary",
+			db.Path, from, store.Version(), snap.Path)
+		return nil
+	})
+	var tooNew *store.TooNewError
+	if errors.As(err, &tooNew) {
+		return nil, withDowngradeAdvice(cfg, err)
+	}
 	if err != nil {
 		return nil, withRecoveryAdvice(cfg, err)
 	}
 	return db, nil
+}
+
+// withDowngradeAdvice names the snapshot taken before a newer binary migrated
+// the file, since there are no down-migrations.
+func withDowngradeAdvice(cfg config.Config, err error) error {
+	snap := backup.BeforeMigration(cfg.Snapshots.Dir, store.Version())
+	if snap == "" {
+		return fmt.Errorf("%w\n\nrun the newer binary; no snapshot from before the migration was found in %s", err, cfg.Snapshots.Dir)
+	}
+	return fmt.Errorf("%w\n\nrun the newer binary, or go back to %s, taken before the migration, losing what changed since:  campfire restore %s",
+		err, snap, snap)
 }
 
 func check(cfg config.Config) error {
