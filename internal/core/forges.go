@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/33313/campfire/internal/forge"
 	"github.com/33313/campfire/internal/store"
 )
 
@@ -19,8 +20,9 @@ import (
 // Pull requests are written by nobody: the events carry no actor, the way
 // the forge, not a user, made the change.
 
-// hosted is each kind's own public forge, used when no address is given.
-var hosted = map[string]string{"github": "https://github.com", "forgejo": "https://codeberg.org", "gitlab": "https://gitlab.com"}
+// CheckToken tries a forge's token, and says whose it is: a token that does
+// not work is refused before it is kept.
+type CheckToken func(context.Context, store.Forge) (account string, err error)
 
 // Forges are the connections, for the administration screen.
 func (s *Service) Forges(ctx context.Context, a Actor) ([]store.Forge, error) {
@@ -56,11 +58,11 @@ func (s *Service) LoadForges(ctx context.Context) ([]store.Forge, error) {
 	return out, mapErr(err)
 }
 
-// ForgeURL is the address a forge of this kind is reached at: its hosted one
+// forgeURL is the address a forge of this kind is reached at: its hosted one
 // when none is given, otherwise a scheme and a host, and a path for one
 // served under one.
-func ForgeURL(kind, raw string) (string, error) {
-	def, ok := hosted[kind]
+func forgeURL(kind, raw string) (string, error) {
+	def, ok := forge.Hosted(kind)
 	if !ok {
 		return "", errf(CodeInvalid, "a forge is GitHub, Forgejo or GitLab")
 	}
@@ -74,9 +76,9 @@ func ForgeURL(kind, raw string) (string, error) {
 	return u.Scheme + "://" + u.Host + strings.TrimRight(u.Path, "/"), nil
 }
 
-// AddForge keeps a connection whose token the caller has tried, and makes
-// the secret its webhook signs with.
-func (s *Service) AddForge(ctx context.Context, a Actor, f store.Forge) (store.Forge, error) {
+// AddForge keeps a connection whose token `check` accepts, and makes the
+// secret its webhook signs with.
+func (s *Service) AddForge(ctx context.Context, a Actor, f store.Forge, check CheckToken) (store.Forge, error) {
 	if err := RequireInstanceAdmin(a); err != nil {
 		return f, err
 	}
@@ -93,8 +95,11 @@ func (s *Service) AddForge(ctx context.Context, a Actor, f store.Forge) (store.F
 		return f, errf(CodeInvalid, "a forge is checked every 1 to 1440 minutes")
 	}
 	var err error
-	if f.URL, err = ForgeURL(f.Kind, f.URL); err != nil {
+	if f.URL, err = forgeURL(f.Kind, f.URL); err != nil {
 		return f, err
+	}
+	if f.Account, err = check(ctx, f); err != nil {
+		return f, errf(CodeInvalid, "%s", err)
 	}
 	if f.Mode == "webhook" {
 		f.WebhookSecret = newSecret()
@@ -134,19 +139,25 @@ func (s *Service) RotateForgeSecret(ctx context.Context, a Actor, id int64) (str
 	return secret, err
 }
 
-// SetForgeToken replaces a connection's token, keeping its webhook.
-func (s *Service) SetForgeToken(ctx context.Context, a Actor, id int64, account, token string) error {
+// SetForgeToken replaces a connection's token with one `check` accepts,
+// keeping its webhook.
+func (s *Service) SetForgeToken(ctx context.Context, a Actor, id int64, token string, check CheckToken) error {
 	if err := RequireInstanceAdmin(a); err != nil {
 		return err
 	}
 	if token == "" {
 		return errf(CodeInvalid, "an access token is required")
 	}
+	f, err := s.LoadForge(ctx, id)
+	if err != nil {
+		return err
+	}
+	f.Token = token
+	account, err := check(ctx, f)
+	if err != nil {
+		return errf(CodeInvalid, "%s", err)
+	}
 	return s.write(ctx, a, func(t *wtx) error {
-		f, err := store.LoadForge(ctx, t.Tx, id)
-		if err != nil {
-			return err
-		}
 		if err := store.SetForgeToken(ctx, t.Tx, id, account, token); err != nil {
 			return err
 		}
@@ -209,7 +220,7 @@ func (s *Service) ApplyPullRequest(ctx context.Context, forgeID int64, pr store.
 		}
 		// A poll re-reads what it already has; only a newer copy is news.
 		newer := prID == 0 || pr.UpdatedAt > at
-		var have []int64
+		var have map[int64]int64 // item → its team, as want
 		if prID != 0 {
 			if have, err = store.PullRequestItems(ctx, t.Tx, prID); err != nil {
 				return err
@@ -226,24 +237,16 @@ func (s *Service) ApplyPullRequest(ctx context.Context, forgeID int64, pr store.
 			return t.log(ctx, store.Event{Kind: store.EvPullRequestChanged, Entity: "item",
 				EntityID: id, ItemID: id, TeamID: team})
 		}
-		for _, id := range have {
-			if team, kept := want[id]; kept {
+		for id, team := range have {
+			if _, kept := want[id]; kept {
 				delete(want, id)
-				if newer {
-					if err := changed(id, team); err != nil {
-						return err
-					}
+				if !newer {
+					continue
 				}
-				continue
-			}
-			it, err := store.ItemByID(ctx, t.Tx, id)
-			if err != nil {
+			} else if err := store.UnlinkPullRequest(ctx, t.Tx, id, prID); err != nil {
 				return err
 			}
-			if err := store.UnlinkPullRequest(ctx, t.Tx, id, prID); err != nil {
-				return err
-			}
-			if err := changed(id, it.TeamID); err != nil {
+			if err := changed(id, team); err != nil {
 				return err
 			}
 		}

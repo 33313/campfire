@@ -164,20 +164,23 @@ func UpsertPullRequest(ctx context.Context, q Q, p PullRequest) (int64, error) {
 	return id, err
 }
 
-// PullRequestItems is the items a pull request is linked to.
-func PullRequestItems(ctx context.Context, q Q, prID int64) ([]int64, error) {
-	rows, err := q.QueryContext(ctx, `SELECT item_id FROM item_pull_requests WHERE pull_request_id = ?`, prID)
+// PullRequestItems is the items a pull request is linked to, each with its
+// team.
+func PullRequestItems(ctx context.Context, q Q, prID int64) (map[int64]int64, error) {
+	rows, err := q.QueryContext(ctx, `
+		SELECT i.id, i.team_id FROM item_pull_requests ip JOIN items i ON i.id = ip.item_id
+		WHERE ip.pull_request_id = ?`, prID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []int64
+	out := map[int64]int64{}
 	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
+		var id, team int64
+		if err := rows.Scan(&id, &team); err != nil {
 			return nil, err
 		}
-		out = append(out, id)
+		out[id] = team
 	}
 	return out, rows.Err()
 }

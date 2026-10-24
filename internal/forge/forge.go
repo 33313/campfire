@@ -36,8 +36,31 @@ const (
 	GitLab  = "gitlab"
 )
 
-// Names are the kinds, as people know them.
-var Names = map[string]string{GitHub: "GitHub", Forgejo: "Forgejo", GitLab: "GitLab"}
+// kind is what differs between the forges' APIs.
+type kind struct {
+	name   string // as people know it
+	hosted string // its public instance's address
+	root   string // its API's path under the address
+	auth   string // its Authorization scheme
+	repos  string // the repositories the token can see
+	pulls  string // a repository's pull requests, newest update first; %s is its key
+}
+
+var kinds = map[string]kind{
+	GitHub: {"GitHub", "https://github.com", "/api/v3", "Bearer ", "/user/repos?per_page=100",
+		"/repos/%s/pulls?state=all&sort=updated&direction=desc&per_page=100"},
+	Forgejo: {"Forgejo", "https://codeberg.org", "/api/v1", "token ", "/user/repos?limit=50",
+		"/repos/%s/pulls?state=all&sort=recentupdate&limit=50"},
+	GitLab: {"GitLab", "https://gitlab.com", "/api/v4", "Bearer ", "/projects?membership=true&simple=true&per_page=100",
+		"/projects/%s/merge_requests?state=all&order_by=updated_at&sort=desc&per_page=100"},
+}
+
+// Hosted is the address of a kind's public instance: GitHub.com, Codeberg
+// for Forgejo, and GitLab.com. False for a kind there is not.
+func Hosted(k string) (string, bool) {
+	kd, ok := kinds[k]
+	return kd.hosted, ok
+}
 
 // Forge is one connection: where, and the credentials for it.
 type Forge struct {
@@ -50,23 +73,10 @@ type Forge struct {
 // api is the root of the forge's REST API. GitHub's own is on its own host;
 // GitHub Enterprise's is under the web address.
 func (f Forge) api() string {
-	switch f.Kind {
-	case GitHub:
-		if f.URL == "https://github.com" {
-			return "https://api.github.com"
-		}
-		return f.URL + "/api/v3"
-	case Forgejo:
-		return f.URL + "/api/v1"
+	if f.Kind == GitHub && f.URL == kinds[GitHub].hosted {
+		return "https://api.github.com"
 	}
-	return f.URL + "/api/v4"
-}
-
-func (f Forge) auth() string {
-	if f.Kind == Forgejo {
-		return "token " + f.Token
-	}
-	return "Bearer " + f.Token
+	return f.URL + kinds[f.Kind].root
 }
 
 // PullRequest is one pull request (a merge request, on GitLab), its state
@@ -124,13 +134,7 @@ func (c *Client) PullRequests(ctx context.Context, f Forge, since time.Time) ([]
 	var denied error
 	skipped := 0
 	for _, r := range repos {
-		next := f.api() + "/repos/" + r.name + "/pulls?state=all&sort=updated&direction=desc&per_page=100"
-		switch f.Kind {
-		case Forgejo:
-			next = f.api() + "/repos/" + r.name + "/pulls?state=all&sort=recentupdate&limit=50"
-		case GitLab:
-			next = f.api() + "/projects/" + r.id + "/merge_requests?state=all&order_by=updated_at&sort=desc&per_page=100"
-		}
+		next := f.api() + fmt.Sprintf(kinds[f.Kind].pulls, r.key)
 		for next != "" {
 			var page []PullRequest
 			if f.Kind == GitLab {
@@ -170,18 +174,14 @@ func (c *Client) PullRequests(ctx context.Context, f Forge, since time.Time) ([]
 	return out, nil
 }
 
-type repo struct{ id, name string }
+// repo is a repository's owner/name, and its key in the forge's API: GitLab
+// names a project by its id, the others by owner/name.
+type repo struct{ key, name string }
 
 // repos lists what the token can see: on GitLab the projects it is a member
 // of, not every public project on the instance.
 func (c *Client) repos(ctx context.Context, f Forge) ([]repo, error) {
-	next := f.api() + "/user/repos?per_page=100"
-	switch f.Kind {
-	case Forgejo:
-		next = f.api() + "/user/repos?limit=50"
-	case GitLab:
-		next = f.api() + "/projects?membership=true&simple=true&per_page=100"
-	}
+	next := f.api() + kinds[f.Kind].repos
 	var out []repo
 	for next != "" {
 		var page []struct {
@@ -194,7 +194,12 @@ func (c *Client) repos(ctx context.Context, f Forge) ([]repo, error) {
 			return nil, err
 		}
 		for _, r := range page {
-			out = append(out, repo{strconv.FormatInt(r.ID, 10), r.FullName + r.Path}) // one is empty
+			name := r.FullName + r.Path // one is empty
+			key := name
+			if f.Kind == GitLab {
+				key = strconv.FormatInt(r.ID, 10)
+			}
+			out = append(out, repo{key, name})
 		}
 	}
 	return out, nil
@@ -408,7 +413,7 @@ func (c *Client) do(ctx context.Context, f Forge, url string, out any) (string, 
 		return "", err
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", f.auth())
+	req.Header.Set("Authorization", kinds[f.Kind].auth+f.Token)
 	res, err := c.HTTP.Do(req)
 	if err != nil {
 		return "", err
@@ -434,7 +439,7 @@ func (c *Client) do(ctx context.Context, f Forge, url string, out any) (string, 
 		if res.Header.Get("X-RateLimit-Remaining") == "0" || res.Header.Get("Retry-After") != "" {
 			status = http.StatusTooManyRequests // GitHub says so with a 403
 		}
-		return "", &statusError{status, Names[f.Kind] + ": " + msg}
+		return "", &statusError{status, kinds[f.Kind].name + ": " + msg}
 	}
 	if err := json.NewDecoder(bytes.NewReader(body)).Decode(out); err != nil {
 		return "", err

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"testing"
 
 	"github.com/33313/campfire/internal/store"
@@ -31,10 +32,13 @@ func (f *fixture) apply(forge int64, pr store.PullRequest, ids ...string) {
 	}
 }
 
+// trust takes any token, as acme's.
+func trust(context.Context, store.Forge) (string, error) { return "acme", nil }
+
 // forge connects one, and returns its id.
 func (f *fixture) forge(kind, url string) int64 {
 	f.t.Helper()
-	fg, err := f.AddForge(f.ctx, f.admin, store.Forge{Kind: kind, Mode: "webhook", URL: url, Account: "acme", Token: "t"})
+	fg, err := f.AddForge(f.ctx, f.admin, store.Forge{Kind: kind, Mode: "webhook", URL: url, Token: "t"}, trust)
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -131,9 +135,9 @@ func TestForgesAreForInstanceAdministrators(t *testing.T) {
 	marta := f.user("marta")
 	_, err := f.Forges(f.ctx, marta)
 	requireCode(t, err, CodeForbidden)
-	_, err = f.AddForge(f.ctx, marta, store.Forge{Kind: "github", Mode: "poll", URL: "https://github.com", Token: "t"})
+	_, err = f.AddForge(f.ctx, marta, store.Forge{Kind: "github", Mode: "poll", URL: "https://github.com", Token: "t"}, trust)
 	requireCode(t, err, CodeForbidden)
-	requireCode(t, f.SetForgeToken(f.ctx, marta, 1, "a", "t"), CodeForbidden)
+	requireCode(t, f.SetForgeToken(f.ctx, marta, 1, "t", trust), CodeForbidden)
 }
 
 func TestAddForge(t *testing.T) {
@@ -147,26 +151,36 @@ func TestAddForge(t *testing.T) {
 		{Kind: "github", Mode: "poll", URL: "https://github.com", Token: "t", PollMinutes: 1441},
 		{Kind: "github", Mode: "carrier pigeon", URL: "https://github.com", Token: "t"},
 	} {
-		_, err := f.AddForge(f.ctx, f.admin, bad)
+		// Refused before the token is tried.
+		_, err := f.AddForge(f.ctx, f.admin, bad, func(context.Context, store.Forge) (string, error) {
+			t.Errorf("%+v: tried the token", bad)
+			return "", nil
+		})
 		requireCode(t, err, CodeInvalid)
 	}
-	a, err := f.AddForge(f.ctx, f.admin, store.Forge{Kind: "gitlab", Mode: "webhook", URL: " https://git.acme.test/gitlab/ ", Token: "t"})
+	a, err := f.AddForge(f.ctx, f.admin, store.Forge{Kind: "gitlab", Mode: "webhook", URL: " https://git.acme.test/gitlab/ ", Token: "t"}, trust)
 	if err != nil || a.URL != "https://git.acme.test/gitlab" || len(a.WebhookSecret) != 48 || a.PollMinutes != 5 {
 		t.Fatalf("forge %+v, %v", a, err)
 	}
 	// No address is the kind's hosted forge.
-	b, _ := f.AddForge(f.ctx, f.admin, store.Forge{Kind: "gitlab", Mode: "webhook", Token: "t"})
+	b, _ := f.AddForge(f.ctx, f.admin, store.Forge{Kind: "gitlab", Mode: "webhook", Token: "t"}, trust)
 	if b.URL != "https://gitlab.com" || a.WebhookSecret == b.WebhookSecret {
 		t.Fatalf("hosted forge %+v", b)
 	}
 	// A polled forge takes no deliveries: no secret, and none to rotate.
-	p, err := f.AddForge(f.ctx, f.admin, store.Forge{Kind: "github", Mode: "poll", URL: "https://github.com", Token: "t"})
+	p, err := f.AddForge(f.ctx, f.admin, store.Forge{Kind: "github", Mode: "poll", URL: "https://github.com", Token: "t"}, trust)
 	if err != nil || p.WebhookSecret != "" {
 		t.Fatalf("polled forge %+v, %v", p, err)
 	}
 	_, err = f.RotateForgeSecret(f.ctx, f.admin, p.ID)
 	requireCode(t, err, CodeNotFound)
-	if err := f.SetForgeToken(f.ctx, f.admin, a.ID, "bot", "t2"); err != nil {
+	bot := func(_ context.Context, g store.Forge) (string, error) {
+		if g.Token != "t2" {
+			t.Errorf("tried %q", g.Token)
+		}
+		return "bot", nil
+	}
+	if err := f.SetForgeToken(f.ctx, f.admin, a.ID, "t2", bot); err != nil {
 		t.Fatal(err)
 	}
 	got, _ := f.LoadForge(f.ctx, a.ID)

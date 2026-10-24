@@ -59,14 +59,9 @@ func toForge(f store.Forge) forge.Forge {
 	return forge.Forge{Kind: f.Kind, URL: f.URL, Token: f.Token, Secret: f.WebhookSecret}
 }
 
-// account asks the forge whose the token is: a token that does not work is
-// refused before it is kept.
-func (s *Server) account(ctx context.Context, f forge.Forge) (string, error) {
-	who, err := s.Forges.Account(ctx, f)
-	if err != nil {
-		return "", &core.Error{Code: core.CodeInvalid, Message: err.Error()}
-	}
-	return who, nil
+// checkToken asks the forge whose the token is.
+func (s *Server) checkToken(ctx context.Context, f store.Forge) (string, error) {
+	return s.Forges.Account(ctx, toForge(f))
 }
 
 func (s *Server) listForges(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
@@ -84,19 +79,8 @@ func (s *Server) addForge(w http.ResponseWriter, r *http.Request, a core.Actor) 
 	if err := decode(r, &in); err != nil {
 		return nil, err
 	}
-	if err := core.RequireInstanceAdmin(a); err != nil {
-		return nil, err
-	}
-	url, err := core.ForgeURL(in.Kind, in.URL)
-	if err != nil {
-		return nil, err
-	}
-	who, err := s.account(r.Context(), forge.Forge{Kind: in.Kind, URL: url, Token: in.Token})
-	if err != nil {
-		return nil, err
-	}
-	f, err := s.svc.AddForge(r.Context(), a, store.Forge{Kind: in.Kind, Mode: in.Mode, URL: url, Account: who,
-		Token: in.Token, PollMinutes: in.PollMinutes})
+	f, err := s.svc.AddForge(r.Context(), a, store.Forge{Kind: in.Kind, Mode: in.Mode, URL: in.URL,
+		Token: in.Token, PollMinutes: in.PollMinutes}, s.checkToken)
 	if err != nil {
 		return nil, err
 	}
@@ -135,16 +119,7 @@ func (s *Server) setForgeToken(w http.ResponseWriter, r *http.Request, a core.Ac
 	if err := decode(r, &in); err != nil {
 		return nil, err
 	}
-	f, err := s.svc.Forge(r.Context(), a, id)
-	if err != nil {
-		return nil, err
-	}
-	f.Token = in.Token
-	who, err := s.account(r.Context(), toForge(f))
-	if err != nil {
-		return nil, err
-	}
-	if err := s.svc.SetForgeToken(r.Context(), a, id, who, in.Token); err != nil {
+	if err := s.svc.SetForgeToken(r.Context(), a, id, in.Token, s.checkToken); err != nil {
 		return nil, err
 	}
 	return s.svc.Forge(r.Context(), a, id)
