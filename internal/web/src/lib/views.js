@@ -54,7 +54,7 @@ export async function editView(view) {
 export async function deleteView(view) {
   const sure = await openModal(ConfirmDialog, {
     title: `Delete ${view.name}`,
-    lines: ["The view goes for everyone. The items it shows are not touched."],
+    lines: ["It is deleted for everyone. Its items are not affected."],
   });
   if (!sure) return;
   try {

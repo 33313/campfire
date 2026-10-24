@@ -152,7 +152,6 @@
       <div class="field">
         <span class="field-label">Icon &amp; colour</span>
         <IconPicker {icon} {color} boxed onpick={(p) => { if ("icon" in p) icon = p.icon; else color = p.color; }} />
-        <span class="explain">It stands in for the bucket wherever it is named, and its tickets wear the colour on the board.</span>
         {@render complaint("icon")}
         {@render complaint("color")}
       </div>

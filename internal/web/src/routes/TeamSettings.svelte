@@ -101,8 +101,7 @@
         { name: "role", label: "Role", type: "select", value: existing?.role || "",
           options: ROLES.map((r) => ({ value: r, label: r || "intermediate" })) },
       ],
-      explain: "A team always has a default, an accepted, a final and a rejected state. " +
-        "Giving a role to one state takes it from the state that had it.",
+      explain: "Each role belongs to exactly one state. Assigning it here moves it from the other.",
     });
     if (!res) return;
     guard(() => existing
@@ -265,8 +264,7 @@
                 <div style="display:flex;align-items:center;gap:8px">
                   <span class="code-badge">{team.shortCode}</span>
                   <span class="explain">
-                    Set at creation and never changed. It is the prefix of every identifier
-                    this team has minted, and it is never reused.
+                    The identifier prefix. It cannot be changed or reused.
                   </span>
                 </div>
               </div>
@@ -282,8 +280,7 @@
           <Section title="Archive">
             {#snippet children()}
               <p class="explain">
-                Archiving hides the team from the switcher. Its items and its identifiers stay,
-                and its short code is never reused.
+                Archiving hides the team from the switcher. Its items are kept.
               </p>
               {#if app.user.isAdmin}
                 <button class="btn" class:destructive={!team.archivedAt} onclick={toggleArchive}>

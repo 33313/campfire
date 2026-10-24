@@ -73,8 +73,8 @@
   const GROUP_NAMES = { planning: "Planning", signals: "Signals", work: "Work", places: "Places" };
   const MODES = [
     ["palette", "Palette", "The sixteen colours, less any hidden below."],
-    ["hex", "Palette and hex", "Also any #rrggbb that reads on a card."],
-    ["off", "Off", "No colour is offered. Buckets that have one keep it."],
+    ["hex", "Palette and hex", "Also any readable #rrggbb."],
+    ["off", "Off", "No colours offered. Buckets keep theirs."],
   ];
   const offered = $derived(Object.entries(BUCKET_ICON_GROUPS)
     .filter(([g]) => !app.appearance.hiddenGroups.includes(g))
@@ -110,9 +110,8 @@
   async function deleteSet(set) {
     const ok = await openModal(ConfirmDialog, {
       title: `Delete ${set.name}`,
-      lines: [`Buckets that wear one of its ${set.icons.length} icons keep the key and show the default icon. ` +
-        `Adding a set with the prefix ${set.prefix} again brings them back.`],
-      consequence: "It leaves every picker", action: "Delete",
+      lines: [`Buckets using its ${set.icons.length} icons show the default icon until a set with the prefix ${set.prefix} is added again.`],
+      consequence: "Removed from every picker", action: "Delete",
     });
     if (ok) try { await api.deleteIconSet(set.id); await reloadSets(); } catch (err) { failure(err); }
   }
@@ -197,8 +196,8 @@
   async function removeForge(f) {
     const ok = await openModal(ConfirmDialog, {
       title: `Remove ${f.url}`,
-      lines: ["Its pull requests stop arriving. Those already listed stay on their items.",
-        "Delete its webhook there, and revoke the token."],
+      lines: ["New pull requests stop arriving; listed ones stay.",
+        "Delete its webhook and revoke the token on the forge."],
       consequence: "Adding it again makes a new webhook", action: "Remove",
     });
     if (ok) guard(() => api.deleteForge(f.id));
@@ -223,7 +222,7 @@
   function showLink(title, invitation) {
     return openModal(ShowOnceDialog, {
       title,
-      explain: "Shown once. Hand it over out of band; it expires in seven days.",
+      explain: "Shown once. Expires in seven days.",
       value: `${location.origin}/invite/${invitation.token}`,
     });
   }
@@ -262,10 +261,6 @@
         {#if tab === "users"}
           <Section title="Users" sub="{users.length} accounts">
             {#snippet children()}
-              <p class="explain">
-                No open registration. Create an account here, or send an invitation link.
-                Resets are one-time links, because no flow depends on email delivery.
-              </p>
               <div style="display:flex;gap:8px;margin:10px 0">
                 <button class="btn primary small" onclick={newAccount}>New account</button>
                 <button class="btn small"
@@ -361,7 +356,7 @@
         {:else if tab === "appearance"}
           <Section title="Bucket icons" sub="{offered} of {Object.keys(BUCKET_ICONS).length} offered">
             {#snippet children()}
-              <p class="explain">A hidden group leaves the icon pickers. Buckets that wear one of its icons keep it.</p>
+              <p class="explain">Hidden groups leave the pickers. Buckets keep their icons.</p>
               <table class="table" style="margin-top:8px">
                 <tbody>
                   {#each Object.entries(BUCKET_ICON_GROUPS) as [group, set] (group)}
@@ -386,9 +381,8 @@
           <Section title="Icon sets" sub="{app.iconSets.length} of the instance's own">
             {#snippet children()}
               <p class="explain">
-                Icons of your own, as SVGs. Each set has a prefix, and an icon's key is
-                <code>prefix.name</code>, the name taken from its file. Only stroked shapes are kept,
-                drawn at the weight of the built-in icons; a file with fills or anything else is skipped.
+                SVG icons under a prefix, keyed <code>prefix.name</code> by file name.
+                Only stroked shapes are kept; other files are skipped.
               </p>
               {#if app.iconSets.length}
                 <table class="table" style="margin-top:8px">
@@ -448,7 +442,7 @@
                             onclick={() => setLooks({ hiddenColours: flip(app.appearance.hiddenColours, name) })}></button>
                   {/each}
                 </div>
-                <p class="explain" style="margin-top:6px">A click hides a colour from the pickers, or offers it again.</p>
+                <p class="explain" style="margin-top:6px">Click to hide or show a colour.</p>
               {/if}
             {/snippet}
           </Section>
@@ -497,14 +491,14 @@
               {#snippet children()}
                 {#if !snapshots.replica}
                   <p class="explain">
-                    Set <code>snapshots.replica</code> to a directory on another disk or machine, and
-                    the database can be restored to any moment, not only to a snapshot.
+                    Set <code>snapshots.replica</code> to a directory on another disk to restore
+                    to any point in time.
                   </p>
                 {:else if !snapshots.replica.from}
                   <p class="explain">Copying to {snapshots.replica.directory}; nothing to restore to yet.</p>
                 {:else}
                   <p class="explain">
-                    Copied continuously to {snapshots.replica.directory}. Any moment from
+                    Replicating to {snapshots.replica.directory}. Restorable from
                     {new Date(snapshots.replica.from).toLocaleString()} to
                     {new Date(snapshots.replica.to).toLocaleString()}.
                   </p>
@@ -523,19 +517,18 @@
           <Section title="Updates" sub={updates?.check ? "checking daily" : "off"}>
             {#snippet children()}
               <p class="explain">
-                This instance runs {updates?.current || "an unknown version"}.
+                Running {updates?.current || "an unknown version"}.
                 {#if !updates?.check}
-                  Set <code>updates.check</code> to true and restart, and this screen says when a newer
-                  release is out.
+                  Set <code>updates.check</code> to true and restart to check for new releases.
                 {:else if updates.latest}
-                  The latest release is {updates.latest.version}{updates.newer ? "" : ", so it is up to date"},
+                  Latest: {updates.latest.version}{updates.newer ? "" : " (up to date)"},
                   checked {new Date(updates.latest.checked).toLocaleString()}.
                 {:else if !updates.error}
-                  Asking GitHub for the latest release.
+                  Checking GitHub…
                 {/if}
               </p>
               {#if updates?.error}
-                <p class="explain">The last check failed: {updates.error}.</p>
+                <p class="explain">Check failed: {updates.error}.</p>
               {/if}
               {#if updates?.newer}
                 <a class="btn small" style="margin-top:10px" href={updates.latest.url}
@@ -551,7 +544,7 @@
                 <p class="explain">Forges are unavailable.</p>
               {:else}
                 <p class="explain">
-                  Links pull requests to tickets automatically: start or end a title with the ticket, as in
+                  A pull request links to a ticket when its title starts or ends with the identifier, as in
                   <code>DEV-12: fix it</code>.
                 </p>
 
@@ -632,8 +625,7 @@
           <Section title="Agent access" sub="{tokens.length} live tokens">
             {#snippet children()}
               <p class="explain">
-                A token names a user and carries no permissions of its own; every call
-                resolves that user's current permissions. Revoking takes effect on the next call.
+                A token has its user's current permissions. Revoking takes effect immediately.
               </p>
               <table class="table">
                 <thead>

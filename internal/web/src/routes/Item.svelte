@@ -178,12 +178,12 @@
     const impact = await api.getItemImpact(item.id);
     const ok = await openModal(ConfirmDialog, {
       title: `Delete ${item.identifier} — ${item.title}`,
-      lines: ["Permanent. The identifier is never reissued.",
+      lines: ["The identifier is never reissued.",
         `${plural(impact.items, "ticket")} across ${plural(impact.teams, "team")} lose their ` +
-          "bucket. The tickets themselves are untouched."],
+          "bucket."],
       counts: [{ value: impact.items, label: "items" }, { value: impact.teams, label: "teams" }],
       confirmWord: item.identifier,
-      consequence: "Deletion is not a state",
+      consequence: "Cannot be undone",
     });
     if (!ok) return;
     try {
@@ -198,9 +198,8 @@
   async function removeContent(it) {
     const ok = await openModal(ConfirmDialog, {
       title: "Remove from bucket",
-      lines: [`Remove ${it.identifier} from ${item.title}?`,
-        "It stays with its own team, and the removal is recorded on the ticket."],
-      consequence: "One event on the ticket",
+      lines: [`Remove ${it.identifier} from ${item.title}?`],
+      consequence: "Recorded on the ticket",
       action: "Remove",
     });
     if (ok) guard(() => api.updateItem(it.id, { bucketId: 0 }));
@@ -397,10 +396,6 @@
                 <span class="code-badge">{item.teamShortCode}</span>
                 <span>{team ? team.name : item.teamShortCode}</span>
               </div>
-              <p class="explain">
-                Reassignable by an instance administrator. The identifier stays
-                {item.identifier} wherever it goes.
-              </p>
             </div>
           {:else}
             <!-- The bucket is a way through to the bucket. Which bucket a ticket
@@ -521,9 +516,7 @@
                 {/each}
               </div>
             {:else}
-              <div class="explain">
-                Nothing is in this bucket yet. Membership is a field on the ticket.
-              </div>
+              <div class="explain">No tickets.</div>
             {/each}
           </section>
         {/if}
@@ -538,9 +531,7 @@
           </div>
           <RelationList relations={item.relations} onremove={(r) => guard(() => api.removeRelation(r.id))} />
           {#if !item.relations?.length}
-            <div class="explain">
-              No relations. A relation is information: a blocked-by edge never prevents a move.
-            </div>
+            <div class="explain">No relations.</div>
           {/if}
         </section>
 

@@ -37,9 +37,9 @@
 <Dialog title={view ? "Edit view" : "Save as view"} {close} wide>
   {#snippet body()}
     <p class="explain">
-      {view ? "A change here is a change for everyone who uses the view."
-        : "Everyone can switch it on; anyone in this team can edit or delete it."}
-      With other views on, each one narrows: they are and-ed.
+      {view ? "Changes apply to everyone."
+        : "Anyone can turn it on; anyone in this team can edit or delete it."}
+      Views that are on combine with and.
     </p>
     <label class="field">
       <span class="field-label">Name</span>
@@ -53,7 +53,7 @@
     </div>
     {#if view?.missing?.length}
       <p class="explain" style="color:var(--alert)">
-        Names what has been deleted, which matches nothing: {view.missing.join(", ")}.
+        Refers to something deleted, so it matches nothing: {view.missing.join(", ")}.
       </p>
     {/if}
     <label style="display:flex;gap:8px;align-items:center">

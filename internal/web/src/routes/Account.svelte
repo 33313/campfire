@@ -54,7 +54,7 @@
     const res = await openModal(FormDialog, {
       title: "Issue an agent token", action: "Issue",
       fields: [{ name: "name", label: "Name", placeholder: "laptop" }],
-      explain: "Name it so you recognise it in the log later.",
+      explain: "Shown in the log.",
     });
     if (!res) return;
     guard(async () => {
@@ -86,7 +86,7 @@
       title: "Turn off the second factor",
       destructive: true, action: "Turn off",
       fields: [{ name: "password", label: "Password", type: "password" }],
-      explain: "Your password confirms it is you.",
+      explain: "Enter your password to confirm.",
     });
     if (res) guard(() => api.disableTotp(res.password));
   }
@@ -131,8 +131,8 @@
     <Section title="Agent tokens" sub="{tokens.length} live">
       {#snippet children()}
         <p class="explain">
-          An agent acts as you, with your permissions at the time of each call.
-          It cannot create accounts, change teams, delete anything, or issue tokens.
+          An agent acts as you, with your current permissions. It cannot create accounts,
+          change teams, delete anything, or issue tokens.
         </p>
         <button class="btn small" style="margin:10px 0" onclick={issueToken}>Issue a token</button>
         <table class="table">

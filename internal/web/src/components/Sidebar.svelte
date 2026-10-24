@@ -124,8 +124,8 @@
           {:else}
             <p class="explain" style="margin:0;padding:8px 9px">
               {app.user.isAdmin
-                ? "This instance has no teams. Create the first one to get a board."
-                : "You are not in a team yet. An instance administrator creates them."}
+                ? "No teams yet."
+                : "You are not in a team."}
             </p>
           {/each}
           <!-- An instance with no teams has nothing else to offer here, and the
@@ -177,7 +177,7 @@
           <Icon body={NAV.view} size={13} />
           <span class="label">{v.name}</span>
           {#if gone.length}
-            <span class="count" style="color:var(--alert)" title="Names what has been deleted: {gone.join(', ')}">!</span>
+            <span class="count" style="color:var(--alert)" title="Refers to something deleted: {gone.join(', ')}">!</span>
           {/if}
           {#if lit}<span class="count" aria-hidden="true">on</span>{/if}
         </button>

@@ -149,7 +149,7 @@
                 </button>
               {/if}
               <span class="explain">
-                Everyone signed in can read this. A picture is scaled to a {AVATAR}px square.
+                Visible to everyone signed in. Pictures are scaled to {AVATAR}px.
               </span>
             </div>
           {:else if team.description}
@@ -181,7 +181,7 @@
                 <span class="state-badge">{m.role}</span>
               </div>
             {:else}
-              <div class="explain">Nobody yet. A team administrator adds people in settings.</div>
+              <div class="explain">No members.</div>
             {/each}
           </div>
         {/snippet}
@@ -215,7 +215,7 @@
           {/each}
         </div>
         <p class="explain" style="margin:10px 0 0">
-          A glance, not the log. <a href="/log">The log</a> is where you read further.
+          <a href="/log">Open the log</a>
         </p>
       {/snippet}
     </Section>

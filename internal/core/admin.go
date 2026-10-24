@@ -296,7 +296,7 @@ func (s *Service) IssueAgentToken(ctx context.Context, a Actor, name string) (*I
 	}
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return nil, invalidField("name", "give the token a name so you can recognise it later")
+		return nil, invalidField("name", "give the token a name")
 	}
 	var out *IssuedAgentToken
 	err := s.write(ctx, a, func(t *wtx) error {

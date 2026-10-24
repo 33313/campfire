@@ -54,13 +54,11 @@
 
     {#if mode === "bootstrap"}
       <p class="explain">
-        This instance has no accounts yet. The first one is an instance administrator;
-        every account after it is created here or invited by link.
+        The first account is the instance administrator.
       </p>
     {:else if mode === "redeem"}
       <p class="explain">
-        An invitation creates your account. A reset sets a new password on the account
-        it was issued for, so the username is ignored.
+        An invitation creates your account. A reset ignores the username.
       </p>
     {/if}
 
