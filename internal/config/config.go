@@ -21,8 +21,8 @@ type Config struct {
 	// is explicitly set to something else: a binary run on a laptop must not
 	// silently serve the network it is attached to (SPEC.md §13.1).
 	Addr string `json:"addr"`
-	// Database is the data file. It lives in the operating system's data
-	// directory by default. Network filesystems and cloud-synchronised folders
+	// Database is the data file. It lives in the data directory by default.
+	// Network filesystems and cloud-synchronised folders
 	// are unsupported — SQLite corrupts on both.
 	Database string `json:"database"`
 
@@ -78,9 +78,9 @@ type Updates struct {
 	Check bool `json:"check"`
 }
 
-// Default is what an instance runs with when nothing is configured.
-func Default() Config {
-	dir := DataDir()
+// Default is what an instance with data directory dir runs with when nothing
+// is configured.
+func Default(dir string) Config {
 	return Config{
 		Addr:     "127.0.0.1:8080",
 		Database: filepath.Join(dir, "campfire.db"),
@@ -96,7 +96,8 @@ func Default() Config {
 	}
 }
 
-// DataDir is the operating system's data directory for this application.
+// DataDir is the operating system's data directory for this application, used
+// unless -data names another.
 func DataDir() string {
 	switch runtime.GOOS {
 	case "windows":
@@ -118,14 +119,14 @@ func DataDir() string {
 	return "campfire-data"
 }
 
-// DefaultPath is where the configuration file is looked for.
-func DefaultPath() string { return filepath.Join(DataDir(), "campfire.json") }
+// Path is where the configuration file in data directory dir is looked for.
+func Path(dir string) string { return filepath.Join(dir, "campfire.json") }
 
-// Load reads the file at path, filling anything absent from Default. A missing
-// file is not an error: an instance with no configuration is the individual
-// profile, and it must start without one.
-func Load(path string) (Config, error) {
-	cfg := Default()
+// Load reads the file at path, filling anything absent from Default(dir). A
+// missing file is not an error: an instance with no configuration is the
+// individual profile, and it must start without one.
+func Load(path, dir string) (Config, error) {
+	cfg := Default(dir)
 	body, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return cfg, nil

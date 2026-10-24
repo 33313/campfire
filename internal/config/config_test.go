@@ -10,7 +10,7 @@ import (
 // SPEC.md §13.1: the server MUST bind to loopback only unless explicitly
 // configured otherwise, and snapshots are on by default.
 func TestDefaultsAreSafeAndBackedUp(t *testing.T) {
-	cfg := Default()
+	cfg := Default(DataDir())
 	if !strings.HasPrefix(cfg.Addr, "127.0.0.1:") {
 		t.Fatalf("the default bind address is %q", cfg.Addr)
 	}
@@ -30,18 +30,18 @@ func TestDefaultsAreSafeAndBackedUp(t *testing.T) {
 // An instance with no configuration is the individual profile, and it must
 // start without one.
 func TestAMissingFileIsNotAnError(t *testing.T) {
-	cfg, err := Load(filepath.Join(t.TempDir(), "nothing-here.json"))
+	cfg, err := Load(filepath.Join(t.TempDir(), "nothing-here.json"), DataDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Addr != Default().Addr {
+	if cfg.Addr != Default(DataDir()).Addr {
 		t.Fatal("a missing file did not fall back to the defaults")
 	}
 }
 
 func TestWriteThenLoadRoundTrips(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "campfire.json")
-	want := Default()
+	want := Default(DataDir())
 	want.Addr = "0.0.0.0:9000"
 	want.MCP.Enabled = true
 	want.Snapshots.Interval = "30m"
@@ -49,7 +49,7 @@ func TestWriteThenLoadRoundTrips(t *testing.T) {
 	if err := want.Write(path); err != nil {
 		t.Fatal(err)
 	}
-	got, err := Load(path)
+	got, err := Load(path, DataDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,23 +81,23 @@ func TestWriteThenLoadRoundTrips(t *testing.T) {
 func TestUnknownKeysAreRejected(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "campfire.json")
 	os.WriteFile(path, []byte(`{"adress":"0.0.0.0:9000"}`), 0o600)
-	if _, err := Load(path); err == nil {
+	if _, err := Load(path, DataDir()); err == nil {
 		t.Fatal("a misspelled key was accepted")
 	}
 }
 
 func TestBadSnapshotSettingsAreRejected(t *testing.T) {
-	cfg := Default()
+	cfg := Default(DataDir())
 	cfg.Snapshots.Interval = "3s"
 	if err := cfg.Validate(); err == nil {
 		t.Fatal("a three-second snapshot interval was accepted")
 	}
-	cfg = Default()
+	cfg = Default(DataDir())
 	cfg.Snapshots.Keep = 0
 	if err := cfg.Validate(); err == nil {
 		t.Fatal("keeping zero snapshots was accepted")
 	}
-	cfg = Default()
+	cfg = Default(DataDir())
 	cfg.Database = ""
 	if err := cfg.Validate(); err == nil {
 		t.Fatal("an empty database path was accepted")

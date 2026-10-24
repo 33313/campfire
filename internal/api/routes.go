@@ -18,6 +18,8 @@ func (s *Server) routes() {
 	s.handle("POST /api/instance/bootstrap", s.bootstrap)
 	s.handle("GET /api/instance/updates", s.getUpdates)
 	s.handle("PUT /api/instance/appearance", s.setAppearance)
+	s.handle("GET /api/instance/data", s.getData)
+	s.handle("POST /api/instance/data", s.moveData)
 	s.handle("POST /api/icon-sets", s.createIconSet)
 	s.handle("PATCH /api/icon-sets/{id}", s.updateIconSet)
 	s.handle("DELETE /api/icon-sets/{id}", s.deleteIconSet)

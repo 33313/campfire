@@ -1,0 +1,3 @@
+kind: Added
+body: "Move the data to another directory in *Administration → Preferences*. Snapshots in the data directory move with the database, and the server restarts. `-data <dir>` sets the data directory at startup."
+time: 2026-10-24T21:00:00.000000+02:00

@@ -136,6 +136,28 @@ func Prune(dir string, keep int) error {
 	return errors.Join(errs...)
 }
 
+// CopyAll copies the snapshots in from into to, keeping the times they were
+// taken.
+func CopyAll(from, to string) error {
+	snaps, err := List(from)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(to, 0o700); err != nil {
+		return err
+	}
+	for _, s := range snaps {
+		path := filepath.Join(to, filepath.Base(s.Path))
+		if err := copyFile(s.Path, path); err != nil {
+			return err
+		}
+		if err := os.Chtimes(path, s.Taken, s.Taken); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func copyFile(from, to string) error {
 	src, err := os.Open(from)
 	if err != nil {

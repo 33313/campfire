@@ -113,11 +113,12 @@ campfire restore <path>  # replace the data file with a snapshot
 campfire version         # print the version and exit
 ```
 
-`-config <path>` points at a configuration file other than the default.
+`-data <dir>` sets the data directory, which holds the configuration file, the database and the
+snapshots. `-config <path>` points at a configuration file other than the default.
 
 ## Configuration
 
-One JSON file, in the operating system's data directory:
+One JSON file, in the data directory. By default that is the operating system's data directory:
 
 | OS | Path |
 |---|---|
@@ -165,6 +166,11 @@ screen says so. The request carries nothing but the running version; `false` tur
 folders (Dropbox, iCloud Drive, OneDrive, Google Drive) are **unsupported**: SQLite's locking is not
 honoured across them and the file corrupts, often silently and only under load. To keep the data
 elsewhere, point `snapshots.replica` there and leave the live file local.
+
+**Moving the data.** To move the database to another directory, enter the directory in
+*Administration → Preferences*. Snapshots in the data directory move with it, and the server
+restarts. The old files are kept; delete them once the instance works. In the container image, mount
+a different volume instead.
 
 ## Agents (MCP)
 

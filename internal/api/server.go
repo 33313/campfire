@@ -39,6 +39,7 @@ type Server struct {
 	// to read from getInstance (SPEC.md §12.4).
 	HiddenTabGrace time.Duration
 	Snapshots      Snapshots
+	Data           Data
 	// MaxImage bounds a pasted picture, in bytes; 0 takes none (DEV-40).
 	MaxImage int64
 	Updates  *updates.Checker
