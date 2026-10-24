@@ -5,6 +5,12 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v0.15.1 - 2026-10-24
+
+### Fixed
+
+- A bucket shows its owning team's picture, and each team's beside its share of the contents, where the team has one
+
 ## v0.15.0 - 2026-10-24
 
 ### Changed
