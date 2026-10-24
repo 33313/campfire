@@ -54,13 +54,11 @@
 
     {#if mode === "bootstrap"}
       <p class="explain">
-        This instance has no accounts yet. The first one is an instance administrator;
-        every account after it is created here or invited by link.
+        The first account is the instance administrator.
       </p>
     {:else if mode === "redeem"}
       <p class="explain">
-        An invitation creates your account. A reset sets a new password on the account
-        it was issued for, so the username is ignored.
+        An invitation creates your account. For a password reset, leave the username as is; it isn't used.
       </p>
     {/if}
 
@@ -80,7 +78,7 @@
 
     {#if needsCode}
       <label class="field">
-        <span class="field-label">Second factor</span>
+        <span class="field-label">2FA code</span>
         <input class="input" inputmode="numeric" autocomplete="one-time-code"
                placeholder="000000" maxlength="6" bind:value={code} />
         <span class="explain">Six digits from your authenticator app.</span>

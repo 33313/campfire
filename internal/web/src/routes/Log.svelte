@@ -112,7 +112,7 @@
 {#if error}
   <ErrorPanel {error} retry={() => load()} />
 {:else}
-  <ScreenHeader title="Log" sub="ordered by sequence, newest first">
+  <ScreenHeader title="Log" sub="newest first">
     {#snippet right()}
       <button class="btn small" onclick={exportRows}>
         <Icon body={NAV.export} size={13} /><span>Export</span>
@@ -198,9 +198,9 @@
       </tbody>
     </table>
     {#if cursor}
-      <LoadOlder label="Load older — from sequence {cursor}" onclick={() => load(cursor)} />
+      <LoadOlder label="Load older" onclick={() => load(cursor)} />
     {:else}
-      <div style="padding:14px 20px"><span class="explain">That is the whole log.</span></div>
+      <div style="padding:14px 20px"><span class="explain">End of the log.</span></div>
     {/if}
   </div>
 {/if}

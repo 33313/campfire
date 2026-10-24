@@ -72,7 +72,7 @@ func subset(field string, keys, set []string) ([]string, error) {
 	out := []string{}
 	for _, k := range keys {
 		if !slices.Contains(set, k) {
-			return nil, invalidField(field, "%q is not one of them", k)
+			return nil, invalidField(field, "%q is not a known option", k)
 		}
 	}
 	for _, k := range set {

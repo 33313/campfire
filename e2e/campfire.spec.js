@@ -1426,7 +1426,7 @@ test("a picture pasted into a description or a comment is drawn", async ({ page 
 
   // Over the instance's limit, it is refused before it is sent.
   await paste(comment, 11 * 2 ** 20);
-  await expect(page.locator(".toast").last()).toHaveText(/over 10MB/);
+  await expect(page.locator(".toast").last()).toHaveText(/over the 10MB limit/);
   await expect(comment).toHaveValue("");
 });
 

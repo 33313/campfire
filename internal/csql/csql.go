@@ -378,7 +378,7 @@ func (p *parser) value(field string) (*Value, error) {
 			return nil, errAt(t.pos, t.end, "expected a value for %s, not the keyword %s", field, low)
 		case "none":
 			if !fields[field].Nullable {
-				return nil, errAt(t.pos, t.end, "%s is never none", field)
+				return nil, errAt(t.pos, t.end, "%s can't be none", field)
 			}
 			v.Raw, v.None = low, true
 			return v, nil

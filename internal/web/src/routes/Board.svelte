@@ -471,7 +471,7 @@
                   <!-- A card that has just been carried somewhere does not also
                        travel there: the copy in the hand already did. -->
                   <div class="card-slot" class:landing={landing.includes(item.id)} class:kept={item.kept}
-                       title={item.kept ? "No longer matches the filter; it goes when the filter changes" : null}
+                       title={item.kept ? "No longer matches the filter. Hidden when the filter changes." : null}
                        in:receive={{ key: landing.includes(item.id) ? -item.id : item.id,
                                      instant: landing.includes(item.id) }}
                        out:send={{ key: item.id }}

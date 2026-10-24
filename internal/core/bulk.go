@@ -62,7 +62,7 @@ func (s *Service) ApplyBulkEdit(ctx context.Context, a Actor, in BulkEdit) (*Bul
 		return nil, invalidField("itemIds", "select something first")
 	}
 	if len(in.ItemIDs) > 500 {
-		return nil, invalidField("itemIds", "that is more than one selection; do it in batches")
+		return nil, invalidField("itemIds", "at most 500 items at a time")
 	}
 
 	out := &BulkResult{}

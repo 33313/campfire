@@ -81,7 +81,7 @@ func (s *Server) handle(pattern string, h handler) {
 	s.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		if !sameOrigin(r) {
 			fail(w, &core.Error{Code: core.CodeForbidden,
-				Message: "this request did not come from this instance"})
+				Message: "request blocked: it came from another site"})
 			return
 		}
 		a, err := s.actor(r)

@@ -11,7 +11,6 @@
 
 <Dialog title="{field} for {plural(count, 'item')}" {close}>
   {#snippet body()}
-    <p class="explain">One field at a time. A selection is where a mis-click is least visible.</p>
     <div style="display:flex;flex-direction:column;gap:2px">
       {#each options as o}
         <button class="option-row" class:on={value === o.value} onclick={() => (value = o.value)}>

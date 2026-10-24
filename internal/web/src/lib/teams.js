@@ -15,8 +15,7 @@ export async function newTeam() {
       { name: "name", label: "Name" },
       { name: "shortCode", label: "Short code", placeholder: "SOL", maxlength: 8 },
     ],
-    explain: "The short code prefixes every identifier this team mints. It is set " +
-      "once, never changed, and never reused — not even after archival.",
+    explain: "The prefix of every identifier. It cannot be changed or reused.",
   });
   if (!res) return null;
   const team = await api.createTeam(res.name, res.shortCode);

@@ -16,8 +16,8 @@
 <Dialog title="Split {item.identifier}" wide {close}>
   {#snippet body()}
     <p class="explain">
-      Each line becomes a new ticket in the same team, carrying this one's bucket,
-      priority, assignee and labels. Every new ticket follows up {item.identifier}.
+      One ticket per line, with this one's bucket, priority, assignee and labels,
+      each following up {item.identifier}.
     </p>
     <div class="field">
       <span class="field-label">New tickets</span>
@@ -34,7 +34,7 @@
     <button class="btn small" onclick={() => lines.push("")}>Add a line</button>
     <label style="display:flex;gap:8px;align-items:center">
       <input class="check" type="checkbox" bind:checked={rejectSource} />
-      <span>Reject {item.identifier} once the split is written</span>
+      <span>Reject {item.identifier} after splitting</span>
     </label>
   {/snippet}
   {#snippet footer()}

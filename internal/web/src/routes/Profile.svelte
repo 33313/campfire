@@ -168,8 +168,7 @@
                 <button class="btn quiet small" onclick={() => write("")}>Remove picture</button>
               {/if}
               <span class="explain">
-                Everyone signed in can read this. A picture is scaled to a {AVATAR}px square and
-                stored with your account.
+                Visible to everyone signed in. Pictures are scaled to {AVATAR}px.
               </span>
             </div>
           {:else if user.bio}
@@ -201,7 +200,7 @@
                 <span class="state-badge">{t.role}</span>
               </div>
             {:else}
-              <div class="explain">In no team yet. An instance administrator adds people to one.</div>
+              <div class="explain">Not in a team.</div>
             {/each}
           </div>
         {/snippet}
@@ -234,7 +233,7 @@
           {/each}
         </div>
         <p class="explain" style="margin:10px 0 0">
-          A glance, not the log. <a href="/log">The log</a> is where you read further.
+          <a href="/log">Open the log</a>
         </p>
       {/snippet}
     </Section>

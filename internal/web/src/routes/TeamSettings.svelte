@@ -74,7 +74,7 @@
 
   function appearsIn(s) {
     if (s.role === "default") return "Backlog view";
-    if (s.role === "rejected") return "Filter and permalink";
+    if (s.role === "rejected") return "Hidden; find by filter or link";
     return `Board column ${board.indexOf(s) + 1}`;
   }
 
@@ -101,8 +101,7 @@
         { name: "role", label: "Role", type: "select", value: existing?.role || "",
           options: ROLES.map((r) => ({ value: r, label: r || "intermediate" })) },
       ],
-      explain: "A team always has a default, an accepted, a final and a rejected state. " +
-        "Giving a role to one state takes it from the state that had it.",
+      explain: "Each role belongs to exactly one state. Assigning it here takes it from the state that has it now.",
     });
     if (!res) return;
     guard(() => existing
@@ -194,7 +193,7 @@
             </div>
 
             <aside style="width:280px;flex:0 0 280px;margin:18px 20px 0 0;border:1px solid var(--border);background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:12px">
-              <span class="eyebrow">What this produces</span>
+              <span class="eyebrow">Result</span>
               <div style="display:flex;flex-direction:column;gap:6px">
                 <span class="field-label">Board</span>
                 <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -209,7 +208,7 @@
                 <span class="field-label">Off the board</span>
                 <div>
                   <span class="chip" style="border-style:dashed">
-                    {rejectedName} — filter and permalink only
+                    {rejectedName} — hidden; find by filter or link
                   </span>
                 </div>
               </div>
@@ -265,8 +264,7 @@
                 <div style="display:flex;align-items:center;gap:8px">
                   <span class="code-badge">{team.shortCode}</span>
                   <span class="explain">
-                    Set at creation and never changed. It is the prefix of every identifier
-                    this team has minted, and it is never reused.
+                    The identifier prefix. It cannot be changed or reused.
                   </span>
                 </div>
               </div>
@@ -282,8 +280,7 @@
           <Section title="Archive">
             {#snippet children()}
               <p class="explain">
-                Archiving hides the team from the switcher. Its items and its identifiers stay,
-                and its short code is never reused.
+                Archiving hides the team from the switcher. Its items are kept.
               </p>
               {#if app.user.isAdmin}
                 <button class="btn" class:destructive={!team.archivedAt} onclick={toggleArchive}>

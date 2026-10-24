@@ -69,7 +69,7 @@ func (r resolver) Resolve(field, name string) (int64, error) {
 		if _, _, ok := store.ParseIdentifier(name); ok {
 			it, err := store.ItemByIdentifier(r.ctx, r.q, name)
 			if err != nil {
-				return 0, fmt.Errorf("nothing is %s", name)
+				return 0, fmt.Errorf("no item is %s", name)
 			}
 			if it.Kind != store.KindBucket {
 				return 0, fmt.Errorf("%s is a ticket, not a bucket", name)
@@ -111,7 +111,7 @@ func (r resolver) Resolve(field, name string) (int64, error) {
 		return 0, fmt.Errorf("%d buckets are called %q (%s); use the identifier",
 			len(found), name, strings.Join(found, ", "))
 	}
-	return 0, fmt.Errorf("%s does not name things", field)
+	return 0, fmt.Errorf("%s doesn't take names", field)
 }
 
 // zone is the reader's time zone, which a day in a query is read in (SPEC.md

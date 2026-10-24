@@ -151,7 +151,7 @@
   <QueryBox bind:value={draft} {error} onenter={apply} ontype={() => { notice = ""; pending = false; }} />
   <CsqlHelp />
   {#if unapplied}
-    <button class="btn quiet small" title="Put back the filter in use" onclick={discard}>Discard</button>
+    <button class="btn quiet small" title="Revert to the applied filter" onclick={discard}>Discard</button>
   {/if}
   {#if notice}
     <span class="filter-error" role="alert">{notice}</span>

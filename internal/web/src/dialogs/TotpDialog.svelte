@@ -5,9 +5,9 @@
   let code = $state("");
 </script>
 
-<Dialog title="Set up your second factor" {close}>
+<Dialog title="Set up 2FA" {close}>
   {#snippet body()}
-    <p class="explain">Add this secret to your authenticator app, then prove a code.</p>
+    <p class="explain">Add this secret to your authenticator app, then enter the code it shows.</p>
     <input class="input" value={setup.secret} readonly onclick={(e) => e.currentTarget.select()} />
     <p class="explain">{setup.uri}</p>
     <label class="field">
