@@ -344,7 +344,23 @@ supersedes them.
 Every merge into main that carries a change file is a release; nobody bumps a version or pushes a
 tag by hand. A pull request adds one with `npm run changie -- new` (or, without prompts,
 `npm run changie -- new --kind Fixed --body "…"`). changie is pinned in `package.json` and run
-with `go run`, so there is nothing to install and nothing of it in `go.mod`. The kind sets the bump:
+with `go run`, so there is nothing to install and nothing of it in `go.mod`.
+
+From v1, a version promises compatibility for what other things depend on:
+
+- **The data file.** A binary opens any data file, or snapshot, of its major version. There are no
+  migrations, so any schema change is a major release.
+- **The configuration file**: its keys and what they mean.
+- **The command line**: commands, flags, and output a script reads (`campfire snapshot` prints the
+  path of the snapshot).
+- **The MCP tools**: names, arguments and result shapes.
+- **Addresses kept outside the instance**: permalinks (`/SOL-42`), image addresses in item text
+  (`/api/images/12`), a forge's webhook address, `/mcp`, and `/api/stream`, which proxies name.
+
+The HTTP API is not covered. It has one client, served by the same binary, and any release may change
+both together ([SPEC §11](SPEC.md#11-api-contract)), the live-update stream's payloads included.
+
+The kind sets the bump. Breaking and Removed are incompatible changes to the covered surface:
 
 | Kind | Bump |
 |---|---|
