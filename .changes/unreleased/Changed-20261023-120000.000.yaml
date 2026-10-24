@@ -1,3 +1,0 @@
-kind: Changed
-body: "Pull requests come from GitHub, GitLab, Codeberg, Forgejo or Gitea: *Administration → Pull requests* takes a forge and an access token, and keeps up by polling (GitHub and GitLab, every 5 minutes by default) or by a webhook. This replaces the GitHub Apps; connect GitHub again with a token."
-time: 2026-10-23T12:00:00.000000+00:00

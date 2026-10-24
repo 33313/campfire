@@ -5,6 +5,12 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v0.15.0 - 2026-10-24
+
+### Changed
+
+- Pull requests come from GitHub, GitLab, Codeberg, Forgejo or Gitea: *Administration → Pull requests* takes a forge and an access token, and keeps up by polling (GitHub and GitLab, every 5 minutes by default) or by a webhook. This replaces the GitHub Apps; connect GitHub again with a token.
+
 ## v0.14.1 - 2026-10-17
 
 ### Fixed
