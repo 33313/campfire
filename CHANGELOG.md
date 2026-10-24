@@ -5,6 +5,12 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v0.17.0 - 2026-10-24
+
+### Added
+
+- Move the data to another directory in *Administration → Preferences*. Snapshots in the data directory move with the database, and the server restarts. `-data <dir>` sets the data directory at startup.
+
 ## v0.16.0 - 2026-10-24
 
 ### Changed
