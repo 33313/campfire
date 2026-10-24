@@ -133,14 +133,15 @@ type PullRequest struct {
 // Ref is how a pull request is named in the log: acme/web#12.
 func (p PullRequest) Ref() string { return p.Repo + "#" + strconv.FormatInt(p.Number, 10) }
 
-// PullRequestByRemote is the stored pull request's id and state, or 0 and ""
-// when there is none.
-func PullRequestByRemote(ctx context.Context, q Q, remote string) (id int64, state string, err error) {
-	err = q.QueryRowContext(ctx, `SELECT id, state FROM pull_requests WHERE remote = ?`, remote).Scan(&id, &state)
+// PullRequestByRemote is the stored pull request's id, or 0 when there is
+// none.
+func PullRequestByRemote(ctx context.Context, q Q, remote string) (int64, error) {
+	var id int64
+	err := q.QueryRowContext(ctx, `SELECT id FROM pull_requests WHERE remote = ?`, remote).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return 0, "", nil
+		return 0, nil
 	}
-	return id, state, err
+	return id, err
 }
 
 // UpsertPullRequest writes a pull request unless the stored copy is newer,

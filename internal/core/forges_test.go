@@ -41,15 +41,6 @@ func (f *fixture) forge(kind, url string) int64 {
 	return fg.ID
 }
 
-func (f *fixture) kinds() map[string]int {
-	out := map[string]int{}
-	for _, e := range f.events {
-		out[e.Kind]++
-	}
-	f.events = nil
-	return out
-}
-
 func TestPullRequestsFollowTheirTitles(t *testing.T) {
 	f := newFixture(t)
 	team := f.team("Development", "DEV", f.admin)
@@ -63,9 +54,6 @@ func TestPullRequestsFollowTheirTitles(t *testing.T) {
 	if got := f.pullRequests(one.ID); len(got) != 1 || got[0].Ref() != "acme/web#4" || got[0].State != "open" {
 		t.Fatalf("one lists %+v", got)
 	}
-	if k := f.kinds(); k[store.EvPullRequestLinked] != 1 {
-		t.Fatalf("events %v", k)
-	}
 
 	// Retitled to the other ticket: it moves.
 	pr.Title, pr.UpdatedAt = "DEV-2: two", 20
@@ -73,18 +61,12 @@ func TestPullRequestsFollowTheirTitles(t *testing.T) {
 	if len(f.pullRequests(one.ID)) != 0 || len(f.pullRequests(two.ID)) != 1 {
 		t.Fatal("the pull request did not follow its title")
 	}
-	if k := f.kinds(); k[store.EvPullRequestLinked] != 1 || k[store.EvPullRequestUnlinked] != 1 {
-		t.Fatalf("events %v", k)
-	}
 
-	// Merged: the state changes in place, and the item's history says so.
+	// Merged: the state changes in place.
 	pr.State, pr.UpdatedAt = "merged", 30
 	f.apply(gh, pr, two.Identifier)
 	if got := f.pullRequests(two.ID); got[0].State != "merged" {
 		t.Fatalf("two lists %+v", got)
-	}
-	if k := f.kinds(); k[store.EvPullRequestUpdated] != 1 || len(k) != 1 {
-		t.Fatalf("events %v", k)
 	}
 
 	// An older delivery arriving late changes nothing.
@@ -113,6 +95,12 @@ func TestPullRequestsFollowTheirTitles(t *testing.T) {
 	f.DB.R.QueryRow(`SELECT count(*) FROM pull_requests`).Scan(&n)
 	if n != 1 {
 		t.Fatalf("%d pull requests kept", n)
+	}
+	// None of it is logged: the forge is the record.
+	for _, e := range f.events {
+		if e.Entity == "item" {
+			t.Fatalf("a pull request logged %+v", e)
+		}
 	}
 }
 

@@ -439,7 +439,7 @@ merged or closed.
 
 The title is the whole link. Retitling a pull request moves it; one that names nothing is not kept.
 A pull request MUST NOT change an item's state: like a relation, it is information. Its link and
-its state changes are written to the item's history with no actor. Deliveries for a forge that is
+its state changes are not written to the log: the forge is their record. Deliveries for a forge that is
 not connected are refused. Removing a forge keeps what it already listed.
 
 ---

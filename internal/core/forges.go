@@ -180,7 +180,8 @@ func (s *Service) MarkSynced(ctx context.Context, id int64, syncErr error) error
 }
 
 // ApplyPullRequest brings one pull request's links up to date with its
-// title, `identifiers` being the items the title names.
+// title, `identifiers` being the items the title names. It writes nothing to
+// the log: the forge is the record of what happened to a pull request.
 //
 // A delivery for a forge that is gone is dropped. One older than what is
 // stored is dropped too: deliveries arrive out of order, and a sync reads
@@ -193,15 +194,15 @@ func (s *Service) ApplyPullRequest(ctx context.Context, forgeID int64, pr store.
 		} else if err != nil {
 			return err
 		}
-		want := map[int64]store.Item{}
+		want := map[int64]bool{}
 		for _, id := range identifiers {
 			if it, err := store.ItemByIdentifier(ctx, t.Tx, id); err == nil {
-				want[it.ID] = it
+				want[it.ID] = true
 			} else if !errors.Is(err, store.ErrNotFound) {
 				return err
 			}
 		}
-		prID, oldState, err := store.PullRequestByRemote(ctx, t.Tx, pr.Remote)
+		prID, err := store.PullRequestByRemote(ctx, t.Tx, pr.Remote)
 		if err != nil {
 			return err
 		}
@@ -218,38 +219,15 @@ func (s *Service) ApplyPullRequest(ctx context.Context, forgeID int64, pr store.
 		if err != nil || prID == 0 {
 			return err
 		}
-
-		ref := pr.Ref()
 		for _, id := range have {
-			it, err := store.ItemByID(ctx, t.Tx, id)
-			if err != nil {
-				return err
-			}
-			if _, kept := want[id]; kept {
+			if want[id] {
 				delete(want, id)
-				if oldState != "" && oldState != pr.State {
-					if err := t.log(ctx, store.Event{Kind: store.EvPullRequestUpdated, Entity: "item",
-						EntityID: id, ItemID: id, TeamID: it.TeamID, Field: "pull_request",
-						OldValue: ref + " " + oldState, NewValue: ref + " " + pr.State}); err != nil {
-						return err
-					}
-				}
-				continue
-			}
-			if err := store.UnlinkPullRequest(ctx, t.Tx, id, prID); err != nil {
-				return err
-			}
-			if err := t.log(ctx, store.Event{Kind: store.EvPullRequestUnlinked, Entity: "item",
-				EntityID: id, ItemID: id, TeamID: it.TeamID, Field: "pull_request", OldValue: ref}); err != nil {
+			} else if err := store.UnlinkPullRequest(ctx, t.Tx, id, prID); err != nil {
 				return err
 			}
 		}
-		for id, it := range want {
+		for id := range want {
 			if err := store.LinkPullRequest(ctx, t.Tx, id, prID); err != nil {
-				return err
-			}
-			if err := t.log(ctx, store.Event{Kind: store.EvPullRequestLinked, Entity: "item",
-				EntityID: id, ItemID: id, TeamID: it.TeamID, Field: "pull_request", NewValue: ref}); err != nil {
 				return err
 			}
 		}

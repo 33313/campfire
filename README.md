@@ -184,7 +184,7 @@ GitHub (and GitHub Enterprise), Forgejo, Gitea and GitLab, private repositories 
 
    The token sees what its user sees, so a bot account limited to a few repositories keeps Campfire
    to those.
-2. **Add it.** *Administration → Pull requests*: pick the forge (GitHub, GitLab, Codeberg, or a
+2. **Add it.** *Administration → Integrations*: pick the forge (GitHub, GitLab, Codeberg, or a
    self-hosted one at its address, like `https://git.example.com`) and give the token. Campfire
    tries the token, then reads back the last 90 days at once; *Sync* does it again. GitHub and
    GitLab come two ways:

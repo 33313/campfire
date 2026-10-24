@@ -2,7 +2,6 @@
   // Instance administration.
 
   import { api } from "../lib/api.js";
-  import { navigate } from "../lib/router.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
   import { openModal, failure, toast } from "../lib/ui.svelte.js";
   import { newTeam } from "../lib/teams.js";
@@ -26,10 +25,8 @@
     { id: "teams", label: "Teams" },
     { id: "appearance", label: "Appearance" },
     { id: "backup", label: "Backup and restore" },
-    { id: "agents", label: "Agent access" },
     { id: "updates", label: "Updates" },
-    { id: "forges", label: "Pull requests" },
-    { id: "log", label: "Global log", onclick: () => navigate("/log") },
+    { id: "integrations", label: "Integrations" },
   ];
 
   const query = new URLSearchParams(location.search);
@@ -547,7 +544,7 @@
             {/snippet}
           </Section>
 
-        {:else if tab === "forges"}
+        {:else if tab === "integrations"}
           <Section title="Pull requests" sub={forges?.length ? `${forges.length} ${forges.length === 1 ? "forge" : "forges"}` : "off"}>
             {#snippet children()}
               {#if !forges}
@@ -632,7 +629,6 @@
             {/snippet}
           </Section>
 
-        {:else}
           <Section title="Agent access" sub="{tokens.length} live tokens">
             {#snippet children()}
               <p class="explain">

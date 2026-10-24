@@ -12,10 +12,9 @@ const DESCRIBE = {
   "comment.deleted": "deleted a comment", "item.created": "created", "item.deleted": "deleted",
 };
 
-/** Who did it. A pull request's events are its forge's, made by nobody here. */
+/** Who did it. */
 export function actorName(e) {
-  if (e.actorName) return e.actorName;
-  return e.kind?.startsWith("item.pull_request_") ? "forge" : "—";
+  return e.actorName || "—";
 }
 
 /** What changed, rather than the event kind's dotted name. */
