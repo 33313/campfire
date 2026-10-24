@@ -87,7 +87,7 @@ func (s *Server) restoreSnapshot(w http.ResponseWriter, r *http.Request, a core.
 	}
 	return map[string]string{
 		"command": "campfire restore " + path,
-		"note": "Stop the server, run this command, then start it again.",
+		"note":    "Stop the server, run this command, then start it again.",
 	}, nil
 }
 
@@ -105,7 +105,7 @@ func (s *Server) restoreAt(r *http.Request, at time.Time) (any, error) {
 	}
 	return map[string]string{
 		"command": "campfire restore -at " + at.UTC().Format(time.RFC3339),
-		"note": "Stop the server, run this command, then start it again.",
+		"note":    "Stop the server, run this command, then start it again.",
 	}, nil
 }
 
