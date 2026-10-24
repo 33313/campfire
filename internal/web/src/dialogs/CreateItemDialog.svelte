@@ -140,7 +140,7 @@
         <span class="field-label">
           {chosen === "bucket" ? "Owner" : "Assignee"}
           <!-- The one assignee picked most often, without the drop-down (DEV-82). -->
-          <button type="button" class="pick-me" onclick={() => (assigneeId = app.user.id)}>Me</button>
+          <button type="button" class="pick-me" onclick={() => (assigneeId = app.user.id)}>(Me!)</button>
         </span>
         <select class="input" aria-label={chosen === "bucket" ? "Owner" : "Assignee"} bind:value={assigneeId}>
           <option value="">Unassigned</option>

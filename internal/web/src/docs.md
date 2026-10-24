@@ -36,7 +36,7 @@ use, then connecting your own tools.
 | Description | Markdown and pictures. See [Text formatting](#text-formatting). |
 | Priority | `P1` (highest) to `P4`. Default `P3`. |
 | Planned end | Optional due date. |
-| Assignee | One person, or nobody. **Me** assigns it to you. |
+| Assignee | One person, or nobody. **(Me!)** assigns it to you. |
 | Bucket | (Optional) The [Bucket](#buckets) it belongs to. Click the box for the list; type to narrow it by identifier or title. The ones you pick most come first. |
 | Labels | Free text. Enter adds a label; Backspace in the empty box removes the last one. |
 | Relations | (Optional) Pick a kind, type the other item's identifier, and press Enter. See *Comments, history and relations* below. |
