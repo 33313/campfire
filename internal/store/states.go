@@ -106,7 +106,7 @@ func DeleteWorkState(ctx context.Context, q Q, id int64) error {
 		return err
 	}
 	if n > 0 {
-		return fmt.Errorf("%d item(s) are still in this state", n)
+		return fmt.Errorf("%d item(s) are still in this state; move them first", n)
 	}
 	_, err := q.ExecContext(ctx, `DELETE FROM work_states WHERE id = ?`, id)
 	return err

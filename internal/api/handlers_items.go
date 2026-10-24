@@ -238,7 +238,7 @@ func (s *Server) deleteComment(w http.ResponseWriter, r *http.Request, a core.Ac
 func (s *Server) uploadImage(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
 	data, err := io.ReadAll(io.LimitReader(r.Body, s.MaxImage+1))
 	if err != nil {
-		return nil, &core.Error{Code: core.CodeInvalid, Message: "the picture did not arrive whole"}
+		return nil, &core.Error{Code: core.CodeInvalid, Message: "the upload was incomplete; try again"}
 	}
 	id, err := s.svc.UploadImage(r.Context(), a, data, s.MaxImage)
 	if err != nil {

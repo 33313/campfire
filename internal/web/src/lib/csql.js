@@ -187,7 +187,7 @@ function parser(toks) {
         throw new CsqlError(`expected a value for ${field}, not the keyword ${low}`, t.pos, t.end);
       }
       if (low === "none") {
-        if (!f.nullable) throw new CsqlError(`${field} is never none`, t.pos, t.end);
+        if (!f.nullable) throw new CsqlError(`${field} can't be none`, t.pos, t.end);
         v.raw = low;
         v.none = true;
         return v;

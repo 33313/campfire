@@ -39,11 +39,11 @@
     <p class="explain">
       {view ? "Changes apply to everyone."
         : "Anyone can turn it on; anyone in this team can edit or delete it."}
-      Views that are on combine with and.
+      Active views are combined with AND.
     </p>
     <label class="field">
       <span class="field-label">Name</span>
-      <input class="input" placeholder="Mine, in the garden" bind:value={name} />
+      <input class="input" placeholder="My open work" bind:value={name} />
     </label>
     <div class="field">
       <span class="field-label">Filter</span>

@@ -113,7 +113,7 @@
     </label>
     <label class="field">
       <span class="field-label">Description</span>
-      <textarea class="input" rows="4" placeholder="Markdown… paste a picture to add one"
+      <textarea class="input" rows="4" placeholder="Markdown. Paste or drop pictures."
                 bind:value={description} use:pictures></textarea>
     </label>
     <!-- Priority, planned end and assignee on one row: there is room, and the
@@ -140,7 +140,7 @@
         <span class="field-label">
           {chosen === "bucket" ? "Owner" : "Assignee"}
           <!-- The one assignee picked most often, without the drop-down (DEV-82). -->
-          <button type="button" class="pick-me" onclick={() => (assigneeId = app.user.id)}>(Me!)</button>
+          <button type="button" class="pick-me" onclick={() => (assigneeId = app.user.id)}>Me</button>
         </span>
         <select class="input" aria-label={chosen === "bucket" ? "Owner" : "Assignee"} bind:value={assigneeId}>
           <option value="">Unassigned</option>

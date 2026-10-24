@@ -114,7 +114,7 @@ paths:
   /api/auth/signin:
     post:
       operationId: signIn
-      summary: Sign in, optionally with a second factor
+      summary: Sign in, optionally with 2FA
       x-agent: false
       security: []
       requestBody: { $ref: "#/components/requestBodies/Json" }
@@ -171,7 +171,7 @@ paths:
   /api/auth/totp/enable:
     post:
       operationId: enableTotp
-      summary: Enable the second factor by proving a code
+      summary: Enable 2FA by proving a code
       x-agent: false
       requestBody: { $ref: "#/components/requestBodies/Json" }
       responses:
@@ -180,7 +180,7 @@ paths:
   /api/auth/totp/disable:
     post:
       operationId: disableTotp
-      summary: Disable the second factor
+      summary: Disable 2FA
       x-agent: false
       requestBody: { $ref: "#/components/requestBodies/Json" }
       responses:

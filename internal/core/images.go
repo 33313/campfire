@@ -33,7 +33,7 @@ func (s *Service) UploadImage(ctx context.Context, a Actor, data []byte, max int
 		return 0, err
 	}
 	if max == 0 {
-		return 0, invalidField("image", "this instance does not take pictures")
+		return 0, invalidField("image", "picture uploads are off on this instance")
 	}
 	if int64(len(data)) > max {
 		return 0, invalidField("image", "a picture is at most %s", size(max))

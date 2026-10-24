@@ -34,7 +34,7 @@
     <button class="btn small" onclick={() => lines.push("")}>Add a line</button>
     <label style="display:flex;gap:8px;align-items:center">
       <input class="check" type="checkbox" bind:checked={rejectSource} />
-      <span>Reject {item.identifier} once the split is written</span>
+      <span>Reject {item.identifier} after splitting</span>
     </label>
   {/snippet}
   {#snippet footer()}

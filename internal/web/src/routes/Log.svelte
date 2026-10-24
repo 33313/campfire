@@ -198,7 +198,7 @@
       </tbody>
     </table>
     {#if cursor}
-      <LoadOlder label="Load older — from sequence {cursor}" onclick={() => load(cursor)} />
+      <LoadOlder label="Load older" onclick={() => load(cursor)} />
     {:else}
       <div style="padding:14px 20px"><span class="explain">End of the log.</span></div>
     {/if}

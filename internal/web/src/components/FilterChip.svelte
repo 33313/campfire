@@ -112,6 +112,6 @@
         <span class="pop-empty">Nothing matches.</span>
       {/each}
     </div>
-    <span class="pop-hint">Click: [+] is · [−] isn't · Esc undoes</span>
+    <span class="pop-hint">Click to cycle: [+] include · [−] exclude · off. Esc cancels.</span>
   </div>
 {/if}

@@ -36,7 +36,7 @@ use, then connecting your own tools.
 | Description | Markdown and pictures. See [Text formatting](#text-formatting). |
 | Priority | `P1` (highest) to `P4`. Default `P3`. |
 | Planned end | Optional due date. |
-| Assignee | One person, or nobody. **(Me!)** assigns it to you. |
+| Assignee | One person, or nobody. **Me** assigns it to you. |
 | Bucket | (Optional) The [Bucket](#buckets) it belongs to. Click the box for the list; type to narrow it by identifier or title. The ones you pick most come first. |
 | Labels | Free text. Enter adds a label; Backspace in the empty box removes the last one. |
 | Relations | (Optional) Pick a kind, type the other item's identifier, and press Enter. See *Comments, history and relations* below. |
@@ -58,9 +58,9 @@ use, then connecting your own tools.
 - **Relations** link two items: *blocks* or *blocked by*, *follows up* or *followed up by*,
   *duplicates* or *duplicated by*, and *relates to*. Each shows on both items, the right way round,
   and in the preview. They are for reference and don't block any move.
-- **Pull requests** show when your instance is connected to GitHub, Forgejo, Gitea or GitLab. Start or end a pull request's
+- **Pull requests** show when your instance is connected to GitHub, GitLab, Codeberg, Forgejo or Gitea. Start or end a pull request's
   title with the identifier, as in `DEV-12: fix it` or `fix it [DEV-12]`, and it is listed on the
-  item and in the preview with its state: open, draft, merged or closed. Retitle it to move it. It
+  item and in the preview with its state: open, draft, merged or closed. Rename it to link a different ticket. It
   never moves the ticket for you.
 
 ### Clone and split
@@ -75,7 +75,7 @@ use, then connecting your own tools.
 A bucket is a milestone. Create one with **Create** → **Bucket**. It has an icon and an optional
 colour, picked together from one field, and its tickets show both on their cards. An instance
 administrator chooses which icons and colours are offered under **Administration** → *Appearance*,
-may allow any hex colour that reads on a card, and may add icon sets of the instance's own: SVGs
+may allow any hex colour with enough contrast on a card, and may add icon sets of the instance's own: SVGs
 uploaded under a prefix, offered as `prefix.name`. Only their stroked shapes are kept.
 
 - **Add a ticket** by setting the ticket's *Bucket* field. A bucket takes tickets from any team.
@@ -114,7 +114,7 @@ as a table. Rejected items appear in neither; find them with a filter or by iden
   use the checkboxes.
 - The **selection bar** replaces the filter bar and changes every selected item at once: *Move to…*,
   *Reject…*, *Assignee*, *Priority* and *Bucket*. The selection stays once a change goes through,
-  less anything that left the screen, so the next change can follow. *Clear* ends it.
+  minus any that left the screen, so the next change can follow. *Clear* ends it.
 
 ### Card menu
 
@@ -274,7 +274,7 @@ Your role can differ from team to team.
 ### Your account
 
 Click your name at the foot of the sidebar to open your profile: picture, email and bio. Its
-**Settings** has your password, a second factor (an authenticator app code at sign-in) and agent
+**Settings** has your password, 2FA (an authenticator app code at sign-in) and agent
 tokens.
 
 ### Team settings
@@ -350,7 +350,7 @@ The full definition is [`api/openapi.yaml`](https://github.com/33313/campfire/bl
 ### Authentication
 
 Sign in with `POST /api/auth/signin` and send the `campfire_session` cookie it sets with every later
-request. Add `"code"` to the body if the account has a second factor. Agent tokens work only for
+request. Add `"code"` to the body if the account has 2FA. Agent tokens work only for
 MCP, not for this API.
 
 ```sh

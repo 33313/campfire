@@ -16,7 +16,7 @@
     <input class="input" {value} readonly onclick={(e) => e.currentTarget.select()} />
     {#if install}
       <p class="explain" style="margin-top:14px">
-        Or install it into an MCP client in one step:
+        Or add it to Claude Code:
       </p>
       <input class="input" value={install} readonly onclick={(e) => e.currentTarget.select()} />
     {/if}

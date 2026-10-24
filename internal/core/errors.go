@@ -51,7 +51,7 @@ func invalidField(field, format string, args ...any) *Error {
 }
 
 var (
-	errForbidden = &Error{Code: CodeForbidden, Message: "you may not do that"}
+	errForbidden = &Error{Code: CodeForbidden, Message: "you don't have permission to do that"}
 	errNotFound  = &Error{Code: CodeNotFound, Message: "not found"}
 )
 

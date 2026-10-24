@@ -334,7 +334,7 @@
              rest open with Edit. -->
         <div class="fields">
           <div class="aside-field">
-            <span class="field-label">Work state</span>
+            <span class="field-label">State</span>
             <button class="aside-control" onclick={() => moveTo(null)}>
               <StatePip role={item.stateRole} />
               <span>{item.stateName}</span>
@@ -486,7 +486,7 @@
           </div>
 
           <section style="margin:0 0 28px">
-            <div class="section-head"><span class="eyebrow">Contents by owning team</span></div>
+            <div class="section-head"><span class="eyebrow">Tickets by team</span></div>
             {#each contents || [] as g}
               <div style="margin-bottom:4px">
                 <div style="display:flex;align-items:center;gap:8px;padding:8px 0">

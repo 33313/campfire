@@ -72,8 +72,8 @@
   // bucket that wears a hidden icon or colour keeps it.
   const GROUP_NAMES = { planning: "Planning", signals: "Signals", work: "Work", places: "Places" };
   const MODES = [
-    ["palette", "Palette", "The sixteen colours, less any hidden below."],
-    ["hex", "Palette and hex", "Also any readable #rrggbb."],
+    ["palette", "Palette", "The 16 palette colours, minus any hidden below."],
+    ["hex", "Palette and hex", "Also any #rrggbb with enough contrast."],
     ["off", "Off", "No colours offered. Buckets keep theirs."],
   ];
   const offered = $derived(Object.entries(BUCKET_ICON_GROUPS)
@@ -119,7 +119,7 @@
   // Forges (DEV-114).
   const FORGES = {
     github: { name: "GitHub", token: "Token scope: pull requests read (classic: repo).",
-      hook: "Add the webhook to an organisation or repository (Settings → Webhooks), with Pull requests events. GitHub has none for personal accounts: poll those." },
+      hook: "Add the webhook to an organisation or repository (Settings → Webhooks), with Pull requests events. Personal GitHub accounts have no webhooks; use polling." },
     forgejo: { name: "Forgejo", token: "Token scopes: read:repository, read:user.",
       hook: "Add the webhook under Settings → Webhooks on your profile, an organisation or a repository, with Pull request events." },
     gitlab: { name: "GitLab", token: "Token scope: read_api.",
@@ -306,7 +306,7 @@
                       <td>
                         {#if u.hasTotp}
                           <span style="display:flex;align-items:center;gap:6px">
-                            <span class="pip final"></span><span class="explain">TOTP</span>
+                            <span class="pip final"></span><span class="explain">on</span>
                           </span>
                         {:else}
                           <span class="field-label">off</span>
@@ -378,7 +378,7 @@
               </table>
             {/snippet}
           </Section>
-          <Section title="Icon sets" sub="{app.iconSets.length} of the instance's own">
+          <Section title="Icon sets" sub="{app.iconSets.length} custom sets">
             {#snippet children()}
               <p class="explain">
                 SVG icons under a prefix, keyed <code>prefix.name</code> by file name.
@@ -612,7 +612,7 @@
                                aria-label="Minutes between checks" bind:value={pollMinutes} />
                         minutes
                       {:else if choice.kind === "github"}
-                        — for organisations and repositories; GitHub has none for personal accounts.
+                        — for organisations and repositories; personal GitHub accounts have no webhooks.
                       {/if}
                     </div>
                   {/if}
@@ -622,7 +622,7 @@
             {/snippet}
           </Section>
 
-          <Section title="Agent access" sub="{tokens.length} live tokens">
+          <Section title="Agent access" sub="{tokens.length} active tokens">
             {#snippet children()}
               <p class="explain">
                 A token has its user's current permissions. Revoking takes effect immediately.

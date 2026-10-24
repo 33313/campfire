@@ -142,7 +142,7 @@
       <div class="banner">
         <span class="pip waiting"></span>
         <span class="grow explain">
-          Reconnecting. Everything on screen is still correct; live updates resume on their own.
+          Reconnecting… Live updates resume automatically.
         </span>
       </div>
     {/if}
@@ -155,7 +155,7 @@
     {:else if route.path !== "/"}
       <div class="signin">
         <div class="signin-card">
-          <h1>Nothing here</h1>
+          <h1>Page not found</h1>
           <p class="explain">{route.path}</p>
           <a href="/">Back to the board</a>
         </div>

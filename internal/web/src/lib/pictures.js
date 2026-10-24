@@ -32,13 +32,13 @@ async function take(el, images, e) {
   e.preventDefault();
   const max = app.imageMaxSize;
   if (!max) {
-    toast("This instance does not take pictures", "alert");
+    toast("Picture uploads are off on this instance.", "alert");
     return;
   }
   await Promise.all(images.map(async (file) => {
     const name = (file.name || "picture").replace(/[[\]()]/g, "");
     if (file.size > max) {
-      toast(`${name} is over ${Math.round(max / 2 ** 20)}MB, the most this instance takes`, "alert");
+      toast(`${name} is over the ${Math.round(max / 2 ** 20)}MB limit`, "alert");
       return;
     }
     const holder = `![Uploading ${name}…]()`;

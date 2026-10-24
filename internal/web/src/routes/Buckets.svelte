@@ -43,7 +43,7 @@
   let paged = $state(false);
 
   let SCOPES = $derived([
-    { id: "participation", label: "Participation" },
+    { id: "participation", label: "Taking part" },
     { id: "owned", label: team ? `Owned by ${team.name}` : "Owned" },
     { id: "instance", label: "Whole instance" },
   ]);
@@ -85,14 +85,14 @@
     (!text || b.title.toLowerCase().includes(text.toLowerCase()) ||
       b.identifier.toLowerCase().includes(text.toLowerCase()))));
 
-  // "so far" while a page is still unread: the count is what has been loaded,
+  // "+" while a page is still unread: the count is what has been loaded,
   // never a total the list has not seen.
   let more = $derived(!!page?.cursor);
   let description = $derived(scope === "participation"
-    ? `${buckets.length}${more ? " so far" : ""} that ${team ? team.name : "this team"} takes part in`
+    ? `${buckets.length}${more ? "+" : ""} that ${team ? team.name : "this team"} takes part in`
     : scope === "owned"
-      ? `${buckets.length}${more ? " so far" : ""} owned by ${team ? team.name : "this team"}`
-      : `${buckets.length}${more ? " so far" : ""} in the instance`);
+      ? `${buckets.length}${more ? "+" : ""} owned by ${team ? team.name : "this team"}`
+      : `${buckets.length}${more ? "+" : ""} in the instance`);
 
   let ownerLabel = $derived(ownerId === -1 ? "Unowned"
     : ownerId ? app.users.find((u) => u.id === ownerId)?.username || `user ${ownerId}`

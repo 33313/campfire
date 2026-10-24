@@ -19,6 +19,7 @@ export function actorName(e) {
 
 /** What changed, rather than the event kind's dotted name. */
 export function fieldName(e) {
+  if (e.field === "totp") return "2FA";
   if (e.field) return e.field.replaceAll("_", " ");
   const [entity, verb] = (e.kind || "").split(".");
   if (entity === "comment") return "comment";
