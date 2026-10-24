@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/33313/campfire/internal/backup"
+	"github.com/33313/campfire/internal/config"
 	"github.com/33313/campfire/internal/core"
 	"github.com/33313/campfire/internal/store"
 )
@@ -59,6 +60,81 @@ func TestAnArgumentNothingReadsIsRefused(t *testing.T) {
 	err := run([]string{"init", "-config", path, "wat"})
 	if err == nil || !strings.Contains(err.Error(), "takes no arguments") {
 		t.Fatalf("got %v, want a complaint about the extra argument", err)
+	}
+}
+
+// -data sets the directory for the configuration file, and the default
+// directory for the database and snapshots.
+func TestDataDirectoryHoldsEverything(t *testing.T) {
+	dir := t.TempDir()
+	if err := run([]string{"init", "-data", dir}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(filepath.Join(dir, "campfire.json"), "elsewhere")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Database != filepath.Join(dir, "campfire.db") || cfg.Snapshots.Dir != filepath.Join(dir, "snapshots") {
+		t.Fatalf("init in %s wrote database %s, snapshots %s", dir, cfg.Database, cfg.Snapshots.Dir)
+	}
+}
+
+// DEV-116: moving the data copies the database and snapshots, points the
+// configuration file at the copy, and keeps the old files.
+func TestMovingTheDataDirectory(t *testing.T) {
+	old, to := t.TempDir(), filepath.Join(t.TempDir(), "elsewhere")
+	configPath := filepath.Join(old, "campfire.json")
+	cfg := config.Default(old)
+	db, err := store.Open(cfg.Database)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := core.New(db).Bootstrap(context.Background(), "root", "correct horse battery"); err != nil {
+		t.Fatal(err)
+	}
+	snap, err := backup.Take(context.Background(), db, cfg.Snapshots.Dir)
+	db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for dir, why := range map[string]string{"relative": "full path", old: "already there"} {
+		if err := checkMoveTarget(cfg, configPath, dir); err == nil || !strings.Contains(err.Error(), why) {
+			t.Errorf("moving to %s: got %v, want %q", dir, err, why)
+		}
+	}
+	if err := checkMoveTarget(cfg, configPath, to); err != nil {
+		t.Fatal(err)
+	}
+	if err := moveData(cfg, configPath, to); err != nil {
+		t.Fatal(err)
+	}
+
+	moved, err := config.Load(configPath, old)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if moved.Database != filepath.Join(to, "campfire.db") || moved.Snapshots.Dir != filepath.Join(to, "snapshots") {
+		t.Fatalf("the configuration points at %s and %s", moved.Database, moved.Snapshots.Dir)
+	}
+	db, err = store.Open(moved.Database)
+	if err != nil {
+		t.Fatal(err)
+	}
+	needs, err := core.New(db).NeedsBootstrap(context.Background())
+	db.Close()
+	if err != nil || needs {
+		t.Fatalf("the moved database lost its account: %v", err)
+	}
+	copied, err := backup.List(moved.Snapshots.Dir)
+	if err != nil || len(copied) != 1 || !copied[0].Taken.Equal(snap.Taken) {
+		t.Fatalf("snapshots after the move: %v, %v; want one taken %v", copied, err, snap.Taken)
+	}
+	if _, err := os.Stat(cfg.Database); err != nil {
+		t.Fatal("the old database is gone")
+	}
+	if err := checkMoveTarget(moved, configPath, filepath.Dir(cfg.Database)); err == nil {
+		t.Fatal("moving back over the old campfire.db was allowed")
 	}
 }
 

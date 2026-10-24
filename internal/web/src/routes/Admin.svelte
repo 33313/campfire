@@ -27,6 +27,7 @@
     { id: "backup", label: "Backup and restore" },
     { id: "updates", label: "Updates" },
     { id: "integrations", label: "Integrations" },
+    { id: "preferences", label: "Preferences" },
   ];
 
   const query = new URLSearchParams(location.search);
@@ -38,17 +39,19 @@
   let tokens = $state([]);
   let updates = $state(null);
   let forges = $state(null);
+  let data = $state(null);
   let error = $state(null);
   let loaded = $state(false);
 
   async function load() {
     try {
-      [users, teams, snapshots, tokens, updates, forges] = await Promise.all([
+      [users, teams, snapshots, tokens, updates, forges, data] = await Promise.all([
         api.listUsers(), api.listTeams(true),
         api.listSnapshots().catch(() => null),
         api.listAgentTokens(0).catch(() => []),
         api.getUpdates().catch(() => null),
         api.listForges().catch(() => null),
+        api.getData().catch(() => null),
       ]);
       loaded = true;
       // A new forge has never been read: read it now, once.
@@ -225,6 +228,37 @@
       explain: "Shown once. Expires in seven days.",
       value: `${location.origin}/invite/${invitation.token}`,
     });
+  }
+
+  // Moving the data restarts the server (DEV-116). Poll until it answers,
+  // then show the data directory.
+  let moveTo = $state("");
+  let moving = $state(false);
+  async function moveData(e) {
+    e.preventDefault();
+    const to = moveTo.trim();
+    const ok = await openModal(ConfirmDialog, {
+      title: `Move the data to ${to}`,
+      lines: [`Moves the database${data.movesSnapshots ? " and its snapshots" : ""} and restarts the server.`,
+        `The old files in ${data.directory} are kept. Delete them once everything works.`],
+      consequence: "Everyone is disconnected for a moment", action: "Move",
+    });
+    if (!ok) return;
+    try { await api.moveData(to); } catch (err) { failure(err); return; }
+    moving = true;
+    const was = data.directory;
+    for (let i = 0; i < 120; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      const now = await api.getData().catch(() => null);
+      if (!now) continue;
+      moving = false;
+      await load();
+      if (now.directory === was) failure("The data was not moved. See the server log.");
+      else { moveTo = ""; toast(`Data moved to ${now.directory}`); }
+      return;
+    }
+    moving = false;
+    failure("The server has not come back. Check its log.");
   }
 
   // A moment in this browser's zone, as the datetime input writes it.
@@ -661,6 +695,39 @@
                   {/each}
                 </tbody>
               </table>
+            {/snippet}
+          </Section>
+
+        {:else if tab === "preferences"}
+          <Section title="Data directory" sub={data?.directory}>
+            {#snippet children()}
+              {#if !data}
+                <p class="explain">The data directory is unavailable.</p>
+              {:else}
+                <p class="explain">
+                  The database{data.movesSnapshots ? " and its snapshots" : ""} live here.
+                  {#if !data.movesSnapshots}Snapshots stay in {data.snapshots}.{/if}
+                  The configuration file is {data.config}.
+                </p>
+                {#if data.fixed}
+                  <p class="explain" style="margin-top:8px">
+                    In the container image the data is in the volume mounted at <code>/data</code>.
+                    To move it, mount a different volume.
+                  </p>
+                {:else}
+                  <form style="display:flex;gap:8px;align-items:center;margin-top:10px" onsubmit={moveData}>
+                    <input class="input" style="flex:1" aria-label="New data directory" placeholder="/path/to/directory"
+                           disabled={moving} bind:value={moveTo} />
+                    <button class="btn primary small" disabled={moving || !moveTo.trim()}>
+                      {moving ? "Moving…" : "Move"}
+                    </button>
+                  </form>
+                  <p class="explain" style="margin-top:8px">
+                    A full path on a local disk. Network shares and synced folders
+                    (Dropbox, iCloud Drive, OneDrive) corrupt the database.
+                  </p>
+                {/if}
+              {/if}
             {/snippet}
           </Section>
         {/if}

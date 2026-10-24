@@ -767,9 +767,9 @@ Two defaults are security- and integrity-bearing:
 
 - The server MUST bind to loopback only unless explicitly configured otherwise. A binary run on a
   laptop must not silently serve the network it is attached to.
-- The database file MUST live in the operating system's data directory. Network filesystems and
-  cloud-synchronised folders are unsupported and MUST be documented as such; the storage engine
-  corrupts on both.
+- The database file MUST live in the operating system's data directory unless the user names
+  another. Network filesystems and cloud-synchronised folders are unsupported and MUST be
+  documented as such; the storage engine corrupts on both.
 
 ### 13.2 Implementation rules
 

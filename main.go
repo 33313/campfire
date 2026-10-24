@@ -46,9 +46,17 @@ func buildVersion() string {
 	return "dev"
 }
 
+// errRestart asks main to start the program again, with the same arguments.
+var errRestart = errors.New("restart")
+
 func main() {
 	log.SetFlags(log.Ltime)
-	if err := run(os.Args[1:]); err != nil {
+	err := run(os.Args[1:])
+	if errors.Is(err, errRestart) {
+		log.Print("restarting")
+		err = restart()
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "campfire:", err)
 		os.Exit(1)
 	}
@@ -68,7 +76,9 @@ usage:
   campfire version              print the version and exit
 
 flags:
-  -config <path>   configuration file (default: the data directory)
+  -data <dir>      data directory: the configuration file, database and snapshots
+                   (default: the operating system's data directory)
+  -config <path>   configuration file (default: campfire.json in the data directory)
   -version         print the version and exit
 `
 }
@@ -80,7 +90,8 @@ func run(args []string) error {
 	}
 
 	fs := flag.NewFlagSet("campfire", flag.ContinueOnError)
-	configPath := fs.String("config", config.DefaultPath(), "configuration file")
+	dataDir := fs.String("data", config.DataDir(), "data directory")
+	configPath := fs.String("config", "", "configuration file")
 	showVersion := fs.Bool("version", false, "print the version and exit")
 	at := fs.String("at", "", "restore: the moment to restore to")
 	fs.Usage = func() { fmt.Fprint(os.Stderr, usage()) }
@@ -117,7 +128,16 @@ func run(args []string) error {
 		return fmt.Errorf("-at is for restore, not %s", command)
 	}
 
-	cfg, err := config.Load(*configPath)
+	// Absolute, so that the paths init writes still hold when the server is
+	// started from another directory.
+	dir, err := filepath.Abs(*dataDir)
+	if err != nil {
+		return err
+	}
+	if *configPath == "" {
+		*configPath = config.Path(dir)
+	}
+	cfg, err := config.Load(*configPath, dir)
 	if err != nil {
 		return err
 	}
@@ -157,7 +177,15 @@ func run(args []string) error {
 		if err := requireNoArgs(command, rest); err != nil {
 			return err
 		}
-		return serve(cfg)
+		moveTo, err := serve(cfg, *configPath)
+		if err != nil || moveTo == "" {
+			return err
+		}
+		// A failed move restarts with the old data directory.
+		if err := moveData(cfg, *configPath, moveTo); err != nil {
+			log.Printf("moving the data to %s failed; still using %s: %v", moveTo, filepath.Dir(cfg.Database), err)
+		}
+		return errRestart
 	case "help", "-h", "--help":
 		fmt.Print(usage())
 		return nil
@@ -201,10 +229,12 @@ func check(cfg config.Config) error {
 	return nil
 }
 
-func serve(cfg config.Config) error {
+// serve runs the server until it is stopped. moveTo is the directory an
+// administrator asked to move the data to, if any.
+func serve(cfg config.Config, configPath string) (moveTo string, err error) {
 	db, err := open(cfg)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer db.Close()
 
@@ -225,6 +255,23 @@ func serve(cfg config.Config) error {
 	apiServer.Snapshots = api.Snapshots{Snapshots: cfg.Snapshots,
 		Take: func(ctx context.Context) (backup.Snapshot, error) { return takeSnapshot(ctx, cfg, db) }}
 	apiServer.Updates = updates.New(buildVersion())
+	moves := make(chan string, 1)
+	apiServer.Data = api.Data{Database: cfg.Database, Config: configPath, Snapshots: cfg.Snapshots.Dir,
+		MovesSnapshots: movesSnapshots(cfg),
+		// In the container image the volume sets the data directory, and a
+		// rewritten configuration file is lost with the container.
+		Fixed: os.Getenv("CAMPFIRE_CONTAINER") != "",
+		Move: func(dir string) error {
+			if err := checkMoveTarget(cfg, configPath, dir); err != nil {
+				return err
+			}
+			select {
+			case moves <- dir:
+				return nil
+			default:
+				return errors.New("the data is already moving")
+			}
+		}}
 	mux.Handle("/api/", apiServer)
 	if cfg.MCP.Enabled {
 		// The agent interface is served from this process, on this origin, at
@@ -254,7 +301,7 @@ func serve(cfg config.Config) error {
 	defer stopSnapshots()
 	stopReplica, err := startReplica(cfg, db)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer stopReplica()
 	stopChecks := startIntegrityChecks(cfg, db)
@@ -270,17 +317,103 @@ func serve(cfg config.Config) error {
 		log.Print("update check is off")
 	}
 
+	stopped := make(chan struct{})
 	go func() {
-		<-ctx.Done()
+		defer close(stopped)
+		select {
+		case <-ctx.Done():
+		case moveTo = <-moves:
+		}
 		shutdown, done := context.WithTimeout(context.Background(), 5*time.Second)
 		defer done()
-		srv.Shutdown(shutdown)
+		// Close event streams still open after the grace period.
+		if srv.Shutdown(shutdown) != nil {
+			srv.Close()
+		}
 	}()
 
 	log.Printf("campfire %s listening on http://%s (data: %s)", buildVersion(), cfg.Addr, cfg.Database)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return "", err
+	}
+	// ListenAndServe returns when shutdown starts. Running requests finish
+	// before the database closes.
+	<-stopped
+	log.Print("stopped")
+	return moveTo, nil
+}
+
+// movesSnapshots reports whether the snapshots are in the data directory, the
+// default. If so, they move with the database.
+func movesSnapshots(cfg config.Config) bool {
+	return cfg.Snapshots.Dir == filepath.Join(filepath.Dir(cfg.Database), "snapshots")
+}
+
+// checkMoveTarget returns why the data can't move to dir. It runs before the
+// server stops.
+func checkMoveTarget(cfg config.Config, configPath, dir string) error {
+	if !filepath.IsAbs(dir) {
+		return errors.New("give the full path of a directory")
+	}
+	dir = filepath.Clean(dir)
+	if dir == filepath.Dir(cfg.Database) {
+		return errors.New("the data is already there")
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	log.Print("stopped")
+	if _, err := os.Stat(filepath.Join(dir, "campfire.db")); err == nil {
+		return fmt.Errorf("%s already holds a campfire.db", dir)
+	}
+	probe, err := os.CreateTemp(dir, ".campfire-")
+	if err != nil {
+		return fmt.Errorf("cannot write to %s: %w", dir, err)
+	}
+	probe.Close()
+	os.Remove(probe.Name())
+	// The configuration file is rewritten to point at the new directory.
+	if f, err := os.OpenFile(configPath, os.O_WRONLY, 0); err == nil {
+		f.Close()
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("cannot rewrite %s: %w", configPath, err)
+	}
+	return nil
+}
+
+// moveData copies the database, and the snapshots if movesSnapshots, to dir
+// and points the configuration file there. Run it with the server stopped.
+// The old files are kept. A failure before the configuration file is written
+// changes nothing.
+func moveData(cfg config.Config, configPath, dir string) error {
+	dir = filepath.Clean(dir)
+	db, err := store.Open(cfg.Database)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	// A snapshot is a verified, self-contained copy, write-ahead log included.
+	snap, err := backup.Take(context.Background(), db, dir)
+	if err != nil {
+		os.Remove(snap.Path)
+		return err
+	}
+	moved := cfg
+	moved.Database = filepath.Join(dir, "campfire.db")
+	if err := os.Rename(snap.Path, moved.Database); err != nil {
+		os.Remove(snap.Path)
+		return err
+	}
+	if movesSnapshots(cfg) {
+		moved.Snapshots.Dir = filepath.Join(dir, "snapshots")
+		if err := backup.CopyAll(cfg.Snapshots.Dir, moved.Snapshots.Dir); err != nil {
+			os.Remove(moved.Database)
+			return err
+		}
+	}
+	if err := moved.Write(configPath); err != nil {
+		os.Remove(moved.Database)
+		return err
+	}
+	log.Printf("moved the data to %s; the old files in %s can be deleted", dir, filepath.Dir(cfg.Database))
 	return nil
 }

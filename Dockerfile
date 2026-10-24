@@ -37,6 +37,8 @@ COPY --from=build /out/campfire /usr/local/bin/campfire
 USER campfire
 VOLUME /data
 ENV XDG_DATA_HOME=/data
+# The volume sets the data directory, so it can't be moved from Preferences.
+ENV CAMPFIRE_CONTAINER=1
 EXPOSE 8080
 
 # The server binds to loopback unless told otherwise, which is right for a

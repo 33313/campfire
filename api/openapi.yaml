@@ -62,6 +62,24 @@ paths:
         "400": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
 
+  /api/instance/data:
+    get:
+      operationId: getData
+      summary: Where the database, its snapshots and the configuration file are
+      x-agent: false
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "403": { $ref: "#/components/responses/Error" }
+    post:
+      operationId: moveData
+      summary: Move the database, and the snapshots in the data directory, to another directory; restarts the server
+      x-agent: false
+      requestBody: { $ref: "#/components/requestBodies/Json" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+
   /api/icon-sets:
     post:
       operationId: createIconSet
