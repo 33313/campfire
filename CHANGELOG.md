@@ -5,6 +5,12 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v0.16.0 - 2026-10-24
+
+### Changed
+
+- Shorter, plainer help text and error messages across the app. Two-factor sign-in is called 2FA throughout.
+
 ## v0.15.1 - 2026-10-24
 
 ### Fixed
