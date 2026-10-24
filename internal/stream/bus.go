@@ -9,7 +9,9 @@ package stream
 import "sync"
 
 // Notification is what goes down the wire: a sequence number, an event kind,
-// an item identifier and an owning team, and nothing else.
+// an item identifier and an owning team, and nothing else. Kind "reset" tells
+// the client to discard its state and refetch: the subscriber has fallen so
+// far behind that replaying the gap is worse than starting again.
 //
 // Thin by rule (SPEC.md §12.3). Carrying entity contents would let the stream
 // disclose data the recipient may not read, would break every time an entity's
@@ -19,10 +21,6 @@ type Notification struct {
 	Kind       string `json:"kind"`
 	Identifier string `json:"identifier,omitempty"`
 	TeamID     int64  `json:"teamId,omitempty"`
-	// Reset tells the client to discard its state and refetch. It is sent when
-	// a subscriber has fallen so far behind that replaying the gap is worse
-	// than starting again.
-	Reset bool `json:"reset,omitempty"`
 }
 
 // queue is how much a slow subscriber may fall behind before it is reset. A

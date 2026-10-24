@@ -370,7 +370,7 @@ func TestStreamTellsAFarBehindClientToReload(t *testing.T) {
 	}
 	defer res.Body.Close()
 	first := readFrame(t, res.Body)
-	if first.Reset {
+	if first.Kind == "reset" {
 		t.Fatalf("a client one event behind was told to reload: %+v", first)
 	}
 	if first.Seq == 0 {

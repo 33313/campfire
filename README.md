@@ -391,7 +391,7 @@ warranty. If you run a modified Campfire for others over a network, offer them i
 [`LICENSE`](LICENSE).
 
 The sign-in page and the last section of the documentation link to the source. A modified Campfire
-run for others complies by pointing [`internal/web/src/lib/source.js`](internal/web/src/lib/source.js)
+run for others complies by pointing [`internal/web/src/routes/SignIn.svelte`](internal/web/src/routes/SignIn.svelte)
 and the *Source code* section of [`internal/web/src/docs.md`](internal/web/src/docs.md) at its own.
 
 The bundled IBM Plex and Source Serif 4 fonts are under the SIL Open Font License 1.1; see

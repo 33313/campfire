@@ -66,7 +66,7 @@ export function openStream() {
     // A cursor past retention gets an explicit instruction, never a silent
     // partial replay (SPEC.md §12.2): everything is refetched. The stream
     // goes on from now, or reconnects, on its own.
-    if (n.reset) {
+    if (n.kind === "reset") {
       staleAll();
       for (const s of subscribers) s.due = true;
       schedule();

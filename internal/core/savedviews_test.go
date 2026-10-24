@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -49,7 +50,11 @@ func TestSavedViewKeepsAReferentThatIsGone(t *testing.T) {
 	if _, err := w.RemoveLabel(w.ctx, w.marta, it.ID, "api"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.LabelByID(w.ctx, w.DB.R, labelID); err != nil {
+	labels, err = store.ListLabels(w.ctx, w.DB.R)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(labels, func(l store.Label) bool { return l.ID == labelID }) {
 		t.Fatal("the label was reaped despite being named by a saved view")
 	}
 

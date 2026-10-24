@@ -1,7 +1,6 @@
 <script>
   import { api } from "../lib/api.js";
   import Mark from "../components/Mark.svelte";
-  import { SOURCE } from "../lib/source.js";
 
   // Sign in, the first-run account, and redeeming a link.
   //
@@ -91,8 +90,11 @@
       {mode === "signin" ? "Sign in" : mode === "bootstrap" ? "Create account" : "Continue"}
     </button>
   </form>
+  <!-- The AGPL-3.0 (§13) asks that network users be offered the source, and
+       the last section of docs.md says the same: a modified copy points both
+       at its own. -->
   <p class="explain">
     Campfire is free software under the AGPL-3.0.
-    <a href={SOURCE} target="_blank" rel="noopener">Source code</a>
+    <a href="https://github.com/33313/campfire" target="_blank" rel="noopener">Source code</a>
   </p>
 </div>

@@ -13,9 +13,7 @@ import (
 	"embed"
 	"encoding/base64"
 	"io/fs"
-	"mime"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -95,9 +93,6 @@ func handler(sub fs.FS) http.Handler {
 			h.Set("Content-Encoding", "gzip")
 		}
 		h.Set("ETag", tag)
-		if t := mime.TypeByExtension(filepath.Ext(a.name)); t != "" {
-			h.Set("Content-Type", t)
-		}
 		http.ServeContent(w, r, a.name, time.Time{}, bytes.NewReader(body))
 	})
 }

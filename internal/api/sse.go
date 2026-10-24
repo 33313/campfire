@@ -70,7 +70,7 @@ func (s *Server) streamHandler(w http.ResponseWriter, r *http.Request) {
 		if tooFar {
 			// An explicit instruction to discard and refetch. A silent partial
 			// replay MUST NOT occur (SPEC.md §12.2).
-			writeEvent(w, flusher, 0, stream.Notification{Kind: "reset", Reset: true})
+			writeEvent(w, flusher, 0, stream.Notification{Kind: "reset"})
 		}
 		for _, e := range events {
 			if !canSee(ctx, e.TeamID) {
@@ -100,7 +100,7 @@ func (s *Server) streamHandler(w http.ResponseWriter, r *http.Request) {
 		case <-ctx.Done():
 			return
 		case <-reset:
-			writeEvent(w, flusher, 0, stream.Notification{Kind: "reset", Reset: true})
+			writeEvent(w, flusher, 0, stream.Notification{Kind: "reset"})
 			return
 		case n, ok := <-notifications:
 			if !ok {
