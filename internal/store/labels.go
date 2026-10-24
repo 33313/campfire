@@ -39,16 +39,6 @@ func LabelByName(ctx context.Context, q Q, name string) (Label, error) {
 	return l, err
 }
 
-func LabelByID(ctx context.Context, q Q, id int64) (Label, error) {
-	var l Label
-	err := q.QueryRowContext(ctx,
-		`SELECT id, name, created_at FROM labels WHERE id = ?`, id).Scan(&l.ID, &l.Name, &l.CreatedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Label{}, ErrNotFound
-	}
-	return l, err
-}
-
 // ListLabels returns every label, for the filter bar's picker. The set is
 // small enough — one row per distinct word a team has typed — that it is not
 // paginated.
