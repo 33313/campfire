@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="160" viewBox="0 0 1200 160">
+  <rect width="1200" height="160" fill="#131110"/>
+  <rect x="0.5" y="0.5" width="1199" height="159" fill="none" stroke="#2c2621"/>
+  <g transform="translate(470 52) scale(3.5)">
+    <path d="M8 1.2 12.6 9.2 10.8 12H5.2L3.4 9.2Z" fill="#f0a84a"/>
+    <path d="M8 5.6 10.4 9.6 9.4 12H6.6L5.6 9.6Z" fill="#f7bf6e"/>
+    <path d="M2.8 12.6 13.2 14.8M2.8 14.8 13.2 12.6" fill="none" stroke="#5f574d" stroke-width="1.4" stroke-linecap="square"/>
+  </g>
+  <text x="540" y="94" fill="#ece5d8" font-family="IBM Plex Mono, ui-monospace, Menlo, Consolas, monospace" font-size="34" font-weight="500" letter-spacing="8">CAMPFIRE</text>
+  <text x="600" y="132" fill="#8f8578" text-anchor="middle" font-family="IBM Plex Mono, ui-monospace, Menlo, Consolas, monospace" font-size="14" letter-spacing="2">SELF-HOSTED KANBAN · ONE BINARY · ONE DATA FILE</text>
+</svg>

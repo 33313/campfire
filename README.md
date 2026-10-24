@@ -1,7 +1,50 @@
-# Campfire
+<p align="center"><img src="docs/banner.svg" alt="Campfire" width="100%"></p>
 
-A self-hosted kanban work tracker for individuals and small teams. One binary, one data file.
-Backup is copying that file; recovery is putting it back.
+A kanban work tracker for individuals and small teams who host it themselves. One binary and one
+data file, so a laptop and a shared server run it the same way.
+
+![Team board](docs/screenshots/board.png)
+
+### What it offers
+- Task boards, backlog, filters
+- Milestones (buckets)
+- Live collaboration
+- MCP & API for AI agents and third-party integrations
+- Customizable work states
+- Audit log
+- Synced PR state from various forges (GitHub, GitLab, Codeberg, Forgejo, Gitea)
+- Automatic backups & point-in-time restore
+- Self-hosted, copyleft, free forever
+
+### What it won't do
+- Per-item access control
+- Workflow rules
+- Subtasks
+- Native clients (desktop, mobile)
+
+<details>
+<summary><b>More screens</b></summary>
+
+**Creating a ticket**
+![The create dialog](docs/screenshots/create-ticket.png)
+
+**Ticket page**
+![Ticket page](docs/screenshots/item.png)
+
+**Saving a filter as a view**
+![The save-as-view dialog with two filters set](docs/screenshots/create-view.png)
+
+**Backlog**
+![Backlog](docs/screenshots/backlog.png)
+
+**Buckets**
+![Buckets and their progress](docs/screenshots/buckets.png)
+
+**User profile**
+![User profile](docs/screenshots/profile.png)
+</details>
+
+## Contents
 
 - [Install](#install)
 - [First run](#first-run)
@@ -17,8 +60,7 @@ Backup is copying that file; recovery is putting it back.
 
 ## Install
 
-Download the binary for your platform from the
-[latest release](https://github.com/33313/campfire/releases/latest):
+Download the binary for your platform from the [latest release](https://github.com/33313/campfire/releases/latest):
 
 ```
 curl -fLo campfire https://github.com/33313/campfire/releases/latest/download/campfire-linux-amd64
