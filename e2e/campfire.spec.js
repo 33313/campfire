@@ -1172,15 +1172,16 @@ test.describe(() => {
     const kept = doneColumn.locator(".card-slot.kept", { hasText: "Sweep the hearth" });
     await expect(kept).toBeVisible();
 
-    // A later refresh keeps it: another write lands on the stream.
-    await page.request.post("/api/items", { data: { kind: "ticket", teamId: 1, title: "Stack the logs", accepted: true } });
-    await expect(page.locator(".card", { hasText: "Stack the logs" })).toBeVisible();
+    // A later refresh keeps it: another write lands on the stream. Its title is
+    // its own, so the wait is for it and not an earlier test's card.
+    await page.request.post("/api/items", { data: { kind: "ticket", teamId: 1, title: "Split the kindling", accepted: true } });
+    await expect(page.locator(".card", { hasText: "Split the kindling" })).toBeVisible();
     await expect(kept).toBeVisible();
 
     // A new filter starts from what matches it.
     await query.fill(`state = "${todo.name}" and priority != 4`);
     await query.press("Enter");
-    await expect(page.locator(".card", { hasText: "Stack the logs" })).toBeVisible();
+    await expect(page.locator(".card", { hasText: "Split the kindling" })).toBeVisible();
     await expect(page.locator(".card", { hasText: "Sweep the hearth" })).toHaveCount(0);
   });
 
