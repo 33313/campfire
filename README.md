@@ -334,9 +334,10 @@ it; Node is needed for that step only. `./build.sh release <version>` builds eve
 into `dist/`. `go test ./...` covers the server; `npm test` runs the client's CSQL parser against the
 same corpus as the server's; `npx playwright test` drives the built binary in a browser.
 
-`npm ci` points git at `.githooks`: a commit runs formatting, vet and the unit tests, and a push
-runs the browser suite, so what CI would reject fails here first. A change to words alone skips
-them, as CI does; `--no-verify` skips them once.
+`npm ci` points git at `.githooks`: a commit runs formatting, vet and the unit tests, so what CI
+would reject for those fails here first. A change to words alone skips them, as CI does;
+`--no-verify` skips them once. The browser suite runs in CI; each checkout serves it on its own
+port (`E2E_PORT` overrides it), so worktrees can run it side by side.
 
 | Path | What is there |
 |---|---|
