@@ -1,29 +1,12 @@
 <p align="center"><img src="docs/banner.svg" alt="Campfire" width="100%"></p>
 
 A kanban work tracker for individuals and small teams who host it themselves. One binary and one
-data file, so a laptop and a shared server run it the same way.
+SQLite data file, so a laptop and a shared server run it the same way.
 
 ![Team board](docs/screenshots/board.png)
 
-### What it offers
-- Task boards, backlog, filters
-- Milestones (buckets)
-- Live collaboration
-- MCP & API for AI agents and third-party integrations
-- Customizable work states
-- Audit log
-- Synced PR state from various forges (GitHub, GitLab, Codeberg, Forgejo, Gitea)
-- Automatic backups & point-in-time restore
-- Self-hosted, copyleft, free forever
-
-### What it won't do
-- Per-item access control
-- Workflow rules
-- Subtasks
-- Native clients (desktop, mobile)
-
 <details>
-<summary><b>More screens</b></summary>
+<summary><b>More screenshots</b></summary>
 
 **Creating a ticket**
 ![The create dialog](docs/screenshots/create-ticket.png)
@@ -44,19 +27,25 @@ data file, so a laptop and a shared server run it the same way.
 ![User profile](docs/screenshots/profile.png)
 </details>
 
-## Contents
+### What it offers
+- Task boards, backlog, filters
+- Milestones (buckets)
+- Live collaboration
+- MCP & API for AI agents and third-party integrations
+- Customizable work states
+- Audit log
+- Synced PR state from various forges (GitHub, GitLab, Codeberg, Forgejo, Gitea)
+- Automatic backups & point-in-time restore
+- Self-hosted, copyleft, free forever
 
-- [Install](#install)
-- [First run](#first-run)
-- [Commands](#commands)
-- [Configuration](#configuration)
-- [Agents (MCP)](#agents-mcp)
-- [Pull requests](#pull-requests)
-- [Behind a proxy](#behind-a-proxy)
-- [Backup and recovery](#backup-and-recovery)
-- [Scale](#scale)
-- [Contributing](#contributing)
-- [License](#license)
+### What it won't do
+- Per-item access control
+- Workflow rules
+- Subtasks
+- Native clients (desktop, mobile)
+
+How to use it is documented in the app, at `/docs` on your instance, and in
+[`internal/web/src/docs.md`](internal/web/src/docs.md). This file covers running it.
 
 ## Install
 
@@ -76,64 +65,90 @@ chmod +x campfire
 
 `SHA256SUMS` in the release checks the download: `sha256sum --ignore-missing -c SHA256SUMS`.
 
-Linux is the primary platform. The binaries are not signed, so elsewhere the first run takes one
-more step:
+Linux is the primary platform. The binaries are not signed: on macOS, download with `curl` as above
+or run `xattr -d com.apple.quarantine campfire` once; on Windows, SmartScreen needs *More info*, then
+*Run anyway*.
 
-- **macOS** refuses a binary downloaded in a browser. Download with `curl` as above, or run
-  `xattr -d com.apple.quarantine <file>` once.
-- **Windows** SmartScreen warns about an unrecognised app: *More info*, then *Run anyway*.
+### Docker
 
-Or run the container image, for `linux/amd64` and `linux/arm64`:
+The image is for `linux/amd64` and `linux/arm64`:
 
 ```
 docker run -p 8080:8080 -v campfire-data:/data ghcr.io/33313/campfire
 ```
 
-The image binds `0.0.0.0:8080`, since loopback inside a container reaches nobody, and keeps the
-database and snapshots in `/data`. Otherwise it is the same application, configured the same way.
+It listens on `0.0.0.0:8080` and keeps the database and snapshots in `/data/campfire`. To change
+other settings, mount your own configuration file over the built-in one. It must set `addr`, since
+the default is loopback, which nothing outside the container can reach:
 
-**Upgrading** is replacing the binary, or pulling the image, and restarting. Versions follow
-[Semantic Versioning](https://semver.org); image tags are the version (`1.4.2`), its minor (`1.4`),
-its major (`1`), and `latest`. [`CHANGELOG.md`](CHANGELOG.md) lists what each release changes.
+```
+docker run -p 8080:8080 -v campfire-data:/data \
+  -v ./campfire.json:/home/campfire/campfire.json:ro ghcr.io/33313/campfire
+```
 
-A newer binary brings an older data file up to its schema when it opens it, in one transaction. It
-first takes a snapshot, `before-migration-<time>.db` in the snapshot directory, and logs its name;
-if the snapshot fails, the file is left as it was. These snapshots are never pruned. Restoring an
-older snapshot migrates it the same way, taking its own snapshot first.
+### As a service
 
-There is no downgrade. An older binary refuses a file a newer one has migrated, and names the
-snapshot taken before the migration: `campfire restore <snapshot>` with the older binary goes back
-to it, losing what changed since.
+A minimal systemd unit for Linux, with the data in `/var/lib/campfire`:
+
+```ini
+# /etc/systemd/system/campfire.service
+[Unit]
+Description=Campfire
+After=network.target
+
+[Service]
+User=campfire
+ExecStart=/usr/local/bin/campfire -data /var/lib/campfire
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+sudo install campfire /usr/local/bin/
+sudo useradd --system --home-dir /var/lib/campfire --create-home campfire
+sudo systemctl enable --now campfire
+```
+
+Run other commands as the same user, with the same `-data`:
+`sudo -u campfire campfire -data /var/lib/campfire snapshot`.
 
 ## First run
 
-Campfire prints an address. Open it and create the first account: that account is an instance
-administrator. There is no setup wizard, no database to install, and no open registration
-afterwards — an administrator creates accounts or hands out an invitation link.
+Campfire prints the address it listens on. Open it and create the first account, which becomes an
+instance administrator. There is no setup wizard and no open registration: afterwards, an
+administrator creates accounts, or hands out invitation and password-reset links, in
+*Administration → Users*. Campfire sends no email.
+
+Until that first account exists, anyone who can reach the server can create it. Create it before
+the server is reachable from other machines.
 
 ## Commands
 
 ```
-campfire                 # run the server (default)
-campfire init            # write a configuration file with every setting in it
-campfire check           # verify the database's integrity and exit
-campfire snapshot        # take a snapshot now and exit
-campfire restore <path>  # replace the data file with a snapshot
-campfire version         # print the version and exit
+campfire                      # run the server (default)
+campfire init                 # write a configuration file with every setting in it
+campfire check                # verify the database's integrity and exit
+campfire snapshot             # take a snapshot now, print its path and exit
+campfire restore <snapshot>   # replace the data file with a snapshot
+campfire restore -at <time>   # rebuild the data file as it was at a moment, from the replica
+campfire version              # print the version and exit
 ```
 
 `-data <dir>` sets the data directory, which holds the configuration file, the database and the
-snapshots. `-config <path>` points at a configuration file other than the default.
+snapshots. `-config <path>` points at a configuration file elsewhere.
 
 ## Configuration
 
-One JSON file, in the data directory. By default that is the operating system's data directory:
+Campfire runs without a configuration file, on the defaults below. `campfire init` writes one with
+every setting in it, to `campfire.json` in the data directory:
 
-| OS | Path |
+| OS | Default data directory |
 |---|---|
-| Linux | `~/.local/share/campfire/campfire.json` |
-| macOS | `~/Library/Application Support/Campfire/campfire.json` |
-| Windows | `%LocalAppData%\Campfire\campfire.json` |
+| Linux | `$XDG_DATA_HOME/campfire`, or `~/.local/share/campfire` |
+| macOS | `~/Library/Application Support/Campfire` |
+| Windows | `%LocalAppData%\Campfire` |
 
 ```json
 {
@@ -153,125 +168,104 @@ One JSON file, in the data directory. By default that is the operating system's 
 }
 ```
 
-Three defaults are worth knowing:
+The file is read at startup; restart after editing it.
 
-- **`addr` binds to loopback.** A binary run on a laptop must not silently serve the network it is
-  attached to. Change it deliberately, and put a reverse proxy in front when you do.
-- **`snapshots.enabled` is true.** Snapshots are online: no locking, no downtime, each verified as
-  it is written.
-- **`mcp.enabled` is false.** While it is off, `/mcp` is not served and an agent token
-  authenticates nothing.
+- `addr` binds to loopback, so only the same machine can reach it. To serve a network, change it and
+  put a reverse proxy in front (see [Behind a proxy](#behind-a-proxy)).
+- `snapshots` are on by default. See [Backup and restore](#backup-and-restore).
+- `mcp.enabled` turns on the agent interface. See [Agents (MCP)](#agents-mcp).
+- `liveUpdates.hiddenTabGrace` is how long a hidden browser tab keeps its live-update connection.
+  The tab catches up when it is shown again.
+- `images.maxMB` limits a picture pasted into a description or comment. Pictures are stored in the
+  database; `0` turns them off.
+- `updates.check` asks GitHub once a day whether a newer release exists, and the administration
+  screen says so. `false` turns it off.
 
-`liveUpdates.hiddenTabGrace` is how long a browser tab nobody is looking at keeps its live-update
-connection. Past it the connection closes, and the tab catches up when it is shown again.
+**The database must be on local disk.** SQLite corrupts on network filesystems (NFS, SMB) and in
+cloud-synchronised folders (Dropbox, iCloud Drive, OneDrive, Google Drive). To keep a copy
+elsewhere, use `snapshots.replica`.
 
-`images.maxMB` bounds a picture pasted into a description or a comment. Pictures are kept in the
-database, so a backup is still one file; `0` turns them off.
+To move the data to another directory, enter it in *Administration → Preferences*. The database,
+and the snapshots if they are in the data directory, are copied there, the configuration file is
+updated, and the server restarts. The old files are kept until you delete them. In the container
+image, mount a different volume instead.
 
-`updates.check` asks GitHub once a day whether a newer release is out, and the administration
-screen says so. The request carries nothing but the running version; `false` turns it off.
+## Backup and restore
 
-**The database must be on local disk.** Network filesystems (NFS, SMB) and cloud-synchronised
-folders (Dropbox, iCloud Drive, OneDrive, Google Drive) are **unsupported**: SQLite's locking is not
-honoured across them and the file corrupts, often silently and only under load. To keep the data
-elsewhere, point `snapshots.replica` there and leave the live file local.
+- **Snapshots** are taken every `snapshots.interval` into `snapshots.dir`, and the newest
+  `snapshots.keep` are kept. Each is a complete database file, verified when written. Taking one
+  doesn't stop the server.
+- **Replica.** Set `snapshots.replica` to a directory, ideally a mount of another machine, and the
+  write-ahead log is copied there within a second of each write, by
+  [Litestream](https://litestream.io) running inside the server. You can then restore to any moment
+  in the last `interval × keep` (3.5 days by default), even if the machine is lost.
+- **Restoring** replaces the data file. Stop the server, run `campfire restore <snapshot>`, or
+  `campfire restore -at "2026-10-03 14:05"` for a moment from the replica (`-at latest` for the
+  newest), then start it. *Administration → Backup and restore* lists the snapshots and writes the
+  command for you. The replaced file is renamed, not deleted.
+- **Integrity** is checked at startup and every hour. If the database is corrupt at startup, the
+  server doesn't start and names the snapshot to restore.
 
-**Moving the data.** To move the database to another directory, enter the directory in
-*Administration → Preferences*. Snapshots in the data directory move with it, and the server
-restarts. The old files are kept; delete them once the instance works. In the container image, mount
-a different volume instead.
+## Upgrading
+
+Replace the binary, or pull the image, and restart. [`CHANGELOG.md`](CHANGELOG.md) lists what each
+release changes. Image tags are the version (`0.18.1`), its minor (`0.18`) and `latest`; from v1,
+also its major (`1`).
+
+A newer binary migrates an older data file when it opens it. It first takes a snapshot,
+`before-migration-<time>.db` in the snapshot directory, which is never pruned. There is no
+downgrade: an older binary refuses a migrated file and names that snapshot, which
+`campfire restore` with the older binary brings back, losing what changed since.
+
+Versions follow [Semantic Versioning](https://semver.org). From v1, a release that isn't a major
+one keeps the data file, configuration file, command line, MCP tools and permalinks compatible; see
+[CONTRIBUTING.md](CONTRIBUTING.md#releases).
 
 ## Agents (MCP)
 
-The server is the MCP server — same origin, same port, no second process.
+The server includes an MCP server at `/mcp`, on the same address as the app. It is off by default;
+while off, `/mcp` is not served and agent tokens authenticate nothing.
 
-1. **Enable it.** Set `mcp.enabled` to `true` and restart. The log line
-   `agent interface (MCP) on /mcp` confirms it.
-2. **Issue a token** on your account screen. It is shown once.
-3. **Install it.** That same dialog shows the finished command:
+1. Set `"mcp": { "enabled": true }` and restart. The log says
+   `agent interface (MCP) on /mcp, authenticated by agent token`.
+2. Each person issues a token under their profile's *Settings → Agent tokens*. The dialog shows the
+   command that adds it to Claude Code.
 
-   ```
-   claude mcp add --scope user --transport http campfire \
-     https://your-instance/mcp --header "Authorization: Bearer <token>"
-   ```
-
-   To keep the token out of the file, export it in your shell and pass
-   `--header 'Authorization: Bearer ${CAMPFIRE_MCP}'` instead — the variable is read from the
-   client's environment at call time.
-
-A client configured with JSON wants the same three facts:
-
-```json
-{
-  "mcpServers": {
-    "campfire": {
-      "type": "http",
-      "url": "https://your-instance/mcp",
-      "headers": { "Authorization": "Bearer <token>" }
-    }
-  }
-}
-```
-
-A stdio-only client needs a bridge:
-`npx -y mcp-remote https://your-instance/mcp --header "Authorization: Bearer <token>"`.
-
-An agent acts as the person who issued the token, with exactly that person's permissions, resolved
-on every call. It can create and edit tickets and buckets, move and rank them, manage bucket
-membership, labels, relations, comments and saved views, and read boards, backlogs, buckets, items
-and the log. It cannot create accounts, change teams or membership, reassign a bucket's owning
-team, delete anything, take or restore backups, or issue tokens — those operations have no tool at
-all. Every mutation records the token it arrived on; filter the log with the Agent chip to see what
-agents did.
-
-An instance bound to loopback is reachable only from its own machine, by an agent as much as by a
-browser.
+An agent acts as the person who issued the token, with their permissions. Tokens can be revoked
+there at any time, and an administrator can revoke any token. Connecting other clients, and what
+an agent can and can't do: the *Agents (MCP)* section of the [docs](internal/web/src/docs.md).
 
 ## Pull requests
 
 A pull request whose title starts or ends with an item's identifier (`DEV-12: fix it`,
 `[DEV-12] fix it`, `fix it DEV-12`) is listed on that item, with its state. Campfire reads them from
-GitHub (and GitHub Enterprise), Forgejo, Gitea and GitLab, private repositories included.
+GitHub (and GitHub Enterprise), GitLab, Forgejo and Gitea, private repositories included.
 
-1. **Make a token** on the forge, read-only:
-   - GitHub: a fine-grained token that can read pull requests on the repositories to list, or a
-     classic one with `repo`.
-   - Forgejo or Gitea: `read:repository` and `read:user`.
+1. **Make a read-only token** on the forge. It sees what its user sees, so a bot account limited to
+   a few repositories limits Campfire to those.
+   - GitHub: a fine-grained token that can read pull requests, or a classic one with `repo`.
    - GitLab: a personal, group or project token with `read_api`.
+   - Forgejo or Gitea: `read:repository` and `read:user`.
+2. **Add it** in *Administration → Integrations*: pick the forge (GitHub, GitLab, Codeberg, or a
+   self-hosted one by address) and give the token. Campfire reads the last 90 days of pull requests;
+   *Sync* does it again.
+3. **Choose how it stays current.** GitHub and GitLab can be polled: Campfire checks every 5 minutes
+   by default, and nothing is set up on the forge. Otherwise, and always for Forgejo and Gitea, the
+   forge sends a webhook: add the address and secret the screen shows, with Pull request events
+   (Merge request events on GitLab). A webhook needs the forge to reach Campfire, and GitHub can't
+   send one for a personal account.
 
-   The token sees what its user sees, so a bot account limited to a few repositories keeps Campfire
-   to those.
-2. **Add it.** *Administration → Integrations*: pick the forge (GitHub, GitLab, Codeberg, or a
-   self-hosted one at its address, like `https://git.example.com`) and give the token. Campfire
-   tries the token, then reads back the last 90 days at once; *Sync* does it again. GitHub and
-   GitLab come two ways:
-   - **Poll**: Campfire checks every 5 minutes, or as often as you choose. Nothing to set up on the
-     forge, and it works for personal accounts, which GitHub can't send webhooks for, and for an
-     instance the forge can't reach.
-   - **Webhook**: instant, for organisations, groups and repositories.
-3. **For a webhook,** add the address the screen shows with its secret (shown once; *Rotate* makes a
-   new one), and Pull request events (Merge request events on GitLab). Forgejo and Gitea take one
-   on your profile, an organisation or a repository. A forge that can't reach Campfire can't
-   deliver; press *Sync*, or poll it instead.
-
-When a token expires, *New token* replaces it and keeps the webhook, if there is one. Tokens and webhook secrets are
-kept in the database, so a snapshot carries them. If a snapshot leaks, revoke the tokens on the
-forges.
+Tokens and webhook secrets are stored in the database, so snapshots contain them.
 
 ## Behind a proxy
 
-The board updates in place over server-sent events. For that long-lived response to survive a
-proxy:
+The app updates live over server-sent events on `/api/stream`. Behind a proxy:
 
-1. **Response buffering off** for `/api/stream`. The server sends `X-Accel-Buffering: no`, which
-   nginx honours; other proxies need it said explicitly.
-2. **Idle read timeout above the heartbeat interval.** The server beats every 20 seconds, well
-   inside the common 60-second default.
-3. **File-descriptor limits allowing one open connection per active client**, plus headroom. Fifty
-   people need nothing unusual; the default 1024 is thin at a few hundred. A tab left hidden past
-   `liveUpdates.hiddenTabGrace` closes its connection.
-
-The server compresses its own responses; the proxy need not.
+1. **Turn response buffering off** for `/api/stream`. The server sends `X-Accel-Buffering: no`,
+   which nginx honours; other proxies need it configured.
+2. **Set the idle read timeout above 20 seconds**, the heartbeat interval.
+3. **Allow one open connection per active browser tab**, plus headroom. The default limit of 1024
+   file descriptors gets tight at a few hundred.
 
 ```nginx
 location /api/stream {
@@ -290,38 +284,8 @@ location / {
 }
 ```
 
-Serve it over TLS. The session cookie is marked `Secure` when the request arrived over HTTPS, which
-behind a proxy the server learns from `X-Forwarded-Proto`: set it, terminate TLS at the proxy, and
-keep the instance on loopback behind it.
-
-## Backup and recovery
-
-- **Snapshots** run on `snapshots.interval` into `snapshots.dir`, keeping `snapshots.keep`. Each is
-  a complete database file, verified when written and again whenever the administration screen
-  lists it.
-- **Any moment, off-host.** Set `snapshots.replica` to a second directory — a mount of another
-  machine, an object-store gateway — and the write-ahead log is copied there continuously, within
-  a second of each write, by [Litestream](https://litestream.io) running inside the server. The
-  database can then be restored to any moment in the last `interval × keep` (14 × 6h, three and a
-  half days, by default), even when the machine it ran on is gone.
-- **Restoring** replaces the data file, which the running process holds open. Stop the server, run
-  `campfire restore <snapshot>` for a snapshot, or `campfire restore -at "2026-10-03 14:05"` for a
-  moment (`-at latest` for the newest the replica holds), and start it again. The administration
-  screen shows the span the replica covers and writes the command for you. The replaced file is
-  moved aside rather than deleted, so restoring the wrong moment is itself recoverable.
-- **Integrity** is checked at startup and hourly. On corruption at startup the server refuses to
-  start and names the snapshot to restore from.
-
-There is no failover and no high availability: recovery from total host loss is restore time, in
-minutes. Restarts take seconds, and sessions live in the database, so a restart logs nobody out.
-
-## Scale
-
-Sized for 10,000 registered users and ~3,000 active per day: about 100,000 writes a day, under two
-per second on average and tens per second at peak; under 100 GB after five years with the audit log
-included. One ordinary machine handles this with room to spare. Sharding, read replicas, a caching
-tier and a job queue are not built, and should not be introduced without measurements contradicting
-that.
+Campfire doesn't serve TLS itself. Terminate it at the proxy and set `X-Forwarded-Proto`, so the
+session cookie is marked `Secure`. The server compresses its own responses.
 
 ## Contributing
 
@@ -331,72 +295,31 @@ that.
 
 `build.sh` compiles the Svelte client into `internal/web/app`, then builds the binary that embeds
 it; Node is needed for that step only. `./build.sh release <version>` builds every released platform
-into `dist/`. `go test ./...` covers the server; `npm test` runs the client's CSQL parser against the
-same corpus as the server's; `npx playwright test` drives the built binary in a browser.
+into `dist/`.
 
-`npm ci` points git at `.githooks`: a commit runs formatting, vet and the unit tests, so what CI
-would reject for those fails here first. A change to words alone skips them, as CI does;
-`--no-verify` skips them once. The browser suite runs in CI; each checkout serves it on its own
-port (`E2E_PORT` overrides it), so worktrees can run it side by side.
+- `go test ./...` tests the server.
+- `npm test` runs the client's CSQL parser against the same corpus as the server's.
+- `npx playwright test` drives the built binary in a browser.
+
+`npm ci` points git at `.githooks`: a commit runs gofmt, vet and the unit tests, except for a change
+to words alone. `--no-verify` skips them once.
 
 | Path | What is there |
 |---|---|
-| `main.go`, `backup.go`, `mcp.go` | The command: serve, init, check, snapshot, restore, version. |
+| `main.go`, `backup.go` | The command: serve, init, check, snapshot, restore, version. |
 | `internal/store` | The schema and every query. One SQLite file behind a single writer and a read pool. |
 | `internal/csql` | CSQL, the filter language: parser, printer and compiler to SQL. `testdata/corpus.json` is what it and the client's parser must both say. |
-| `internal/core` | The application. Every operation exists here exactly once, behind one permission check and one validation. |
+| `internal/core` | The application. Every operation exists here once, behind one permission check and one validation. |
 | `internal/api` | The HTTP interface described by [`api/openapi.yaml`](api/openapi.yaml), plus the event stream. |
-| `internal/mcp` | The agent interface: a second interface over the same handlers. |
-| `internal/web` | The client — Svelte, built by Vite into `app/`, embedded and served by the server. |
-| `internal/auth`, `internal/backup`, `internal/config`, `internal/stream` | Credentials, snapshots, the configuration file, and the fan-out hub. |
-| `e2e` | The Playwright suite. It runs the real binary against a throwaway data directory and drives it in a browser. |
+| `internal/mcp` | The agent interface: a second interface over the same operations. |
+| `internal/forge` | Pull requests read from GitHub, GitLab, Forgejo and Gitea. |
+| `internal/web` | The client: Svelte, built by Vite into `app/`, embedded and served by the server. |
+| `internal/auth`, `internal/backup`, `internal/config`, `internal/stream`, `internal/updates` | Credentials, snapshots and the replica, the configuration file, the live-update hub, and the release check. |
+| `e2e` | The Playwright suite. It runs the real binary against a throwaway data directory. |
 | `.changes` | Release notes: unreleased change files, and one file per release. |
 
-Two documents are normative, and the tests cite them. [`SPEC.md`](SPEC.md) fixes behaviour — the
-entities, permissions, lifecycle, API, storage and agent interface. [`DESIGN.md`](DESIGN.md) fixes
-appearance — colour and type tokens, geometry, component states, icon paths. Where they appear to
-disagree, `SPEC.md` wins on behaviour and `DESIGN.md` on appearance. The mockups `DESIGN.md`
-describes are not in this repository; they live in `~/dev/.design/kanban/`, and `DESIGN.md`
-supersedes them.
-
-### Releases
-
-Every merge into main that carries a change file is a release; nobody bumps a version or pushes a
-tag by hand. A pull request adds one with `npm run changie -- new` (or, without prompts,
-`npm run changie -- new --kind Fixed --body "…"`). changie is pinned in `package.json` and run
-with `go run`, so there is nothing to install and nothing of it in `go.mod`.
-
-From v1, a version promises compatibility for what other things depend on:
-
-- **The data file.** A binary opens any data file, or snapshot, written by its own version or an
-  earlier one, migrating it if it's older (see "Upgrading"). A schema change therefore needs a
-  migration, not a major release.
-- **The configuration file**: its keys and what they mean.
-- **The command line**: commands, flags, and output a script reads (`campfire snapshot` prints the
-  path of the snapshot).
-- **The MCP tools**: names, arguments and result shapes.
-- **Addresses kept outside the instance**: permalinks (`/SOL-42`), image addresses in item text
-  (`/api/images/12`), a forge's webhook address, `/mcp`, and `/api/stream`, which proxies name.
-
-The HTTP API is not covered. It has one client, served by the same binary, and any release may change
-both together ([SPEC §11](SPEC.md#11-api-contract)), the live-update stream's payloads included.
-
-The kind sets the bump. Breaking and Removed are incompatible changes to the covered surface:
-
-| Kind | Bump |
-|---|---|
-| Breaking, Removed | major |
-| Added, Changed, Deprecated | minor |
-| Fixed, Security | patch |
-
-A pull request that changes nothing for the people who run Campfire — tests, CI, contributor docs —
-carries the `skip-changeset` label instead. The `changeset` check requires one or the other, and its
-summary previews the release.
-
-On the merge, [`release.yaml`](.github/workflows/release.yaml) writes `CHANGELOG.md`, commits and
-tags `Release vX.Y.Z` with the deploy key in the `GH_DK` secret, pushes the image to ghcr.io, and
-publishes the GitHub release with the binaries and `SHA256SUMS`. If it fails after the tag is
-pushed, rerun it: it finishes a release that has no published GitHub release.
+[`SPEC.md`](SPEC.md) fixes behaviour and [`DESIGN.md`](DESIGN.md) fixes appearance; the tests cite
+them. [CONTRIBUTING.md](CONTRIBUTING.md) covers change files and releases.
 
 ## License
 
