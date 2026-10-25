@@ -8,15 +8,22 @@ export const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGP8z8Dwn4GBgYkBBv" +
   "5DGAAmYgML8Ck1FQAAAABJRU5ErkJggg==", "base64");
 
+// The JSON a write answered, or a throw naming what was refused, so a failed
+// setup fails here and not at a locator further on.
+async function ok(res) {
+  if (!res.ok()) throw new Error(`${res.url()}: ${res.status()} ${await res.text()}`);
+  return res.json();
+}
+
 // Signs the page in as root, bootstrapping the instance first if no test has,
 // and makes a new team. page.request shares the page's cookies, so its writes
 // are root's.
 export async function newTeam(page) {
   await page.request.post("/api/instance/bootstrap", { data: ROOT }); // refused once there is an account
-  await page.request.post("/api/auth/signin", { data: ROOT });
+  await ok(await page.request.post("/api/auth/signin", { data: ROOT }));
   const shortCode = Array.from({ length: 5 }, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join("");
-  const team = await (await page.request.post("/api/teams", { data: { name: `Team ${shortCode}`, shortCode } })).json();
-  const states = await (await page.request.get(`/api/teams/${team.id}/states`)).json();
+  const team = await ok(await page.request.post("/api/teams", { data: { name: `Team ${shortCode}`, shortCode } }));
+  const states = await ok(await page.request.get(`/api/teams/${team.id}/states`));
   return {
     ...team,
     board: `/t/${team.id}/board`,
@@ -24,9 +31,9 @@ export async function newTeam(page) {
     todo: states.find((s) => s.role === "accepted"),
     doing: states.find((s) => !["default", "accepted", "final", "rejected"].includes(s.role)),
     done: states.find((s) => s.role === "final"),
-    ticket: async (title, data = {}) => (await page.request.post("/api/items", {
+    ticket: async (title, data = {}) => ok(await page.request.post("/api/items", {
       data: { kind: "ticket", teamId: team.id, title, ...data },
-    })).json(),
+    })),
   };
 }
 

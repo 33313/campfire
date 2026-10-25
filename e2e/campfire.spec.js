@@ -5,10 +5,12 @@ import { ROOT, PNG, newTeam, column } from "./helpers.js";
 // drop, live updates, and what the client renders. Rules the server enforces
 // are tested in Go.
 
-// First, so it meets the instance empty. Run after another test, it skips.
+// First, so it meets the instance empty. Run after another test it skips
+// locally (as with -g), and fails in CI, where the whole suite runs.
 test("the first visit creates the first account, then the first team", async ({ page }) => {
   const { needsBootstrap } = await (await page.request.get("/api/instance")).json();
-  test.skip(!needsBootstrap, "another test bootstrapped the instance first");
+  test.skip(!needsBootstrap && !process.env.CI, "another test bootstrapped the instance first");
+  expect(needsBootstrap, "this test must run before any other").toBe(true);
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Create the first account" })).toBeVisible();
   await page.getByLabel("Username").fill(ROOT.username);
@@ -306,7 +308,10 @@ test("a card dropped between two others lands where the line said, and Escape pu
   await expect(page.locator(".card.ghost")).toHaveCount(0);
   await expect(page.locator(".detail-aside")).toHaveCount(0);
 
+  // Escape puts a held card back: the release after it writes nothing.
   const order = await titles();
+  const writes = [];
+  page.on("request", (r) => r.method() !== "GET" && r.url().includes("/api/") && writes.push(r.url()));
   const top = await cards.first().boundingBox();
   await page.mouse.move(top.x + 20, top.y + 10);
   await page.mouse.down();
@@ -314,6 +319,8 @@ test("a card dropped between two others lands where the line said, and Escape pu
   await page.keyboard.press("Escape");
   await expect(page.locator(".card.ghost")).toHaveCount(0);
   await page.mouse.up();
+  await page.waitForTimeout(300); // a drop would have sent its move by now
+  expect(writes).toEqual([]);
   expect(await titles()).toEqual(order);
 });
 
