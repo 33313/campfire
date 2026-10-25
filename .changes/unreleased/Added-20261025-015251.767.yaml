@@ -1,3 +1,0 @@
-kind: Added
-body: 'A newer binary migrates an older data file when it opens it, after taking a snapshot it never prunes; an older binary refuses a newer file and names that snapshot to restore. README "Upgrading" explains.'
-time: 2026-10-25T01:52:51.767774829+02:00

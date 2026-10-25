@@ -5,6 +5,12 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v0.18.0 - 2026-10-25
+
+### Added
+
+- A newer binary migrates an older data file when it opens it, after taking a snapshot it never prunes; an older binary refuses a newer file and names that snapshot to restore. README "Upgrading" explains.
+
 ## v0.17.0 - 2026-10-24
 
 ### Added
