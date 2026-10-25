@@ -50,8 +50,8 @@ reachable through the `campfire` MCP server. For ticket work, use `/ticket <ID>`
 ## Shipping
 
 - Name the branch and commit after the ticket: `dev-120-ci`, `DEV-120: <what changed>`.
-- Commits are SSH-signed. If a commit fails on the passphrase, ask the maintainer to run
-  `! ssh-add ~/.ssh/id_ed25519`. Never turn signing off.
+- Commits may be signed. If a commit fails on a passphrase, ask the user to run `! ssh-add`.
+  Never turn signing off.
 - Every PR adds a change file (`npm run changie -- new`; a hand-written body must be quoted), or
   carries the `skip-changeset` label when nothing changes for people who run Campfire. Before v1,
   a breaking change is `Changed`: `Breaking` and `Removed` would release v1.0.0.
