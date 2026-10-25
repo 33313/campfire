@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -66,6 +67,10 @@ func TestWriteThenLoadRoundTrips(t *testing.T) {
 	got.LiveUpdates.HiddenTabGrace = "-1s"
 	if got.Validate() == nil {
 		t.Fatal("a negative hidden tab grace was accepted")
+	}
+	// Windows has no mode bits: the file inherits its directory's access list.
+	if runtime.GOOS == "windows" {
+		return
 	}
 	info, err := os.Stat(path)
 	if err != nil {

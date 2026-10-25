@@ -77,11 +77,30 @@ jobs:
       - name: Test the client's parser
         run: npm test
 
-      # Only Linux runs the tests, but a release ships Windows and macOS too.
-      # The code differs by operating system, never by architecture, so one
-      # type-check per OS finds what would stop the release.
+      # A required stand-in for test-os until that job is stable enough to be
+      # required itself. The code differs by operating system, never by
+      # architecture, so one type-check per OS finds what would stop the release.
       - name: Compile for Windows and macOS
         run: GOOS=windows go vet ./... && GOOS=darwin GOARCH=arm64 go vet ./...
+
+  # A release ships Windows and macOS binaries, so their tests run there too.
+  # The tests embed no client, so none is built.
+  test-os:
+    needs: changes
+    if: needs.changes.outputs.code
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+          check-latest: true
+      - name: Test
+        run: go test ./...
 
   # The browser suite, beside the Go checks rather than after them.
   e2e:
