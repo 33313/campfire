@@ -15,13 +15,6 @@ reachable through the `campfire` MCP server. For ticket work, use `/ticket <ID>`
 
 - Read before planning: the code the change touches, end to end, and every caller of what you
   will change.
-- When there's a real choice (behaviour, UX, data model, scope), give the options with their
-  trade-offs and a recommendation, and ask. Don't settle product questions on your own.
-- Question the ticket too: if it rests on a wrong assumption or a simpler path exists, say so
-  before building it.
-- Before a PR, read your whole diff, run `/code-review` on it, and check every point of the
-  ticket. Report what the review found and what you changed because of it.
-- Report what you verified and how, and what you didn't verify.
 
 ## Writing
 
