@@ -5,6 +5,12 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v0.19.0 - 2026-10-25
+
+### Changed
+
+- MCP tool results leave out team and user pictures. The HTTP API still returns them.
+
 ## v0.18.1 - 2026-10-25
 
 ### Fixed
