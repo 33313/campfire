@@ -1,8 +1,9 @@
 # Campfire
 
 A self-hosted kanban tracker: a Go server with the Svelte client embedded, on one SQLite file.
-It's pre-v1, and the only install is the maintainer's own. Tickets live in Campfire itself (team
-DEV), reachable through the `campfire` MCP server. For ticket work, use `/ticket DEV-<n>`.
+It's pre-v1, and the only install is the maintainer's own. Tickets live in Campfire itself,
+reachable through the `campfire` MCP server. For ticket work, use `/ticket <ID>`, e.g.
+`/ticket DEV-120`.
 
 ## Where things are decided
 
@@ -48,9 +49,9 @@ DEV), reachable through the `campfire` MCP server. For ticket work, use `/ticket
 
 ## Shipping
 
-- Branch `dev-<n>-<slug>`, commit `DEV-<n>: <what changed>`. Commits are SSH-signed; if a commit
-  fails on the passphrase, ask the maintainer to run `! ssh-add ~/.ssh/id_ed25519`. Never turn
-  signing off.
+- Name the branch and commit after the ticket: `dev-120-ci`, `DEV-120: <what changed>`.
+- Commits are SSH-signed. If a commit fails on the passphrase, ask the maintainer to run
+  `! ssh-add ~/.ssh/id_ed25519`. Never turn signing off.
 - Every PR adds a change file (`npm run changie -- new`; a hand-written body must be quoted), or
   carries the `skip-changeset` label when nothing changes for people who run Campfire. Before v1,
   a breaking change is `Changed`: `Breaking` and `Removed` would release v1.0.0.

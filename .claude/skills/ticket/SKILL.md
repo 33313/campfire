@@ -1,12 +1,15 @@
 ---
 name: ticket
-description: Work a Campfire ticket (DEV-<n>) from investigation to pull request, stopping after the plan for the maintainer's decision. Use when asked to implement, fix or work on a ticket.
-argument-hint: DEV-<n> [trivial]
+description: Work a Campfire ticket (an identifier such as DEV-120) from investigation to pull request, stopping after the plan for the maintainer's decision. Use when asked to implement, fix or work on a ticket.
+argument-hint: <ticket identifier> [trivial]
 ---
 
 # Work a ticket
 
 Follow CLAUDE.md throughout. The phases run in order, and phase 2 ends with a stop.
+
+The ticket is any Campfire identifier, `<CODE>-<n>`. Below, `<ID>` is that identifier and `<id>` is
+the same in lower case.
 
 ## 1. Understand
 
@@ -33,7 +36,7 @@ only when the arguments include `trivial`; in that case, state the plan in two l
 
 ## 3. Build
 
-- Work in a worktree (`EnterWorktree`, named `dev-<n>-<slug>`) unless you're already in one.
+- Work in a worktree (`EnterWorktree`, named `<id>-<slug>`) unless you're already in one.
 - Make the change the plan agreed. If the plan turns out wrong, stop and say so instead of
   improvising a different one.
 
@@ -57,7 +60,7 @@ only when the arguments include `trivial`; in that case, state the plan in two l
 ## 6. Open the PR
 
 - Add a change file, or use the `skip-changeset` label.
-- Commit as `DEV-<n>: <what changed>`, push, and run `gh pr create`.
+- Commit as `<ID>: <what changed>`, push, and run `gh pr create`.
 - Keep the body short: what changed and why, how it was verified, what is left.
 - Check CI once it finishes. If a failure isn't from your change, say so.
 
