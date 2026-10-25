@@ -40,6 +40,9 @@ DEV), reachable through the `campfire` MCP server. For ticket work, use `/ticket
   rerunning until it passes.
 - The maintainer uses Firefox. For browser-dependent CSS or JS, also run
   `npx playwright test --browser=firefox`.
+- Worktrees share the main checkout's `node_modules` through a symlink (`.claude/settings.json`).
+  On a branch that changes `package.json`, replace the symlink first (`rm node_modules && npm ci`);
+  otherwise `npm` rewrites every checkout's dependencies.
 - Never kill `campfire` processes by name: the maintainer's own instance runs as `./campfire` from
   the main checkout (port 8080, the `campfire` MCP server). Stop a test server by its port.
 
