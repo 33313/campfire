@@ -2,7 +2,8 @@ name: changeset
 
 # Every pull request says what it changes for the people who run Campfire, in a
 # change file, or carries the skip-changeset label to say it changes nothing
-# for them (README "Releases"). Merging a change file into main releases it.
+# for them (CONTRIBUTING.md "Releases"). Merging a change file into main
+# releases it.
 #
 # This is its own workflow so that adding or removing the label reruns this,
 # not the test suite.

@@ -365,7 +365,7 @@ func clampLimit(limit int) int {
 // Bootstrap creates the first account on an empty instance and makes it an
 // instance administrator.
 //
-// First run creates the account and a personal team, then opens the client:
+// First run creates the account, then opens the client:
 // there is no setup wizard (SPEC.md §13.1). It refuses once any account
 // exists, so it cannot become a back door.
 func (s *Service) Bootstrap(ctx context.Context, username, password string) (*User, error) {

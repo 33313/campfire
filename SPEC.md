@@ -635,8 +635,8 @@ This is required even though v1 ships one client, served by the server it talks 
 
 The HTTP API is **internal**: Semantic Versioning does not cover it, and a release MAY change it
 together with the client it serves. The addresses stored or configured outside the instance are the
-exception and are covered (README "Releases"): permalinks, image addresses, forge webhook addresses,
-`/mcp` and `/api/stream`.
+exception and are covered (CONTRIBUTING.md "Releases"): permalinks, image addresses, forge webhook
+addresses, `/mcp` and `/api/stream`.
 
 Live updates ([§12](#12-live-updates)) are **not** described by the OpenAPI document, which does not
 usefully describe a long-lived stream. Their contract is [§12](#12-live-updates) and is normative in
@@ -759,7 +759,7 @@ configuration exists in both.
 | Processes | One | One |
 | Availability | Restart in seconds | Restart in seconds; recovery time equals restore time |
 
-First run of the individual profile creates the account and a personal team, then opens the client.
+First run of the individual profile creates the account, then opens the client.
 The application WILL NOT show a setup wizard, and WILL NOT show controls that depend on a team the
 user has not been told to create.
 

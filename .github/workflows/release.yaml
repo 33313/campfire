@@ -1,7 +1,7 @@
 name: release
 
-# A merge into main that carries change files is a release (README "Releases").
-# The change files' kinds set the version. The release is a commit that turns
+# A merge into main that carries change files is a release (CONTRIBUTING.md
+# "Releases"). The change files' kinds set the version. The release is a commit that turns
 # them into CHANGELOG.md, its tag, the binaries on a GitHub release, and the
 # container image.
 on:
