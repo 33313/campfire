@@ -309,6 +309,48 @@ func TestAnAgentCanRunAnOrdinaryDay(t *testing.T) {
 	}
 }
 
+// Team and user pictures are left out of every tool result; pictures in an
+// item's description stay, because they can be part of the work.
+func TestResultsLeaveOutTeamAndUserPictures(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	const png = "data:image/png;base64,iVBORw0KGgo="
+	if err := h.svc.SetTeamProfile(ctx, h.admin, h.team.ID, png, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.svc.UpdateProfile(ctx, h.admin, "", png, ""); err != nil {
+		t.Fatal(err)
+	}
+	bucket := h.call("create_item", map[string]any{
+		"kind": "bucket", "teamId": h.team.ID, "title": "v1", "icon": "flame"})
+	item := h.call("create_item", map[string]any{
+		"kind": "ticket", "teamId": h.team.ID, "title": "crop the logo",
+		"description": "![logo](" + png + ")", "bucketId": bucket["id"]})
+
+	text := func(name string, args map[string]any) string {
+		out := h.rpc("tools/call", map[string]any{"name": name, "arguments": args}, h.token)
+		result := out["result"].(map[string]any)
+		if result["isError"] == true {
+			t.Fatalf("%s: %s", name, textOf(result))
+		}
+		return textOf(result)
+	}
+	for name, args := range map[string]map[string]any{
+		"list_teams":          {},
+		"get_team":            {"teamId": h.team.ID},
+		"list_users":          {},
+		"get_board":           {"teamId": h.team.ID},
+		"get_bucket_contents": {"bucketId": bucket["id"]},
+	} {
+		if strings.Contains(text(name, args), `"avatar"`) {
+			t.Errorf("%s carries a picture", name)
+		}
+	}
+	if !strings.Contains(text("get_item", map[string]any{"itemId": item["id"]}), png) {
+		t.Error("get_item dropped the picture in the description")
+	}
+}
+
 // The agent holds exactly its user's permissions, resolved at the time of the
 // call — not the ones the token was issued with.
 func TestAnAgentIsBoundedByItsUsersPermissions(t *testing.T) {
