@@ -1,3 +1,0 @@
-kind: Breaking
-body: 'Version 1.0.0. From here on, a change that breaks the HTTP API, the MCP tools, the configuration file or the command line comes only in a new major version.'
-time: 2026-10-26T00:23:00.000000000+01:00

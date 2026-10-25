@@ -5,6 +5,12 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v1.0.0 - 2026-10-25
+
+### Breaking
+
+- Version 1.0.0. From here on, a change that breaks the HTTP API, the MCP tools, the configuration file or the command line comes only in a new major version.
+
 ## v0.19.0 - 2026-10-25
 
 ### Changed
