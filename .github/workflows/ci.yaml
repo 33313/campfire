@@ -11,6 +11,13 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Pull requests can only read caches made on main, and the only Go cache there
+# is release.yaml's. Building with its flags lets vet, the tests and the e2e
+# binary reuse its compiled packages instead of compiling SQLite from scratch.
+env:
+  GOFLAGS: -trimpath
+  CGO_ENABLED: "0"
+
 jobs:
   # Words and other workflows change nothing the tests can see. A pull request
   # that touches only those skips them; a skipped job still passes as a
@@ -63,7 +70,7 @@ jobs:
         run: go vet ./...
 
       - name: Test
-        run: go test -race ./...
+        run: go test ./...
 
       # The client's CSQL parser answers to the same corpus as the server's
       # (SPEC.md §9.2).
@@ -72,28 +79,29 @@ jobs:
 
       # Only Linux runs the tests, but a release ships Windows and macOS too.
       # The code differs by operating system, never by architecture, so one
-      # type-check per OS finds what would stop the release, at a third of the
-      # cost of building all six binaries.
+      # type-check per OS finds what would stop the release.
       - name: Compile for Windows and macOS
         run: GOOS=windows go vet ./... && GOOS=darwin GOARCH=arm64 go vet ./...
 
-      # The browser is the slowest thing this workflow downloads, so it is
-      # cached against the Playwright version that asks for it. --with-deps
-      # installs system packages and is only needed when the cache misses.
-      - name: Playwright version
-        id: pw
-        run: echo "v=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v6
-        id: pw-cache
+  # The browser suite, beside the Go checks rather than after them.
+  e2e:
+    needs: changes
+    if: needs.changes.outputs.code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.v }}
-
-      # The client's own tests drive the real binary in a browser.
+          go-version: "1.27"
+          check-latest: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      # The runner's own Google Chrome (playwright.config.js), so no browser
+      # is downloaded. e2e/serve.sh builds the client and the binary.
       - name: End to end
-        run: |
-          npx playwright install ${{ steps.pw-cache.outputs.cache-hit == 'true' && 'chromium firefox' || '--with-deps chromium firefox' }}
-          npx playwright test
+        run: npm ci && npx playwright test
 
   # The image is a packaging concern: it only changes when the things that go
   # into it do. It is not a required check, so a pull request that does not

@@ -5,7 +5,6 @@
   "scripts": {
     "build": "vite build",
     "changie": "go run github.com/miniscruff/changie@v1.26.0",
-    "dev": "vite",
     "e2e": "playwright test",
     "prepare": "git config core.hooksPath .githooks || true",
     "test": "node --test internal/web/src/lib/csql.test.js"
