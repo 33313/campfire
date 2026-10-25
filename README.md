@@ -96,6 +96,15 @@ database and snapshots in `/data`. Otherwise it is the same application, configu
 [Semantic Versioning](https://semver.org); image tags are the version (`1.4.2`), its minor (`1.4`),
 its major (`1`), and `latest`. [`CHANGELOG.md`](CHANGELOG.md) lists what each release changes.
 
+A newer binary brings an older data file up to its schema when it opens it, in one transaction. It
+first takes a snapshot, `before-migration-<time>.db` in the snapshot directory, and logs its name;
+if the snapshot fails, the file is left as it was. These snapshots are never pruned. Restoring an
+older snapshot migrates it the same way, taking its own snapshot first.
+
+There is no downgrade. An older binary refuses a file a newer one has migrated, and names the
+snapshot taken before the migration: `campfire restore <snapshot>` with the older binary goes back
+to it, losing what changed since.
+
 ## First run
 
 Campfire prints an address. Open it and create the first account: that account is an instance
@@ -358,8 +367,9 @@ with `go run`, so there is nothing to install and nothing of it in `go.mod`.
 
 From v1, a version promises compatibility for what other things depend on:
 
-- **The data file.** A binary opens any data file, or snapshot, of its major version. There are no
-  migrations, so any schema change is a major release.
+- **The data file.** A binary opens any data file, or snapshot, written by its own version or an
+  earlier one, migrating it if it's older (see "Upgrading"). A schema change therefore needs a
+  migration, not a major release.
 - **The configuration file**: its keys and what they mean.
 - **The command line**: commands, flags, and output a script reads (`campfire snapshot` prints the
   path of the snapshot).

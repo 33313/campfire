@@ -134,6 +134,9 @@ func restoreAt(cfg config.Config, at string) error {
 	if err := backup.RestoreAt(context.Background(), cfg.Snapshots.Replica, moment, cfg.Database); err != nil {
 		return err
 	}
+	if err := migrateRestored(cfg); err != nil {
+		return err
+	}
 	fmt.Printf("restored %s as it was at %s\n", cfg.Database, at)
 	return nil
 }
@@ -166,11 +169,27 @@ func restore(cfg config.Config, snapshot string) error {
 			return err
 		}
 	}
+	if v, err := store.FileVersion(snapshot); err == nil && v > store.Version() {
+		return store.TooNew(snapshot, v)
+	}
 	if err := backup.Restore(snapshot, cfg.Database); err != nil {
+		return err
+	}
+	if err := migrateRestored(cfg); err != nil {
 		return err
 	}
 	fmt.Printf("restored %s into %s\n", snapshot, cfg.Database)
 	return nil
+}
+
+// migrateRestored opens a restored file the way the server does, so that an
+// older one is migrated now, its own snapshot taken first.
+func migrateRestored(cfg config.Config) error {
+	db, err := open(cfg)
+	if err != nil {
+		return err
+	}
+	return db.Close()
 }
 
 // withRecoveryAdvice names the snapshot to restore from, because a corrupt

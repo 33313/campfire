@@ -67,8 +67,14 @@ func dsn(path string, readonly bool) string {
 }
 
 // Open opens (creating if absent) the database at path, checks its integrity,
-// and gives a new, empty file the schema.
-func Open(path string) (*DB, error) {
+// and gives a new, empty file the schema. It refuses a file that needs
+// migrating; OpenMigrating migrates it.
+func Open(path string) (*DB, error) { return OpenMigrating(path, nil) }
+
+// OpenMigrating is Open that also brings a file older than the binary up to
+// the current schema. snapshot is called first, with the file's version; if it
+// fails, or is nil, nothing is migrated.
+func OpenMigrating(path string, snapshot func(db *DB, from int) error) (*DB, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
@@ -94,6 +100,10 @@ func Open(path string) (*DB, error) {
 		return nil, err
 	}
 	if err := db.create(); err != nil {
+		w.Close()
+		return nil, err
+	}
+	if err := db.migrate(snapshot); err != nil {
 		w.Close()
 		return nil, err
 	}
@@ -141,9 +151,8 @@ func (d *DB) checkIntegrity() error {
 	return nil
 }
 
-// create applies the schema to a file with no tables. A file that has any is
-// taken as it is: there are no migrations, and a schema change before v1 is
-// made to a live database by hand.
+// create applies the schema to a file with no tables, and stamps it with the
+// current version. A file that has tables is left to migrate.
 func (d *DB) create() error {
 	var tables int
 	if err := d.W.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type = 'table'`).Scan(&tables); err != nil {
@@ -156,9 +165,96 @@ func (d *DB) create() error {
 	if err != nil {
 		return err
 	}
-	if _, err := tx.Exec(schema); err != nil {
+	if _, err := tx.Exec(schema + fmt.Sprintf("\nPRAGMA user_version = %d;", Version())); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("schema: %w", err)
+	}
+	return tx.Commit()
+}
+
+// migrations[i] takes a file from schema version i+1 to i+2. Append only: one
+// that has shipped is never edited. Before adding one, copy schema.sql to
+// testdata/v<its from version>.sql, then change schema.sql to match.
+var migrations []string
+
+// Version is the schema version this binary writes. A file records its own in
+// PRAGMA user_version; a file with none (0) has the v1 schema, version 1.
+func Version() int { return 1 + len(migrations) }
+
+// ErrTooNew is a file written by a newer binary. It is refused rather than
+// opened and left to fail at query time.
+var ErrTooNew = errors.New("written by a newer binary")
+
+// TooNew is the error for a file at path, of schema version v.
+func TooNew(path string, v int) error {
+	return fmt.Errorf("%s has schema version %d, newer than this binary's %d: %w", path, v, Version(), ErrTooNew)
+}
+
+// FileVersion reads the schema version recorded in the file at path.
+func FileVersion(path string) (int, error) {
+	db, err := sql.Open("sqlite", dsn(path, true))
+	if err != nil {
+		return 0, err
+	}
+	defer db.Close()
+	return userVersion(db)
+}
+
+func userVersion(db *sql.DB) (int, error) {
+	var v int
+	err := db.QueryRow(`PRAGMA user_version`).Scan(&v)
+	return v, err
+}
+
+// migrate brings the file up to Version() in one transaction. There are no
+// down-migrations: going back is restoring the snapshot taken first.
+func (d *DB) migrate(snapshot func(*DB, int) error) error {
+	from, err := userVersion(d.W)
+	if err != nil {
+		return err
+	}
+	switch {
+	case from == Version():
+		return nil
+	case from > Version():
+		return TooNew(d.Path, from)
+	case snapshot == nil:
+		return fmt.Errorf("%s has schema version %d and needs migrating to %d", d.Path, from, Version())
+	}
+	if err := snapshot(d, from); err != nil {
+		return fmt.Errorf("not migrating %s: snapshot failed: %w", d.Path, err)
+	}
+
+	// SQLite's procedure for changing a table: with foreign keys off, dropping
+	// a rebuilt table does not cascade into its children, and the check before
+	// commit holds what they would have. The pragma does nothing inside a
+	// transaction, so it is set first, on W's one connection.
+	if _, err := d.W.Exec(`PRAGMA foreign_keys = OFF`); err != nil {
+		return err
+	}
+	defer d.W.Exec(`PRAGMA foreign_keys = ON`)
+
+	tx, err := d.W.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for v := max(from, 1); v < Version(); v++ {
+		if _, err := tx.Exec(migrations[v-1]); err != nil {
+			return fmt.Errorf("migrating %s from version %d: %w", d.Path, v, err)
+		}
+	}
+	rows, err := tx.Query(`PRAGMA foreign_key_check`)
+	if err != nil {
+		return err
+	}
+	broken := rows.Next()
+	rows.Close()
+	if broken {
+		return fmt.Errorf("migrating %s left rows pointing at nothing", d.Path)
+	}
+	if _, err := tx.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, Version())); err != nil {
+		return err
 	}
 	return tx.Commit()
 }
