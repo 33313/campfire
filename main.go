@@ -218,8 +218,7 @@ func open(cfg config.Config) (*store.DB, error) {
 			db.Path, from, store.Version(), snap.Path)
 		return nil
 	})
-	var tooNew *store.TooNewError
-	if errors.As(err, &tooNew) {
+	if errors.Is(err, store.ErrTooNew) {
 		return nil, withDowngradeAdvice(cfg, err)
 	}
 	if err != nil {

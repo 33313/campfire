@@ -170,7 +170,7 @@ func restore(cfg config.Config, snapshot string) error {
 		}
 	}
 	if v, err := store.FileVersion(snapshot); err == nil && v > store.Version() {
-		return &store.TooNewError{Path: snapshot, File: v, Binary: store.Version()}
+		return store.TooNew(snapshot, v)
 	}
 	if err := backup.Restore(snapshot, cfg.Database); err != nil {
 		return err

@@ -165,13 +165,9 @@ func (d *DB) create() error {
 	if err != nil {
 		return err
 	}
-	if _, err := tx.Exec(schema); err != nil {
+	if _, err := tx.Exec(schema + fmt.Sprintf("\nPRAGMA user_version = %d;", Version())); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("schema: %w", err)
-	}
-	if _, err := tx.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, Version())); err != nil {
-		tx.Rollback()
-		return err
 	}
 	return tx.Commit()
 }
@@ -185,15 +181,13 @@ var migrations []string
 // PRAGMA user_version; a file with none (0) has the v1 schema, version 1.
 func Version() int { return 1 + len(migrations) }
 
-// TooNewError is a file written by a newer binary. It is refused rather than
+// ErrTooNew is a file written by a newer binary. It is refused rather than
 // opened and left to fail at query time.
-type TooNewError struct {
-	Path         string
-	File, Binary int
-}
+var ErrTooNew = errors.New("written by a newer binary")
 
-func (e *TooNewError) Error() string {
-	return fmt.Sprintf("%s has schema version %d, newer than this binary's %d", e.Path, e.File, e.Binary)
+// TooNew is the error for a file at path, of schema version v.
+func TooNew(path string, v int) error {
+	return fmt.Errorf("%s has schema version %d, newer than this binary's %d: %w", path, v, Version(), ErrTooNew)
 }
 
 // FileVersion reads the schema version recorded in the file at path.
@@ -223,7 +217,7 @@ func (d *DB) migrate(snapshot func(*DB, int) error) error {
 	case from == Version():
 		return nil
 	case from > Version():
-		return &TooNewError{Path: d.Path, File: from, Binary: Version()}
+		return TooNew(d.Path, from)
 	case snapshot == nil:
 		return fmt.Errorf("%s has schema version %d and needs migrating to %d", d.Path, from, Version())
 	}
@@ -234,19 +228,13 @@ func (d *DB) migrate(snapshot func(*DB, int) error) error {
 	// SQLite's procedure for changing a table: with foreign keys off, dropping
 	// a rebuilt table does not cascade into its children, and the check before
 	// commit holds what they would have. The pragma does nothing inside a
-	// transaction, so it is set on the connection first.
-	ctx := context.Background()
-	conn, err := d.W.Conn(ctx)
-	if err != nil {
+	// transaction, so it is set first, on W's one connection.
+	if _, err := d.W.Exec(`PRAGMA foreign_keys = OFF`); err != nil {
 		return err
 	}
-	defer conn.Close()
-	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
-		return err
-	}
-	defer conn.ExecContext(ctx, `PRAGMA foreign_keys = ON`)
+	defer d.W.Exec(`PRAGMA foreign_keys = ON`)
 
-	tx, err := conn.BeginTx(ctx, nil)
+	tx, err := d.W.Begin()
 	if err != nil {
 		return err
 	}

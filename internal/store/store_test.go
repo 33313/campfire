@@ -150,8 +150,7 @@ func TestMigrationNeedsItsSnapshotAndRunsAtomically(t *testing.T) {
 	db.Close()
 
 	migrations = migrations[:len(migrations)-1]
-	var tooNew *TooNewError
-	if _, err := Open(path); !errors.As(err, &tooNew) || tooNew.File != 2 || tooNew.Binary != 1 {
+	if _, err := Open(path); !errors.Is(err, ErrTooNew) {
 		t.Fatalf("opened a file newer than the binary: %v", err)
 	}
 }
