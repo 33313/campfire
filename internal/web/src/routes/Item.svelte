@@ -36,6 +36,7 @@
   import BucketDialog from "../dialogs/BucketDialog.svelte";
   import RelationList from "../components/RelationList.svelte";
   import PullRequestList from "../components/PullRequestList.svelte";
+  import TeamMark from "../components/TeamMark.svelte";
   import RelationDialog from "../dialogs/RelationDialog.svelte";
   import FormDialog from "../dialogs/FormDialog.svelte";
   import ConfirmDialog from "../dialogs/ConfirmDialog.svelte";
@@ -248,16 +249,6 @@
 
 </script>
 
-<!-- A team's picture where it has one, its short code where it has none; as
-     wide as the badge, so the names line up either way. -->
-{#snippet teamMark(t)}
-  {#if t.avatar}
-    <img class="team-avatar" style="width:24px;flex-basis:24px" src={t.avatar} alt="" />
-  {:else}
-    <span class="code-badge">{t.shortCode}</span>
-  {/if}
-{/snippet}
-
 {#if error}
   <ErrorPanel {error} retry={load} />
 {:else if item}
@@ -403,7 +394,7 @@
             <div class="aside-field" style="grid-column:1/-1">
               <span class="field-label">Owning team</span>
               <div class="aside-value">
-                {@render teamMark(team || { shortCode: item.teamShortCode })}
+                <TeamMark team={team || { shortCode: item.teamShortCode }} />
                 <span>{team ? team.name : item.teamShortCode}</span>
               </div>
             </div>
@@ -500,7 +491,7 @@
             {#each contents || [] as g}
               <div style="margin-bottom:4px">
                 <div style="display:flex;align-items:center;gap:8px;padding:8px 0">
-                  {@render teamMark(g.team)}
+                  <TeamMark team={g.team} />
                   <span style="color:var(--bright);font-size:12.5px">{g.team.name}</span>
                   <span class="ident" style="margin-left:auto">
                     {g.items.filter((i) => i.stateRole === "final" || i.stateRole === "rejected").length}

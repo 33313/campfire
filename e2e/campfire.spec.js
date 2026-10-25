@@ -1010,6 +1010,9 @@ test("a team has a profile: its picture, what it does, who is in it", async ({ p
   // The members, each a way through to their own profile, and the trail.
   await page.locator(".profile-teams").getByRole("link", { name: "root" }).click();
   await expect(page).toHaveURL(/\/users\/root$/);
+  // ...where the team wears the picture it was just given (DEV-119)...
+  await expect(page.locator(".profile-teams img.team-avatar").first())
+    .toHaveAttribute("src", /^data:image\//);
   // ...and a person's teams lead back.
   await page.locator(".profile-teams a[href='/t/1/profile']").click();
   await expect(page).toHaveURL(/\/t\/1\/profile$/);
@@ -1169,15 +1172,16 @@ test.describe(() => {
     const kept = doneColumn.locator(".card-slot.kept", { hasText: "Sweep the hearth" });
     await expect(kept).toBeVisible();
 
-    // A later refresh keeps it: another write lands on the stream.
-    await page.request.post("/api/items", { data: { kind: "ticket", teamId: 1, title: "Stack the logs", accepted: true } });
-    await expect(page.locator(".card", { hasText: "Stack the logs" })).toBeVisible();
+    // A later refresh keeps it: another write lands on the stream. Its title is
+    // its own, so the wait is for it and not an earlier test's card.
+    await page.request.post("/api/items", { data: { kind: "ticket", teamId: 1, title: "Split the kindling", accepted: true } });
+    await expect(page.locator(".card", { hasText: "Split the kindling" })).toBeVisible();
     await expect(kept).toBeVisible();
 
     // A new filter starts from what matches it.
     await query.fill(`state = "${todo.name}" and priority != 4`);
     await query.press("Enter");
-    await expect(page.locator(".card", { hasText: "Stack the logs" })).toBeVisible();
+    await expect(page.locator(".card", { hasText: "Split the kindling" })).toBeVisible();
     await expect(page.locator(".card", { hasText: "Sweep the hearth" })).toHaveCount(0);
   });
 

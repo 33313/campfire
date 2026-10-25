@@ -25,6 +25,7 @@
   import ScreenHeader from "../components/ScreenHeader.svelte";
   import Section from "../components/Section.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
+  import TeamMark from "../components/TeamMark.svelte";
 
   let { username } = $props();
 
@@ -188,7 +189,7 @@
             {#each user.teams || [] as t}
               {@const team = app.allTeams.find((x) => x.shortCode === t.shortCode)}
               <div class="relation-row">
-                <span class="code-badge">{t.shortCode}</span>
+                <TeamMark team={team || t} />
                 {#if team}
                   <a href="/t/{team.id}/profile"
                      style="flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis">
