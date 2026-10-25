@@ -1,9 +1,8 @@
 # Campfire
 
 A self-hosted kanban tracker: a Go server with the Svelte client embedded, on one SQLite file.
-It's pre-v1, and the only install is the maintainer's own. Tickets live in Campfire itself,
-reachable through the `campfire` MCP server. For ticket work, use `/ticket <ID>`, e.g.
-`/ticket DEV-120`.
+Tickets live in Campfire itself, reachable through the `campfire` MCP server. For ticket work,
+use `/ticket <ID>`, e.g. `/ticket DEV-120`.
 
 ## Where things are decided
 
@@ -46,9 +45,9 @@ reachable through the `campfire` MCP server. For ticket work, use `/ticket <ID>`
 - Commits may be signed. If a commit fails on a passphrase, ask the user to run `! ssh-add`.
   Never turn signing off.
 - Every PR adds a change file (`npm run changie -- new`; a hand-written body must be quoted), or
-  carries the `skip-changeset` label when nothing changes for people who run Campfire. Before v1,
-  a breaking change is `Changed`: `Breaking` and `Removed` would release v1.0.0.
+  carries the `skip-changeset` label when nothing changes for people who run Campfire. A change
+  that breaks the API, the MCP tools, the configuration file or the command line is `Breaking`
+  or `Removed`, and releases a new major version: ask before making one.
 - A schema change appends a migration in `internal/store/store.go` (see the comment there).
-  The API and MCP may still break freely before v1.
 - Multi-part work goes out as stacked PRs with `gh stack`.
 - Release binaries and the Docker image are the only install paths. Tags stay on main.
