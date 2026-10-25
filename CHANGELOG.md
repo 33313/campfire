@@ -5,6 +5,12 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v0.18.1 - 2026-10-25
+
+### Fixed
+
+- A user's profile shows each of their teams' pictures, where the team has one
+
 ## v0.18.0 - 2026-10-25
 
 ### Added
