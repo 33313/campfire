@@ -1,0 +1,3 @@
+kind: Changed
+body: 'MCP tool results leave out team and user pictures. The HTTP API still returns them.'
+time: 2026-10-25T23:38:13.124957489+01:00

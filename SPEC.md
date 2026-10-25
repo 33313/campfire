@@ -877,6 +877,9 @@ The MCP server is **a second interface over the same handlers**, not a separate 
   ([§11](#11-api-contract)), and the tool list is derived from that correspondence over the exposed
   subset ([§14.3](#143-what-is-exposed)). A tool without an operation MUST NOT exist; it would be
   behaviour with no written contract.
+- A tool's result MUST be its operation's response without team and user pictures. They are inline
+  images an agent cannot use, and they crowd out its context. Pictures in descriptions and comments
+  stay, because they can be part of the work.
 
 Reuse of the authorisation and validation path is the entire point. A second implementation of
 either would be a second set of rules to keep in step, and a permission bug would live on the

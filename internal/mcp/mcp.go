@@ -11,6 +11,7 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -208,11 +209,44 @@ func (s *Server) callTool(ctx context.Context, a core.Actor, params json.RawMess
 		// protocol error.
 		return toolResult(errorText(err), true), nil
 	}
-	body, err := json.MarshalIndent(result, "", "  ")
+	body, err := withoutAvatars(result)
 	if err != nil {
 		return nil, &rpcError{codeInternal, "the result could not be encoded"}
 	}
 	return toolResult(string(body), false), nil
+}
+
+// withoutAvatars encodes a result with every "avatar" key removed, at any
+// depth. Team and user pictures are inline data URIs of up to 256KB that an
+// agent can't use and that crowd out its context. Only teams and users have
+// that key; pictures in descriptions and comments are string values and stay.
+func withoutAvatars(result any) ([]byte, error) {
+	raw, err := json.Marshal(result)
+	if err != nil {
+		return nil, err
+	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber()
+	var v any
+	if err := dec.Decode(&v); err != nil {
+		return nil, err
+	}
+	dropAvatars(v)
+	return json.MarshalIndent(v, "", "  ")
+}
+
+func dropAvatars(v any) {
+	switch v := v.(type) {
+	case map[string]any:
+		delete(v, "avatar")
+		for _, child := range v {
+			dropAvatars(child)
+		}
+	case []any:
+		for _, child := range v {
+			dropAvatars(child)
+		}
+	}
 }
 
 func toolResult(text string, isError bool) map[string]any {
