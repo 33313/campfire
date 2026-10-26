@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -67,12 +68,15 @@ func TestWriteThenLoadRoundTrips(t *testing.T) {
 	if got.Validate() == nil {
 		t.Fatal("a negative hidden tab grace was accepted")
 	}
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.Mode().Perm()&0o077 != 0 {
-		t.Fatalf("the configuration file is mode %v; it is readable by others", info.Mode().Perm())
+	// Windows has no mode bits: the file inherits its directory's access list.
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Mode().Perm()&0o077 != 0 {
+			t.Fatalf("the configuration file is mode %v; it is readable by others", info.Mode().Perm())
+		}
 	}
 }
 

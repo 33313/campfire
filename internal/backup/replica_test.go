@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -16,6 +17,9 @@ import (
 func TestReplicaRestoresToAMoment(t *testing.T) {
 	if testing.Short() {
 		t.Skip("waits on replication")
+	}
+	if runtime.GOOS == "windows" {
+		t.Skip("litestream syncs the restored file's directory, which Windows refuses")
 	}
 	ctx := context.Background()
 	dir := t.TempDir()

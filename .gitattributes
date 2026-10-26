@@ -1,0 +1,3 @@
+# LF everywhere, Windows checkouts included: tests read the OpenAPI document
+# and other text files and expect LF.
+* text=auto eol=lf

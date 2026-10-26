@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	_ "time/tzdata" // as internal/core embeds it: Windows has no zoneinfo for Warsaw
 )
 
 // The corpus is what both parsers must say: this one, and the client's
