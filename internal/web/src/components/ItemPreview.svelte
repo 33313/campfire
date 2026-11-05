@@ -171,7 +171,6 @@
     <span class="field-label">State</span>
     <button class="aside-control" onclick={move}>
       <span>{it.stateName}</span>
-      <span class="note">{it.stateRole || "intermediate"}</span>
       <Icon body={NAV.chevron} size={11} color="var(--faint)" />
     </button>
   </div>
@@ -220,16 +219,16 @@
             <span>{it.bucketTitle}</span>
             <span class="note">{it.bucketIdentifier}</span>
           </a>
+          <button class="btn quiet" style="height:34px" aria-label="Change bucket"
+                  title="Change bucket" onclick={pickBucket}>
+            <Icon body={NAV.pen} size={13} />
+          </button>
         {:else}
-          <!-- Empty but editable: it says so, as the description does. -->
           <button class="aside-control" onclick={pickBucket}>
-            <span style="color:var(--faint)">No bucket. Pick one.</span>
+            <span>No bucket</span>
+            <Icon body={NAV.chevron} size={11} color="var(--faint)" />
           </button>
         {/if}
-        <button class="btn quiet" style="height:34px" aria-label="Change bucket"
-                title="Change bucket" onclick={pickBucket}>
-          <Icon body={NAV.pen} size={13} />
-        </button>
       </div>
     </div>
   {/if}

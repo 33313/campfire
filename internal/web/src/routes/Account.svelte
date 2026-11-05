@@ -95,8 +95,8 @@
 {#if error}
   <ErrorPanel {error} retry={load} />
 {:else if me}
-  <ScreenHeader title={app.user.username}
-                sub={app.user.isAdmin ? "Instance administrator" : "Member"}>
+  <ScreenHeader title="Account"
+                sub="{app.user.username} · {app.user.isAdmin ? 'instance administrator' : 'member'}">
     {#snippet right()}
       <a class="btn small" href="/users/{app.user.username}">Your profile</a>
     {/snippet}
@@ -124,6 +124,8 @@
                           onclick={() => guard(() => api.revokeAgentToken(t.id))}>Revoke</button>
                 </td>
               </tr>
+            {:else}
+              <tr><td colspan="3"><div class="empty-note">No tokens yet.</div></td></tr>
             {/each}
           </tbody>
         </table>

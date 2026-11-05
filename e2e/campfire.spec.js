@@ -141,7 +141,7 @@ test("a bucket is made with an icon, and a ticket put in it carries it on its ca
   await expect(form).toHaveCount(0);
 
   await page.goto(`/${item.identifier}`);
-  await page.getByRole("button", { name: "Change bucket" }).click();
+  await page.getByRole("button", { name: "No bucket" }).click();
   await page.getByRole("dialog").getByRole("combobox", { name: "Bucket" }).fill("wint");
   await expect(page.getByRole("listbox").getByRole("option")).toHaveCount(1);
   await page.keyboard.press("Enter");

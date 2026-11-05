@@ -1,0 +1,3 @@
+kind: Changed
+body: A ticket's State field no longer repeats the state's role, and an empty Bucket field reads No bucket. Account is titled Account and says when it has no agent tokens.
+time: 2026-11-05T14:42:41.448224505-07:00
