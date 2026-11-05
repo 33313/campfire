@@ -217,9 +217,9 @@
     { label: "Agent tokens", on: tokens.length > 0, tab: "integrations",
       note: `${tokens.length} active` },
     { label: "Pull requests", on: !!forges?.length, tab: "integrations",
-      note: forges?.length ? `${forges.length} ${forges.length === 1 ? "forge" : "forges"}` : "no forge" },
+      note: forges?.length ? plural(forges.length, "forge") : "no forge" },
     { label: "Accounts", on: true, tab: "people",
-      note: `${users.length} · ${teams.length} ${teams.length === 1 ? "team" : "teams"}` },
+      note: `${users.length} · ${plural(teams.length, "team")}` },
   ]);
 
   const usernameOf = (id) => users.find((u) => u.id === id)?.username || `user ${id}`;
@@ -541,7 +541,7 @@
                 <div class="field"><span class="field-label">SVG files, at most 100</span>
                   <label class="btn small">
                     <span>{setFiles.length ? plural(setFiles.length, "file") : "Choose files"}</span>
-                    <input type="file" multiple accept=".svg,image/svg+xml" hidden bind:this={fileInput}
+                    <input class="file-input" type="file" multiple accept=".svg,image/svg+xml" bind:this={fileInput}
                            onchange={(e) => (setFiles = [...e.currentTarget.files])} />
                   </label></div>
                 <button class="btn primary small" disabled={!setName.trim() || !setPrefix.trim() || !setFiles.length}>Add set</button>
@@ -646,7 +646,7 @@
           {/if}
 
         {:else if tab === "integrations"}
-          <Section title="Pull requests" sub={forges?.length ? `${forges.length} ${forges.length === 1 ? "forge" : "forges"}` : "off"}>
+          <Section title="Pull requests" sub={forges?.length ? plural(forges.length, "forge") : "off"}>
             {#snippet children()}
               {#if !forges}
                 <p class="explain">Forges are unavailable.</p>

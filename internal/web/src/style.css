@@ -75,6 +75,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
    everything else. A pointer's is not: the hover state already said it. */
 :focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; }
+/* A file input drawn as the control around it: out of sight, still in the tab
+   order and read out, unlike `hidden`. The control shows its focus. */
+.file-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+:has(> .file-input) { position: relative; }
+:has(> .file-input:focus-visible) { outline: 1px solid var(--accent); outline-offset: 1px; }
 
 /* Every control answers the pointer at once, and eases rather than snaps.
    Colour only: nothing here moves or resizes. */
