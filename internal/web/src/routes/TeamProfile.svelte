@@ -108,8 +108,8 @@
     {/snippet}
   </ScreenHeader>
 
-  <div class="body profile-body">
-    <div class="profile-top measure">
+  <div class="body profile-body"><div class="manage split profile-split">
+    <div class="profile-top">
       <div class="profile-head">
         {#snippet picture()}
           {#if team.avatar}
@@ -180,7 +180,7 @@
       </Section>
     </div>
 
-    <Section class="profile-activity measure" title="Recent activity"
+    <Section class="profile-activity" title="Recent activity"
              sub="{activity.length} newest first">
       {#snippet children()}
         <div class="profile-activity-rows">
@@ -211,5 +211,5 @@
         </p>
       {/snippet}
     </Section>
-  </div>
+  </div></div>
 {/if}
