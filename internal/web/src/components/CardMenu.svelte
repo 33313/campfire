@@ -42,7 +42,7 @@
       .map((s) => ({ value: s.id, label: s.name, icon: { pip: s.role } })) },
     Assignee: { field: "assignee", now: target.assigneeId || 0, options: assigneeOptions },
     Priority: { field: "priority", now: target.priority, options: priorityOptions },
-    Bucket: { field: "bucket", now: target.bucketId || 0, options: bucketOptions },
+    Bucket: { field: "bucket", now: target.bucketId || 0, options: () => bucketOptions(target.bucketId) },
   };
 
   // The sub-menu that is open: its name, its values, and the row it hangs

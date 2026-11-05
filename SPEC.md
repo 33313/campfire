@@ -466,6 +466,12 @@ The bucket index defaults to **participation**: buckets my team owns, plus bucke
 least one of my team's tickets. Ownership alone is a secondary filter. Scoping by ownership would
 show a team the buckets it created and hide the release it is working toward.
 
+The bucket index leaves out rejected buckets, and buckets in the final state for more than three
+days, unless it asks for all of them: the board's rule for done items ([§7.2](#72-board-and-backlog)),
+for the same reason. The client's bucket pickers and search suggestions leave them out too, except a
+bucket an item is already in. A filter and a permalink still reach them. The agent interface lists
+every bucket.
+
 ### 9.2 Filtering
 
 Every filter is a **CSQL** query: the Campfire Simple Query Language. CSQL is the one way a filter

@@ -182,6 +182,9 @@ func (s *Service) storeFilter(ctx context.Context, a Actor, f Filter) (store.Ite
 	default:
 		sf.Where, sf.WhereArgs = csql.Compile(csql.And{Of: all})
 	}
+	if f.HideDoneBuckets {
+		sf.BucketsDoneSince = s.Clock() - DoneFor
+	}
 	return sf, nil
 }
 

@@ -383,7 +383,7 @@ func TestReassignedBucketKeepsItsIdentifier(t *testing.T) {
 	}
 	// It is found among TERRA's own buckets now, by the stored ownership
 	// field rather than by its prefix.
-	cards, _, err := w.BucketIndex(w.ctx, w.sam, w.ter.ID, ScopeOwned, "", 50)
+	cards, _, err := w.BucketIndex(w.ctx, w.sam, w.ter.ID, ScopeOwned, "", 50, false)
 	if err != nil {
 		t.Fatal(err)
 	}
