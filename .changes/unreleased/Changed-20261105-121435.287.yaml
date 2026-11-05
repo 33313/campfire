@@ -1,0 +1,3 @@
+kind: Changed
+body: The sidebar has one Team entry; team settings open from the team's page. The sidebar follows the team of the ticket or bucket open, and a fresh load starts on the team last used.
+time: 2026-11-05T12:14:35.28778542-07:00

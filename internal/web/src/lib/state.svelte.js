@@ -31,9 +31,12 @@ export async function reloadContext(teamId) {
   app.user = session.user;
   app.teams = session.teams || [];
   app.allTeams = teams || [];
-  const chosen = teamId || app.teams[0]?.teamId || app.allTeams[0]?.id;
-  app.team = app.allTeams.find((t) => t.id === chosen) || null;
+  // The team asked for, else the one this browser last had in context.
+  const known = (id) => app.allTeams.find((t) => t.id === id);
+  app.team = known(teamId) || known(pref("team")) || known(app.teams[0]?.teamId)
+    || app.allTeams[0] || null;
   if (!app.team) return;
+  setPref("team", app.team.id);
   const [views, labels, users] = await Promise.all([
     api.listSavedViews(app.team.id), api.listLabels(), api.listUsers(), refreshBacklogCount(),
   ]);
@@ -41,6 +44,17 @@ export async function reloadContext(teamId) {
   app.viewsOn = stored(app.team.id);
   app.labels = labels || [];
   app.users = users || [];
+}
+
+/**
+ * Puts a team in context for a screen that belongs to it, so the sidebar's
+ * Board and Backlog lead to the team the screen is about. Only a known team:
+ * asking for one the instance does not have would ask again forever.
+ */
+export function followTeam(id) {
+  if (id && app.user && id !== app.team?.id && app.allTeams.some((t) => t.id === id)) {
+    reloadContext(id);
+  }
 }
 
 // The sidebar's backlog count. It is not any one screen's: the sidebar
