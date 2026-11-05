@@ -26,20 +26,29 @@ export function setIconSets(sets) {
   app.customIcons = Object.fromEntries(sets.flatMap((s) => s.icons.map((i) => [i.key, i])));
 }
 
+// The newest reload wins: following one item and then another starts two, and
+// the first to be asked can be the last to answer.
+let reloads = 0;
+
 export async function reloadContext(teamId) {
+  const mine = ++reloads;
   const [session, teams] = await Promise.all([api.getSession(), api.listTeams()]);
+  if (mine !== reloads) return;
   app.user = session.user;
   app.teams = session.teams || [];
   app.allTeams = teams || [];
-  // The team asked for, else the one this browser last had in context.
+  // The team asked for, else the one this account last had in context in
+  // this browser. Per account: whoever signs in next starts on their own.
+  const lastKey = `team:${app.user.id}`;
   const known = (id) => app.allTeams.find((t) => t.id === id);
-  app.team = known(teamId) || known(pref("team")) || known(app.teams[0]?.teamId)
+  app.team = known(teamId) || known(pref(lastKey)) || known(app.teams[0]?.teamId)
     || app.allTeams[0] || null;
   if (!app.team) return;
-  setPref("team", app.team.id);
+  setPref(lastKey, app.team.id);
   const [views, labels, users] = await Promise.all([
     api.listSavedViews(app.team.id), api.listLabels(), api.listUsers(), refreshBacklogCount(),
   ]);
+  if (mine !== reloads) return;
   app.views = views || [];
   app.viewsOn = stored(app.team.id);
   app.labels = labels || [];
