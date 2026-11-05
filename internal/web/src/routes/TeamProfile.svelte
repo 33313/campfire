@@ -157,14 +157,6 @@
           {:else}
             <span class="explain">No description.</span>
           {/if}
-          <div style="display:flex;gap:8px;margin-top:4px">
-            <a class="btn small" href="/t/{teamId}/board">
-              <Icon body={NAV.board} size={13} /><span>Board</span>
-            </a>
-            <a class="btn small" href="/t/{teamId}/backlog">
-              <Icon body={NAV.backlog} size={13} /><span>Backlog</span>
-            </a>
-          </div>
         </div>
       </div>
 

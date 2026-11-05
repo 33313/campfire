@@ -279,8 +279,12 @@ tokens.
 
 ### Team settings
 
-Team administrators find **Team settings** in the sidebar: *Work states*, *Members*, *Identity* (name,
-picture and description) and *Archive*.
+**Team** in the sidebar opens the team's page: its members and recent activity. Team administrators
+find **Settings** there: *Work states*, *Members*, *Identity* (name, picture and description) and
+*Archive*.
+
+The sidebar follows the team of what is open: opening another team's ticket switches Board and
+Backlog to that team. A fresh page load starts on the team you last had open.
 
 ## Agents (MCP)
 

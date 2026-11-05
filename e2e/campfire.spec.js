@@ -562,6 +562,20 @@ test("the team switcher goes to the team picked and names it", async ({ page }) 
   await expect(page.locator(".team-switch")).toContainText(there.name);
 });
 
+test("the sidebar follows the team of the item open, and remembers it", async ({ page }) => {
+  const here = await newTeam(page);
+  const there = await newTeam(page);
+  const ticket = await there.ticket("Elsewhere");
+  await page.goto(here.board);
+  await expect(page.locator(".team-switch")).toContainText(here.name);
+  await page.goto(`/${ticket.identifier}`);
+  await expect(page.locator(".team-switch")).toContainText(there.name);
+  await expect(page.locator(".sidebar").getByRole("link", { name: "Board" }))
+    .toHaveAttribute("href", there.board);
+  await page.goto("/");
+  await expect(page).toHaveURL(new RegExp(`${there.board}$`));
+});
+
 test("signing out from the sidebar returns to the sign-in card", async ({ page }) => {
   const team = await newTeam(page);
   await page.goto(team.board);
