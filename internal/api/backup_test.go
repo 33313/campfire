@@ -78,20 +78,30 @@ func TestRestoreOnlyNamesASnapshotInTheDirectory(t *testing.T) {
 func TestSnapshotListCarriesSchemaVersions(t *testing.T) {
 	c, api := signedInAdmin(t)
 	api.Snapshots.Dir = t.TempDir()
-	db, err := store.Open(filepath.Join(api.Snapshots.Dir, "campfire-20260101-000000.db"))
-	if err != nil {
-		t.Fatal(err)
+	// The newer file is this binary's; the older one predates recorded
+	// versions, holds 0, and has the v1 schema.
+	for name, recorded := range map[string]int{"campfire-20260102-000000.db": -1, "campfire-20260101-000000.db": 0} {
+		db, err := store.Open(filepath.Join(api.Snapshots.Dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if recorded >= 0 {
+			if _, err := db.W.Exec(fmt.Sprintf("PRAGMA user_version = %d", recorded)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		db.Close()
 	}
-	db.Close()
 
 	out := c.must("GET", "/api/snapshots", nil)
 	snaps, _ := out["snapshots"].([]any)
-	if len(snaps) != 1 {
+	if len(snaps) != 2 {
 		t.Fatalf("snapshots %v", out["snapshots"])
 	}
-	got := id(snaps[0].(map[string]any)["version"])
-	if got != int64(store.Version()) || id(out["version"]) != int64(store.Version()) {
-		t.Fatalf("snapshot version %d, binary %v; want both %d", got, out["version"], store.Version())
+	newest, oldest := id(snaps[0].(map[string]any)["version"]), id(snaps[1].(map[string]any)["version"])
+	if newest != int64(store.Version()) || id(out["version"]) != int64(store.Version()) || oldest != 1 {
+		t.Fatalf("snapshot versions %d and %d, binary %v; want %d, 1 and %d",
+			newest, oldest, out["version"], store.Version(), store.Version())
 	}
 }
 
