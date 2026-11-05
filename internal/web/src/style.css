@@ -81,6 +81,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: non
 a, .btn, .chip, .nav-item, .card, .bucket-card, .input, .bare, .label-input, .toggle,
 .check, .tab, .team-switch, .team-option, .option-row, .aside-control,
 .search-suggestion, .label-suggestion, .settings-rail button, .swatch, .icon-option, .load-older,
+.status-row,
 .column-body, .table tbody tr {
   transition: color var(--snap) ease-out, background-color var(--snap) ease-out,
     border-color var(--snap) ease-out, box-shadow var(--snap) ease-out;
@@ -260,7 +261,20 @@ a, .btn, .chip, .nav-item, .card, .bucket-card, .input, .bare, .label-input, .to
    measure, still capped, so a table's columns stay near each other. `split`
    gives it a side column for what the screen is about. */
 .manage { width: 100%; max-width: 1200px; margin: 0 auto; padding-bottom: 24px; }
-.manage.split { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 0 12px; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 0 12px; }
+/* Facts about one thing: a mono-caps label beside each value. */
+.facts {
+  display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px 12px; align-items: baseline;
+  margin: 0 0 12px;
+}
+.facts dd { margin: 0; font-family: var(--mono); font-size: 11.5px; color: var(--muted-soft); overflow-wrap: anywhere; }
+/* A line of the instance's status, opening the section that changes it. */
+.status-row {
+  display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 2px;
+  background: none; border: 0; border-bottom: 1px solid var(--rule-faint);
+  color: var(--text); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer;
+}
+.status-row:hover { color: var(--bright); }
 
 /* Controls -------------------------------------------------------------- */
 
@@ -1115,7 +1129,6 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 .icon-set-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 14px; }
 .icon-set-form .field { display: flex; flex-direction: column; gap: 4px; }
 .icon-set-form .input { width: 160px; }
-.icon-set-form input[type="file"] { width: 260px; padding: 3px 6px; height: auto; }
 .icon-set-skipped { margin: 4px 0 0; padding-left: 16px; }
 .icon-field { display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: left; }
 .icon-field-colour { color: var(--muted); }
