@@ -72,6 +72,77 @@ func TestRestoreOnlyNamesASnapshotInTheDirectory(t *testing.T) {
 	}
 }
 
+// The list says which schema version each snapshot holds, beside the
+// binary's own, so a snapshot the binary would refuse is visible before a
+// restore is tried.
+func TestSnapshotListCarriesSchemaVersions(t *testing.T) {
+	c, api := signedInAdmin(t)
+	api.Snapshots.Dir = t.TempDir()
+	db, err := store.Open(filepath.Join(api.Snapshots.Dir, "campfire-20260101-000000.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.Close()
+
+	out := c.must("GET", "/api/snapshots", nil)
+	snaps, _ := out["snapshots"].([]any)
+	if len(snaps) != 1 {
+		t.Fatalf("snapshots %v", out["snapshots"])
+	}
+	got := id(snaps[0].(map[string]any)["version"])
+	if got != int64(store.Version()) || id(out["version"]) != int64(store.Version()) {
+		t.Fatalf("snapshot version %d, binary %v; want both %d", got, out["version"], store.Version())
+	}
+}
+
+// A delete names a snapshot the list shows, and nothing else: not a path out
+// of the directory, and not another file in it.
+func TestDeleteSnapshotOnlyRemovesAListedSnapshot(t *testing.T) {
+	c, api := signedInAdmin(t)
+	api.Snapshots.Dir = t.TempDir()
+	snap := filepath.Join(api.Snapshots.Dir, "campfire-20260101-000000.db")
+	kept := filepath.Join(api.Snapshots.Dir, "before-migration-1.db")
+	for _, path := range []string{snap, kept} {
+		if err := os.WriteFile(path, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for _, name := range []string{"before-migration-1.db", "..%2Fcampfire.db", "nothing.db"} {
+		if code, _ := c.do("DELETE", "/api/snapshots/"+name, nil); code != http.StatusNotFound {
+			t.Errorf("deleting %s returned %d, want 404", name, code)
+		}
+	}
+	if _, err := os.Stat(kept); err != nil {
+		t.Fatalf("a file the list does not show was removed: %v", err)
+	}
+
+	c.must("DELETE", "/api/snapshots/"+filepath.Base(snap), nil)
+	if _, err := os.Stat(snap); !os.IsNotExist(err) {
+		t.Fatalf("the snapshot is still there: %v", err)
+	}
+}
+
+// Deleting a snapshot is for an instance administrator only.
+func TestDeleteSnapshotNeedsAnInstanceAdmin(t *testing.T) {
+	c, api := signedInAdmin(t)
+	api.Snapshots.Dir = t.TempDir()
+	snap := filepath.Join(api.Snapshots.Dir, "campfire-20260101-000000.db")
+	if err := os.WriteFile(snap, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	c.must("POST", "/api/users", map[string]any{"username": "marta", "password": "correct horse battery"})
+	c.must("POST", "/api/auth/signout", nil)
+	c.must("POST", "/api/auth/signin", map[string]string{"username": "marta", "password": "correct horse battery"})
+
+	if code, _ := c.do("DELETE", "/api/snapshots/"+filepath.Base(snap), nil); code != http.StatusForbidden {
+		t.Fatalf("a member's delete returned %d, want 403", code)
+	}
+	if _, err := os.Stat(snap); err != nil {
+		t.Fatalf("a member removed a snapshot: %v", err)
+	}
+}
+
 // The session cookie is secure whenever the request arrived over HTTPS, here
 // or at the proxy in front.
 func TestSessionCookieIsSecureOverHTTPS(t *testing.T) {

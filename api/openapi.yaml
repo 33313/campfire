@@ -851,6 +851,21 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Ok" }
 
+  /api/snapshots/{name}:
+    delete:
+      operationId: deleteSnapshot
+      summary: Delete a snapshot from the snapshot directory, by its file name
+      x-agent: false
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+
   /api/restore:
     post:
       operationId: restoreSnapshot

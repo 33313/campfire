@@ -36,6 +36,9 @@ type Snapshot struct {
 	// Verified is true when the file opened and passed an integrity check. A
 	// backup that has never been read is not a backup.
 	Verified bool `json:"verified"`
+	// Version is the schema version the file records, 0 when unread. One
+	// newer than the binary's is refused on restore (store.ErrTooNew).
+	Version int `json:"version,omitempty"`
 }
 
 // Take writes a consistent snapshot of db into dir and verifies it.
@@ -105,19 +108,27 @@ func take(ctx context.Context, db *store.DB, dir, prefix string) (Snapshot, erro
 
 // Verify opens a snapshot read-only and runs SQLite's integrity check.
 func Verify(path string) error {
+	_, err := Inspect(path)
+	return err
+}
+
+// Inspect is Verify, also answering the schema version the file records,
+// read on the same connection.
+func Inspect(path string) (version int, err error) {
 	db, err := sql.Open("sqlite", "file:"+path+"?mode=ro&_pragma=busy_timeout(5000)")
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer db.Close()
 	var result string
 	if err := db.QueryRow(`PRAGMA integrity_check`).Scan(&result); err != nil {
-		return err
+		return 0, err
 	}
 	if result != "ok" {
-		return errors.New(result)
+		return 0, errors.New(result)
 	}
-	return nil
+	err = db.QueryRow(`PRAGMA user_version`).Scan(&version)
+	return version, err
 }
 
 // List returns the snapshots in dir, newest first.

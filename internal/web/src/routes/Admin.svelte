@@ -290,6 +290,16 @@
     return new Date(d - d.getTimezoneOffset() * 60e3).toISOString().slice(0, 16);
   };
 
+  async function deleteSnapshot(s) {
+    const name = s.path.split(/[\\/]/).pop();
+    const ok = await openModal(ConfirmDialog, {
+      title: `Delete the snapshot of ${at(s.taken)}`,
+      lines: [`Removes ${name} from ${snapshots.directory}. It cannot be restored afterwards.`],
+      consequence: "Cannot be undone", action: "Delete",
+    });
+    if (ok) guard(() => api.deleteSnapshot(name));
+  }
+
   async function restore(s) {
     const out = await (s ? api.restoreSnapshot(s.path) : api.restoreAt(new Date(moment).toISOString()))
       .catch(failure);
@@ -592,7 +602,8 @@
             <Section title="Snapshots" sub={snapshots.enabled ? "on" : "off"}>
               {#snippet children()}
                 <p class="explain">
-                  Every {snapshots.interval} · keep {snapshots.keep} · {snapshots.directory}
+                  Every {snapshots.interval} · keep {snapshots.keep} · {snapshots.directory}.
+                  This version writes schema {snapshots.version}.
                 </p>
                 <button class="btn small" style="margin:10px 0"
                         onclick={() => guard(() => api.createSnapshot())}>Take one now</button>
@@ -600,11 +611,13 @@
                   <thead>
                     <tr>
                       <th>Taken</th><th style="width:110px">Size</th>
-                      <th style="width:110px">Integrity</th><th style="width:110px"></th>
+                      <th style="width:110px">Integrity</th><th style="width:200px">Schema</th>
+                      <th style="width:170px"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {#each snapshots.snapshots || [] as s (s.path)}
+                      {@const tooNew = s.version > snapshots.version}
                       <tr>
                         <td class="num">{at(s.taken)}</td>
                         <td class="num">{(s.size / 1e6).toFixed(1)} MB</td>
@@ -614,12 +627,21 @@
                             <span class="explain">{s.verified ? "verified" : "unreadable"}</span>
                           </span>
                         </td>
+                        <td class="explain" style:color={tooNew ? "var(--alert)" : null}>
+                          {#if !s.version}—
+                          {:else if tooNew}{s.version} · too new to restore
+                          {:else if s.version < snapshots.version}{s.version} · migrated on restore
+                          {:else}{s.version}{/if}
+                        </td>
                         <td>
-                          <button class="btn quiet small" onclick={() => restore(s)}>Restore</button>
+                          <span style="display:flex;gap:4px;justify-content:flex-end">
+                            <button class="btn quiet small" disabled={tooNew} onclick={() => restore(s)}>Restore</button>
+                            <button class="btn quiet small" onclick={() => deleteSnapshot(s)}>Delete</button>
+                          </span>
                         </td>
                       </tr>
                     {:else}
-                      <tr><td colspan="4"><div class="empty-note">No snapshots yet.</div></td></tr>
+                      <tr><td colspan="5"><div class="empty-note">No snapshots yet.</div></td></tr>
                     {/each}
                   </tbody>
                 </table>
