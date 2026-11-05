@@ -276,8 +276,8 @@ Your role can differ from team to team.
 ### Your account
 
 Click your name at the foot of the sidebar to open your profile: picture, email and bio. Its
-**Settings** has your password, 2FA (an authenticator app code at sign-in) and agent
-tokens.
+**Settings** opens *Account*: your password, 2FA (an authenticator app code at sign-in) and
+agent tokens.
 
 ### Team settings
 
