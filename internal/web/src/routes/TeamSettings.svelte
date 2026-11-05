@@ -137,7 +137,7 @@
                 badge={acting ? "Acting as team administrator" : null} />
 
   <div class="body">
-    <SettingsRail sections={SECTIONS} active={tab} onpick={(t) => (tab = t)}>
+    <SettingsRail sections={SECTIONS} active={tab} onpick={(t) => (tab = t)} manage>
       {#snippet children()}
         {#if tab === "states"}
           <div style="display:flex;align-items:flex-start">

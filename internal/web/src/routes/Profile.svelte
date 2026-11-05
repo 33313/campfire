@@ -119,8 +119,8 @@
   <!-- Who they are stays on screen; only the activity scrolls. A profile that
        scrolls as a whole buries the picture, the bio and the teams under a
        list of events, which is the wrong way round. -->
-  <div class="body profile-body">
-    <div class="profile-top measure">
+  <div class="body profile-body"><div class="manage split profile-split">
+    <div class="profile-top">
       <div class="profile-head">
         <!-- In edit mode the picture is the control: clicking it chooses a new
              one, which is where anyone would click anyway. -->
@@ -182,9 +182,6 @@
 
       <Section title="Teams" sub={plural((user.teams || []).length, "membership")}>
         {#snippet children()}
-          <!-- Side by side rather than stacked: the memberships are a fact
-               about a person, not a list to read down, and the page has to
-               finish above the fold. -->
           <div class="profile-teams">
             {#each user.teams || [] as t}
               {@const team = app.allTeams.find((x) => x.shortCode === t.shortCode)}
@@ -208,7 +205,7 @@
       </Section>
     </div>
 
-    <Section class="profile-activity measure" title="Recent activity"
+    <Section class="profile-activity" title="Recent activity"
              sub="{profile.activity.length} newest first">
       {#snippet children()}
         <!-- The same two helpers the log, the detail view and the preview read
@@ -238,5 +235,5 @@
         </p>
       {/snippet}
     </Section>
-  </div>
+  </div></div>
 {/if}
