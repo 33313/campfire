@@ -518,6 +518,7 @@ test("a person's and a team's pictures replace their initials", async ({ page })
   await expect(page).toHaveURL(/\/users\/root$/);
   await page.getByRole("button", { name: "Edit profile" }).click();
   await page.getByLabel("Picture").setInputFiles({ name: "me.png", mimeType: "image/png", buffer: PNG });
+  await page.getByRole("dialog").getByRole("button", { name: "Use this" }).click();
   await expect(page.locator(".whoami img.avatar")).toHaveAttribute("src", /^data:image\//);
   await page.getByRole("button", { name: "Remove picture" }).click();
   await expect(page.locator(".whoami .avatar")).toHaveText("RO");
@@ -526,6 +527,7 @@ test("a person's and a team's pictures replace their initials", async ({ page })
   await expect(page.locator("span.profile-picture")).toHaveText(team.shortCode);
   await page.getByRole("button", { name: "Edit profile" }).click();
   await page.getByLabel("Picture").setInputFiles({ name: "team.png", mimeType: "image/png", buffer: PNG });
+  await page.getByRole("dialog").getByRole("button", { name: "Use this" }).click();
   await page.getByRole("banner").getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".toast")).toHaveText(/Saved/);
   await page.reload();
