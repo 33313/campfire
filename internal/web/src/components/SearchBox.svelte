@@ -5,6 +5,7 @@
   import { api } from "../lib/api.js";
   import { quote } from "../lib/csql.js";
   import { navigate } from "../lib/router.svelte.js";
+  import { offered } from "../lib/options.js";
 
   // Search, with the items that match offered as you type.
   //
@@ -41,8 +42,9 @@
     const mine = ++issued;
     const filter = { csql: `text ~ ${quote(q)}${teamId ? ` and team = #${teamId}` : ""}` };
     try {
-      const page = await api.listItems(filter, "", 6);
-      if (mine === issued) hits = page.items || [];
+      // Twice what is shown, so leaving out finished buckets still fills it.
+      const page = await api.listItems(filter, "", 12);
+      if (mine === issued) hits = (page.items || []).filter(offered).slice(0, 6);
     } catch {
       // A suggestion that cannot be fetched is no suggestion. The search itself
       // still runs on Enter and reports its own failures.

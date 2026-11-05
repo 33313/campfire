@@ -174,11 +174,18 @@ type BucketCard struct {
 }
 
 // BucketIndex lists buckets under one of the three scopes.
-func (s *Service) BucketIndex(ctx context.Context, a Actor, teamID int64, scope, cursor string, limit int) ([]BucketCard, string, error) {
+//
+// Unless all is set, it leaves out what the board would: rejected buckets,
+// and buckets finished more than DoneFor ago.
+func (s *Service) BucketIndex(ctx context.Context, a Actor, teamID int64, scope, cursor string, limit int, all bool) ([]BucketCard, string, error) {
 	if err := requireUser(a); err != nil {
 		return nil, "", err
 	}
 	f := store.ItemFilter{Kind: store.KindBucket}
+	if !all {
+		f.ExcludeRoles = []string{store.RoleRejected}
+		f.EndedSince = s.Clock() - DoneFor
+	}
 	switch scope {
 	case ScopeInstance:
 	case ScopeOwned:

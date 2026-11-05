@@ -82,7 +82,9 @@ uploaded under a prefix, offered as `prefix.name`. Only their stroked shapes are
 - **The bucket's page** lists its tickets by team, with progress as finished over total (`37 / 50`).
   Done and rejected tickets count as finished.
 - **Buckets** in the sidebar lists the buckets your team takes part in, the ones it owns, or every
-  bucket.
+  bucket. Rejected buckets, and buckets done for more than three days, are left out unless
+  **Show finished** is on. The *Bucket* field and the search suggestions leave them out too; a
+  filter or a link still reaches them.
 - A bucket has its own state. It doesn't complete when its tickets do.
 - Buckets are hidden on the board unless **Show buckets** is on.
 - Buckets can't be deleted. Reject one as *cancelled* instead.

@@ -152,8 +152,8 @@ export const api = {
   createSavedView: (body) => post("/api/views", body),
   updateSavedView: (id, body) => patch(`/api/views/${id}`, body),
   deleteSavedView: (id) => del(`/api/views/${id}`),
-  listBuckets: (teamId, scope, cursor = "") =>
-    get(`/api/buckets?team=${teamId}&scope=${scope}&limit=60${cursor ? `&cursor=${cursor}` : ""}`),
+  listBuckets: (teamId, scope, cursor = "", all = false) =>
+    get(`/api/buckets?team=${teamId}&scope=${scope}&limit=60${cursor ? `&cursor=${cursor}` : ""}${all ? "&all=1" : ""}`),
 
   // Items
   listItems: (filter, cursor = "", limit = 100) => get(`/api/items?${filterQuery(filter, { cursor, limit })}`),

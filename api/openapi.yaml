@@ -483,6 +483,9 @@ paths:
       parameters:
         - { name: team, in: query, schema: { type: integer } }
         - { name: scope, in: query, schema: { type: string, enum: [participation, owned, instance] } }
+        # Rejected buckets, and buckets finished more than three days ago, are
+        # left out unless all is set.
+        - { name: all, in: query, schema: { type: boolean } }
         - { $ref: "#/components/parameters/Cursor" }
         - { $ref: "#/components/parameters/Limit" }
       responses:

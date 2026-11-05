@@ -2,6 +2,8 @@ package core
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/33313/campfire/internal/store"
@@ -155,7 +157,7 @@ func TestBucketIndexScopes(t *testing.T) {
 	}
 
 	names := func(scope string) map[string]bool {
-		cards, _, err := w.BucketIndex(w.ctx, w.marta, w.sol.ID, scope, "", 50)
+		cards, _, err := w.BucketIndex(w.ctx, w.marta, w.sol.ID, scope, "", 50, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -392,6 +394,48 @@ func TestOldDoneItemsAreHiddenFromTheBoard(t *testing.T) {
 	}
 	if col := final(true); len(col.Items) != 1 || col.Count != 1 {
 		t.Fatalf("allDone: %d items, count %d", len(col.Items), col.Count)
+	}
+}
+
+// The bucket index leaves out what the board would: a rejected bucket always,
+// a finished one once it has been done for longer than DoneFor. all shows
+// every one.
+func TestBucketIndexHidesFinishedAndRejectedBuckets(t *testing.T) {
+	w := newWorld(t)
+	now := int64(1_700_000_000_000_000)
+	w.Clock = func() int64 { return now }
+	w.bucket(w.sol, w.marta, "Open")
+	done := w.bucket(w.sol, w.marta, "Done")
+	dropped := w.bucket(w.sol, w.marta, "Dropped")
+	if _, err := w.MoveItem(w.ctx, w.marta, done.ID, w.state(w.sol, store.RoleFinal).ID, "", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.MoveItem(w.ctx, w.marta, dropped.ID, w.state(w.sol, store.RoleRejected).ID,
+		store.ReasonCancelled, ""); err != nil {
+		t.Fatal(err)
+	}
+	titles := func(all bool) string {
+		cards, _, err := w.BucketIndex(w.ctx, w.marta, w.sol.ID, ScopeOwned, "", 50, all)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, c := range cards {
+			out = append(out, c.Title)
+		}
+		sort.Strings(out)
+		return strings.Join(out, ", ")
+	}
+
+	if got := titles(false); got != "Done, Open" {
+		t.Fatalf("just finished: %s", got)
+	}
+	now += DoneFor + 1
+	if got := titles(false); got != "Open" {
+		t.Fatalf("finished for longer than DoneFor: %s", got)
+	}
+	if got := titles(true); got != "Done, Dropped, Open" {
+		t.Fatalf("all: %s", got)
 	}
 }
 

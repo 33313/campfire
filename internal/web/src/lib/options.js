@@ -29,8 +29,17 @@ export function usedBucket(id) {
   setPref(PICKS, n);
 }
 
-export async function bucketOptions() {
-  return [{ value: 0, label: "No bucket" }].concat(byUse(await buckets()).map((b) => ({
+// A bucket worth offering: not rejected, and not finished more than three days
+// ago, as the board leaves out old done tickets (SPEC.md §7.2). Typing its
+// identifier into a filter and its link still reach it.
+const DONE_FOR = 3 * 24 * 60 * 60 * 1e6; // microseconds, as the server's DoneFor
+export const offered = (b) => b.kind !== "bucket" || (b.stateRole !== "rejected"
+  && !(b.stateRole === "final" && b.actualEnd < Date.now() * 1000 - DONE_FOR));
+
+/** The buckets to offer; `keep` is the one a card is in, offered finished or not. */
+export async function bucketOptions(keep = 0) {
+  const list = (await buckets()).filter((b) => b.id === keep || offered(b));
+  return [{ value: 0, label: "No bucket" }].concat(byUse(list).map((b) => ({
     value: b.id, label: `${b.identifier}  ${b.title}`, icon: { bucket: b.icon },
   })));
 }
