@@ -2,7 +2,7 @@
   // Item detail: the full record, its relations, its comments and its history.
   //
   // Header actions are Copy link, Clone, Split, Reject and Edit — buttons, not
-  // menu items buried in an overflow (DESIGN.md §6). Edit becomes Save and
+  // menu items buried in an overflow (DESIGN.md §5). Edit becomes Save and
   // Cancel while it is open.
   //
   // The fields sit in the one column with everything else. A second sidebar

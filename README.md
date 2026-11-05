@@ -318,8 +318,8 @@ to words alone. `--no-verify` skips them once.
 | `e2e` | The Playwright suite. It runs the real binary against a throwaway data directory. |
 | `.changes` | Release notes: unreleased change files, and one file per release. |
 
-[`SPEC.md`](SPEC.md) fixes behaviour and [`DESIGN.md`](DESIGN.md) fixes appearance; the tests cite
-them. [CONTRIBUTING.md](CONTRIBUTING.md) covers change files and releases.
+[`SPEC.md`](SPEC.md) fixes behaviour and [`DESIGN.md`](DESIGN.md) the rules of appearance; the
+tests cite them. [CONTRIBUTING.md](CONTRIBUTING.md) covers change files and releases.
 
 ## License
 

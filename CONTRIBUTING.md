@@ -5,9 +5,9 @@ Building, testing and the package map are in the [README](README.md#contributing
 ## Specification
 
 [`SPEC.md`](SPEC.md) fixes behaviour: the entities, permissions, lifecycle, API, storage and agent
-interface. [`DESIGN.md`](DESIGN.md) fixes appearance: colour and type tokens, geometry, component
-states, icon paths. The tests cite them. Where they appear to disagree, `SPEC.md` wins on behaviour
-and `DESIGN.md` on appearance.
+interface. [`DESIGN.md`](DESIGN.md) fixes the rules of appearance: colour and type tokens,
+geometry, motion, icon paths. Neither describes the client screen by screen; the code does. Edit
+them when a change breaks or adds a rule. Where they appear to disagree, `SPEC.md` wins.
 
 ## Tests
 

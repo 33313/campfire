@@ -6,8 +6,10 @@ use `/ticket <ID>`, e.g. `/ticket DEV-120`.
 
 ## Where things are decided
 
-- `SPEC.md` fixes behaviour and `DESIGN.md` fixes appearance. Before planning a change, read the
-  sections it touches. When the code and those files disagree, point it out instead of guessing.
+- `SPEC.md` fixes behaviour and `DESIGN.md` the rules of appearance. Before planning a change,
+  read the sections it touches. When the code breaks one of their rules, point it out instead of
+  guessing.
+- Edit them only when a change breaks or adds a rule, not to describe what the code does.
 - README "Contributing" maps the packages.
 
 ## How to work
