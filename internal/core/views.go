@@ -37,6 +37,10 @@ type Filter struct {
 	// TZ is the reader's time zone, an IANA name; a day in a query is read in
 	// it. Empty is UTC.
 	TZ string `json:"tz,omitempty"`
+	// HideDoneBuckets leaves out rejected buckets and buckets done for longer
+	// than DoneFor: what the client's bucket pickers and suggestions offer.
+	// Not an agent's to set (SPEC.md §9.1), so not in its JSON.
+	HideDoneBuckets bool `json:"-"`
 }
 
 // DoneFor is how long an item stays in the board's final column after it
@@ -183,8 +187,7 @@ func (s *Service) BucketIndex(ctx context.Context, a Actor, teamID int64, scope,
 	}
 	f := store.ItemFilter{Kind: store.KindBucket}
 	if !all {
-		f.ExcludeRoles = []string{store.RoleRejected}
-		f.EndedSince = s.Clock() - DoneFor
+		f.BucketsDoneSince = s.Clock() - DoneFor
 	}
 	switch scope {
 	case ScopeInstance:

@@ -397,24 +397,38 @@ func TestOldDoneItemsAreHiddenFromTheBoard(t *testing.T) {
 	}
 }
 
-// The bucket index leaves out what the board would: a rejected bucket always,
-// a finished one once it has been done for longer than DoneFor. all shows
-// every one.
-func TestBucketIndexHidesFinishedAndRejectedBuckets(t *testing.T) {
+// SPEC.md §9.1: the bucket index, and the item list asked to hide done
+// buckets, leave out what the board would: a rejected bucket always, a
+// finished one once it has been done for longer than DoneFor. A bucket in an
+// intermediate state, which has no role, stays; so does every ticket, done or
+// not. all shows every bucket.
+func TestDoneBucketsAreHidden(t *testing.T) {
 	w := newWorld(t)
 	now := int64(1_700_000_000_000_000)
 	w.Clock = func() int64 { return now }
+	move := func(it *Item, role, reason string) {
+		t.Helper()
+		if _, err := w.MoveItem(w.ctx, w.marta, it.ID, w.state(w.sol, role).ID, reason, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
 	w.bucket(w.sol, w.marta, "Open")
-	done := w.bucket(w.sol, w.marta, "Done")
-	dropped := w.bucket(w.sol, w.marta, "Dropped")
-	if _, err := w.MoveItem(w.ctx, w.marta, done.ID, w.state(w.sol, store.RoleFinal).ID, "", ""); err != nil {
-		t.Fatal(err)
+	move(w.bucket(w.sol, w.marta, "Done"), store.RoleFinal, "")
+	move(w.bucket(w.sol, w.marta, "Dropped"), store.RoleRejected, store.ReasonCancelled)
+	doing := w.bucket(w.sol, w.marta, "Doing")
+	states, _ := w.ListWorkStates(w.ctx, w.marta, w.sol.ID)
+	for _, st := range states {
+		if st.Role == "" {
+			if _, err := w.MoveItem(w.ctx, w.marta, doing.ID, st.ID, "", ""); err != nil {
+				t.Fatal(err)
+			}
+			break
+		}
 	}
-	if _, err := w.MoveItem(w.ctx, w.marta, dropped.ID, w.state(w.sol, store.RoleRejected).ID,
-		store.ReasonCancelled, ""); err != nil {
-		t.Fatal(err)
-	}
-	titles := func(all bool) string {
+	move(w.ticket(w.sol, w.marta, "Shipped"), store.RoleFinal, "")
+
+	sorted := func(out []string) string { sort.Strings(out); return strings.Join(out, ", ") }
+	index := func(all bool) string {
 		cards, _, err := w.BucketIndex(w.ctx, w.marta, w.sol.ID, ScopeOwned, "", 50, all)
 		if err != nil {
 			t.Fatal(err)
@@ -423,19 +437,35 @@ func TestBucketIndexHidesFinishedAndRejectedBuckets(t *testing.T) {
 		for _, c := range cards {
 			out = append(out, c.Title)
 		}
-		sort.Strings(out)
-		return strings.Join(out, ", ")
+		return sorted(out)
+	}
+	listed := func() string {
+		page, err := w.ListItems(w.ctx, w.marta, Filter{Query: "team = SOL", HideDoneBuckets: true}, "", 50)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, it := range page.Items {
+			out = append(out, it.Title)
+		}
+		return sorted(out)
 	}
 
-	if got := titles(false); got != "Done, Open" {
-		t.Fatalf("just finished: %s", got)
+	if got := index(false); got != "Doing, Done, Open" {
+		t.Fatalf("index, just finished: %s", got)
+	}
+	if got := listed(); got != "Doing, Done, Open, Shipped" {
+		t.Fatalf("list, just finished: %s", got)
 	}
 	now += DoneFor + 1
-	if got := titles(false); got != "Open" {
-		t.Fatalf("finished for longer than DoneFor: %s", got)
+	if got := index(false); got != "Doing, Open" {
+		t.Fatalf("index, finished for longer than DoneFor: %s", got)
 	}
-	if got := titles(true); got != "Done, Dropped, Open" {
-		t.Fatalf("all: %s", got)
+	if got := listed(); got != "Doing, Open, Shipped" {
+		t.Fatalf("list, finished for longer than DoneFor: %s", got)
+	}
+	if got := index(true); got != "Doing, Done, Dropped, Open" {
+		t.Fatalf("index, all: %s", got)
 	}
 }
 

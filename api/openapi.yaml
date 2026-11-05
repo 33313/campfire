@@ -502,6 +502,9 @@ paths:
         - { $ref: "#/components/parameters/FilterQuery" }
         - { $ref: "#/components/parameters/FilterView" }
         - { $ref: "#/components/parameters/FilterZone" }
+        # The client's bucket pickers and suggestions: rejected buckets, and
+        # buckets done for more than three days, are left out.
+        - { name: hideDoneBuckets, in: query, schema: { type: boolean } }
       responses:
         "200": { $ref: "#/components/responses/Ok" }
     post:

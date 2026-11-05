@@ -87,6 +87,7 @@ function filterQuery(filter = {}, { cursor, limit } = {}) {
   if (filter.csql?.trim()) q.set("csql", filter.csql);
   for (const id of filter.viewIds || []) q.append("view", id);
   if (filter.tz) q.set("tz", filter.tz); // days in a query are the reader's
+  if (filter.hideDoneBuckets) q.set("hideDoneBuckets", "1"); // SPEC.md §9.1
   if (cursor) q.set("cursor", cursor);
   if (limit) q.set("limit", limit);
   return q;

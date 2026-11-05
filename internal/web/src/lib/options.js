@@ -1,6 +1,6 @@
 // The option lists the pick and bulk-edit dialogs are handed.
 
-import { buckets } from "./catalog.svelte.js";
+import { buckets, offeredBuckets } from "./catalog.svelte.js";
 import { app } from "./state.svelte.js";
 import { PRIORITY } from "./icons.js";
 import { pref, setPref } from "./prefs.js";
@@ -29,17 +29,11 @@ export function usedBucket(id) {
   setPref(PICKS, n);
 }
 
-// A bucket worth offering: not rejected, and not finished more than three days
-// ago, as the board leaves out old done tickets (SPEC.md §7.2). Typing its
-// identifier into a filter and its link still reach it.
-const DONE_FOR = 3 * 24 * 60 * 60 * 1e6; // microseconds, as the server's DoneFor
-export const offered = (b) => b.kind !== "bucket" || (b.stateRole !== "rejected"
-  && !(b.stateRole === "final" && b.actualEnd < Date.now() * 1000 - DONE_FOR));
-
-/** The buckets to offer; `keep` is the one a card is in, offered finished or not. */
+/** The buckets to offer; `keep` is the one a card is in, offered done or not. */
 export async function bucketOptions(keep = 0) {
-  const list = (await buckets()).filter((b) => b.id === keep || offered(b));
-  return [{ value: 0, label: "No bucket" }].concat(byUse(list).map((b) => ({
+  const list = await offeredBuckets();
+  const kept = keep && !list.some((b) => b.id === keep) && (await buckets()).find((b) => b.id === keep);
+  return [{ value: 0, label: "No bucket" }].concat(byUse(kept ? [...list, kept] : list).map((b) => ({
     value: b.id, label: `${b.identifier}  ${b.title}`, icon: { bucket: b.icon },
   })));
 }

@@ -166,6 +166,8 @@ func filterFrom(r *http.Request) core.Filter {
 		Query:   r.URL.Query().Get("csql"),
 		ViewIDs: queryInts(r, "view"),
 		TZ:      r.URL.Query().Get("tz"),
+
+		HideDoneBuckets: queryBool(r, "hideDoneBuckets"),
 	}
 }
 
