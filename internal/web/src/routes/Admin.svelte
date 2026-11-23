@@ -206,12 +206,18 @@
     if (ok) guard(() => api.deleteForge(f.id));
   }
 
+  // The backup and update endpoints send RFC 3339 times, not the epoch
+  // microseconds the rest of the API does. Written as everywhere else, not in
+  // the browser's locale, which may write 10.09.31.
+  const micros = (t) => Date.parse(t) * 1000;
+  const at = (t) => when(micros(t), true);
+
   // The Instance section's side: one row per thing that can be on or off,
   // each opening the section that changes it.
   let status = $derived([
     { label: "Snapshots", on: !!snapshots?.enabled, tab: "backup",
       note: !snapshots?.enabled ? "off" : `every ${snapshots.interval}` + (snapshots.snapshots?.length
-        ? ` · last ${ago(Math.max(...snapshots.snapshots.map((s) => Date.parse(s.taken))) * 1000)}` : "") },
+        ? ` · last ${ago(Math.max(...snapshots.snapshots.map((s) => micros(s.taken))))}` : "") },
     { label: "Point in time", on: !!snapshots?.replica, tab: "backup",
       note: snapshots?.replica ? "on" : "off" },
     { label: "Agent tokens", on: tokens.length > 0, tab: "integrations",
@@ -319,7 +325,7 @@
                       <dt class="field-label">Latest</dt>
                       <dd>{updates.latest.version}{updates.newer ? "" : " · up to date"}</dd>
                       <dt class="field-label">Checked</dt>
-                      <dd>{new Date(updates.latest.checked).toLocaleString()}</dd>
+                      <dd>{at(updates.latest.checked)}</dd>
                     {/if}
                   </dl>
                   {#if !updates?.check}
@@ -600,7 +606,7 @@
                   <tbody>
                     {#each snapshots.snapshots || [] as s (s.path)}
                       <tr>
-                        <td class="num">{new Date(s.taken).toLocaleString()}</td>
+                        <td class="num">{at(s.taken)}</td>
                         <td class="num">{(s.size / 1e6).toFixed(1)} MB</td>
                         <td>
                           <span style="display:flex;align-items:center;gap:6px">
@@ -631,8 +637,7 @@
                 {:else}
                   <p class="explain">
                     Replicating to {snapshots.replica.directory}. Restorable from
-                    {new Date(snapshots.replica.from).toLocaleString()} to
-                    {new Date(snapshots.replica.to).toLocaleString()}.
+                    {at(snapshots.replica.from)} to {at(snapshots.replica.to)}.
                   </p>
                   <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
                     <input class="input" type="datetime-local" aria-label="Moment to restore to"
