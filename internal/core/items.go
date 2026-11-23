@@ -218,7 +218,7 @@ func (s *Service) CreateItem(ctx context.Context, a Actor, in NewItem) (*Item, e
 type Item struct {
 	store.Item
 	Relations []store.Relation `json:"relations,omitempty"`
-	// PullRequests are the pull requests whose titles name the item (DEV-13).
+	// PullRequests include title matches and manually attached links.
 	PullRequests []store.PullRequest `json:"pullRequests,omitempty"`
 	// Progress is a bucket's contents count: items in a terminal state over
 	// the total. It is a view, not a field (SPEC.md §6.2).

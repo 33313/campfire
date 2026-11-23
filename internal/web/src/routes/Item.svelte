@@ -45,6 +45,7 @@
   let { identifier = null, bucketId = null } = $props();
 
   let item = $state(null);
+  let canLinkPull = $derived(app.user?.isAdmin || app.teams.some((t) => t.teamId === item?.teamId));
   let comments = $state([]);
   let history = $state({ events: [] });
   let contents = $state(null);
@@ -210,6 +211,14 @@
   async function addRelation() {
     const res = await openModal(RelationDialog, { item });
     if (res) guard(() => api.addRelation(item.id, res.other.id, res.kind));
+  }
+
+  async function addPullRequest() {
+    const res = await openModal(FormDialog, {
+      title: "Link a pull request", action: "Link",
+      fields: [{ name: "url", label: "Pull request URL", type: "url", placeholder: "https://github.com/owner/repo/pull/12" }],
+    });
+    if (res?.url?.trim()) await guard(() => api.addManualPull(item.id, res.url));
   }
 
   async function pickAssignee() {
@@ -536,13 +545,19 @@
           {/if}
         </section>
 
-        {#if item.pullRequests?.length}
+        {#if item.pullRequests?.length || canLinkPull}
           <section style="margin-top:28px">
             <div class="section-head">
               <span class="eyebrow">Pull requests</span>
-              <span class="ident">{item.pullRequests.length}</span>
+              <span class="ident">{item.pullRequests?.length || 0}</span>
+              {#if canLinkPull}
+                <button class="btn quiet small" style="margin-left:auto" onclick={addPullRequest}>
+                  <Icon body={NAV.plus} size={11} /><span>Link pull request</span>
+                </button>
+              {/if}
             </div>
-            <PullRequestList pullRequests={item.pullRequests} />
+            <PullRequestList pullRequests={item.pullRequests || []}
+                             onremove={canLinkPull ? (p) => guard(() => api.removeManualPull(item.id, p.id)) : null} />
           </section>
         {/if}
 

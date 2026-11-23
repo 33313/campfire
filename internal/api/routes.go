@@ -88,6 +88,8 @@ func (s *Server) routes() {
 	s.handle("POST /api/items/{id}/labels", s.addLabel)
 	s.handle("DELETE /api/items/{id}/labels/{name}", s.removeLabel)
 	s.handle("POST /api/items/{id}/relations", s.addRelation)
+	s.handle("POST /api/items/{id}/pull-requests", s.addManualPull)
+	s.handle("DELETE /api/items/{id}/pull-requests/{pullId}", s.removeManualPull)
 	s.handle("DELETE /api/relations/{id}", s.removeRelation)
 	s.handle("GET /api/items/{id}/comments", s.listComments)
 	s.handle("POST /api/items/{id}/comments", s.addComment)

@@ -1,0 +1,3 @@
+kind: Added
+body: 'Link a pull request directly from item detail without putting the item identifier in its title. Links stay visible with Unknown status when Campfire cannot read the forge.'
+time: 2026-11-23T03:30:00Z

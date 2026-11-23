@@ -178,6 +178,21 @@ func (d *DB) create() error {
 var migrations = []string{`
 ALTER TABLE users ADD COLUMN theme_settings TEXT NOT NULL DEFAULT '{}';
 ALTER TABLE appearance ADD COLUMN theme_settings TEXT NOT NULL DEFAULT '{}';
+`, `
+CREATE TABLE manual_pull_requests (
+    id         INTEGER PRIMARY KEY,
+    item_id    INTEGER NOT NULL REFERENCES items (id) ON DELETE CASCADE,
+    url        TEXT    NOT NULL,
+    repo       TEXT    NOT NULL,
+    number     INTEGER NOT NULL,
+    title      TEXT    NOT NULL,
+    state      TEXT    NOT NULL CHECK (state IN ('unknown', 'open', 'draft', 'merged', 'closed')),
+    author     TEXT    NOT NULL,
+    updated_at INTEGER NOT NULL,
+    checked_at INTEGER NOT NULL,
+    UNIQUE (item_id, url)
+) STRICT;
+CREATE INDEX manual_pull_requests_checked ON manual_pull_requests (checked_at);
 `}
 
 // Version is the schema version this binary writes. A file records its own in
