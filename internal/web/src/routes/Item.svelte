@@ -340,7 +340,6 @@
             <button class="aside-control" onclick={() => moveTo(null)}>
               <StatePip role={item.stateRole} />
               <span>{item.stateName}</span>
-              <span class="note">{item.stateRole || "intermediate"}</span>
               <Icon body={NAV.chevron} size={11} color="var(--faint)" />
             </button>
           </div>
@@ -412,16 +411,16 @@
                     <span>{item.bucketTitle}</span>
                     <span class="note">{item.bucketIdentifier}</span>
                   </a>
+                  <button class="btn quiet" style="height:34px" aria-label="Change bucket"
+                          title="Change bucket" onclick={pickBucket}>
+                    <Icon body={NAV.pen} size={13} />
+                  </button>
                 {:else}
                   <button class="aside-control" onclick={pickBucket}>
-                    <span class="dash">—</span>
-                    <span class="note">none</span>
+                    <span>No bucket</span>
+                    <Icon body={NAV.chevron} size={11} color="var(--faint)" />
                   </button>
                 {/if}
-                <button class="btn quiet" style="height:34px" aria-label="Change bucket"
-                        title="Change bucket" onclick={pickBucket}>
-                  <Icon body={NAV.pen} size={13} />
-                </button>
               </div>
             </div>
           {/if}
