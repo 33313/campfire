@@ -5,8 +5,7 @@ export const ROOT = { username: "root", password: "correct horse battery" };
 
 // A 2×2 PNG.
 export const PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGP8z8Dwn4GBgYkBBv" +
-  "5DGAAmYgML8Ck1FQAAAABJRU5ErkJggg==", "base64");
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR4nGP4z8DwHwyBNBgAAEnICff5q7YNAAAAAElFTkSuQmCC", "base64");
 
 // The JSON a write answered, or a throw naming what was refused, so a failed
 // setup fails here and not at a locator further on.
