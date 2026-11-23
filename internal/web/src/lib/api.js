@@ -98,6 +98,7 @@ export const api = {
   getInstance: () => get("/api/instance"),
   getUpdates: () => get("/api/instance/updates"),
   installUpdate: () => post("/api/instance/updates"),
+  suggestItems: (q, team) => get(`/api/items/suggestions?${new URLSearchParams(team ? { q, team } : { q })}`),
   getThemes: () => get("/api/themes"),
   setThemes: (scope, body) => put(`/api/themes/${scope}`, body),
   setAppearance: (body) => put("/api/instance/appearance", body),

@@ -6,6 +6,9 @@
   import { route, navigate } from "./lib/router.svelte.js";
   import { stream, openStream, configure } from "./lib/stream.svelte.js";
   import { applyTheme, currentTheme, loadThemes, themeState } from "./lib/themes.svelte.js";
+  import { createItem } from "./lib/create.js";
+  import { failure, modals, openModal } from "./lib/ui.svelte.js";
+  import QuickMenu from "./dialogs/QuickMenu.svelte";
 
   import Sidebar from "./components/Sidebar.svelte";
   import Mark from "./components/Mark.svelte";
@@ -76,6 +79,22 @@
   boot();
   $effect(() => applyTheme(currentTheme()));
 
+  async function quickKey(e) {
+    if ((!e.ctrlKey && !e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== "k"
+        || !booted || !app.user || modals.length) return;
+    e.preventDefault();
+    const from = document.activeElement;
+    const team = app.team;
+    const pick = await openModal(QuickMenu, { team, admin: app.user.isAdmin, username: app.user.username });
+    if (pick?.path) navigate(pick.path);
+    else if (pick?.kind && team) {
+      try {
+        await createItem({ team, states: await api.listWorkStates(team.id), kind: pick.kind, reload: () => {} });
+      } catch (err) { failure(err); }
+    }
+    if (!pick?.path && from?.isConnected) from.focus();
+  }
+
   // The team in context follows the address. Everything per-team the sidebar
   // draws — the name in the switcher, the views, the backlog count — is read
   // from app.team. An item's screen follows its own team (Item.svelte).
@@ -111,6 +130,8 @@
     return null;
   });
 </script>
+
+<svelte:window onkeydown={quickKey} />
 
 {#if !booted}
   <!-- Kindling: the fire, burning, while the client boots. It shows only once

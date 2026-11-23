@@ -3,22 +3,21 @@
   // under it as soon as it is clicked. Typing narrows them, by identifier or
   // by title; arrows and Enter pick one, Escape puts the box back.
   //
-  // The lists are the catalog's, asked for once and filtered here, so typing
-  // costs no query. The buckets picked most in this browser come first.
+  // Offers are revalidated on open and filtered here. Typing costs no query.
+  // The buckets picked most in this browser come first when nothing is typed.
   // Done buckets are not offered (SPEC.md §9.1); the one already chosen is
   // named from the full list, and stays on offer.
 
   import { untrack } from "svelte";
-  import { buckets, offeredBuckets } from "../lib/catalog.svelte.js";
+  import { offeredBuckets } from "../lib/catalog.svelte.js";
+  import { api } from "../lib/api.js";
   import { byUse, usedBucket } from "../lib/options.js";
+  import { ranked } from "../lib/matches.js";
   import BucketIcon from "./BucketIcon.svelte";
 
   let { value = 0, invalid = false, label = "Bucket", onpick } = $props();
 
-  let all = $state([]);
   let offered = $state([]);
-  buckets().then((list) => (all = list));
-  offeredBuckets().then((list) => (offered = list));
 
   let input;
   let open = $state(false);
@@ -27,7 +26,14 @@
   let place = $state({ left: 0, top: 0, width: 0 });
   const list = `bucket-offers-${Math.random().toString(36).slice(2)}`;
 
-  let chosen = $derived(all.find((b) => b.id === value));
+  let chosen = $state(null);
+  $effect(() => {
+    let alive = true;
+    const id = value;
+    chosen = null;
+    if (id) api.getItem(id).then((b) => { if (alive) chosen = b; }).catch(() => {});
+    return () => { alive = false; };
+  });
   let live = $derived(byUse(chosen && !offered.some((b) => b.id === value)
     ? [...offered, chosen] : offered));
   // What the box says when it is not being typed in.
@@ -50,7 +56,7 @@
   let offers = $derived.by(() => {
     const q = text.trim().toLowerCase();
     if (!open || q === name().toLowerCase() || !q) return [{ id: 0 }, ...live];
-    return live.filter((b) => `${b.identifier} ${b.title}`.toLowerCase().includes(q));
+    return ranked(live, q);
   });
 
   // Fixed, measured from the box: a dialog's body scrolls, and would clip it.
@@ -65,7 +71,12 @@
     const rising = input.closest(".dialog")?.getAnimations() || [];
     if (rising.length) Promise.all(rising.map((a) => a.finished)).then(measure, () => {});
     open = true;
+    offered = [];
     active = start();
+    offeredBuckets().then((list) => {
+      offered = list;
+      if (open && text === name()) active = start();
+    });
     input.select(); // so typing replaces the name rather than adding to it
   }
   function hide() {

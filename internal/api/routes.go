@@ -72,6 +72,7 @@ func (s *Server) routes() {
 
 	// Items.
 	s.handle("GET /api/items", s.listItems)
+	s.handle("GET /api/items/suggestions", s.suggestItems)
 	s.handle("POST /api/items", s.createItem)
 	s.handle("POST /api/items/bulk", s.bulkEdit)
 	s.handle("GET /api/items/{id}", s.getItem)

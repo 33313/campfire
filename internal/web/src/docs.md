@@ -236,6 +236,9 @@ them. Click a view to turn it on or off.
 
 ## Keyboard and mouse
 
+Press **Ctrl+K** (**⌘K** on macOS) to open the quick menu. It opens pages, tickets and buckets,
+or starts a new item in the current team. Use the arrow keys to choose a result and Enter to open it.
+
 | Where | Input | Does |
 |---|---|---|
 | Anywhere | Escape | Closes the top dialog, menu or list; cancels a drag |
