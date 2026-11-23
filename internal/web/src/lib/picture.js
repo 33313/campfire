@@ -2,6 +2,9 @@
 // instance with no object store and no third party to fetch from is the whole
 // point.
 
+import { openModal } from "./ui.svelte.js";
+import CropDialog from "../dialogs/CropDialog.svelte";
+
 // 512 is the size a profile draws at on a dense screen; anything smaller was
 // being scaled up there and looked it.
 export const AVATAR = 512;
@@ -16,26 +19,40 @@ function encode(canvas) {
   return data.length <= MAX_AVATAR ? data : canvas.toDataURL("image/webp", 0.6);
 }
 
-// The picture a file input's change event chose, as a data URL; null when
-// nothing was chosen. Rejects when the file is not an image.
-export function pickPicture(e) {
-  const file = e.currentTarget.files?.[0];
-  e.currentTarget.value = "";
-  if (!file) return Promise.resolve(null);
+function load(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    // An SVG with only a viewBox loads with no size, and there is nothing to
+    // crop or scale.
     img.onload = () => {
-      // Square crop from the centre, then scale: a picture is drawn at 20px
-      // beside a name, and letterboxing it there reads as a mistake.
-      const side = Math.min(img.width, img.height);
-      const canvas = Object.assign(document.createElement("canvas"),
-        { width: AVATAR, height: AVATAR });
-      canvas.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2,
-        side, side, 0, 0, AVATAR, AVATAR);
+      if (img.naturalWidth && img.naturalHeight) return resolve(img);
       URL.revokeObjectURL(img.src);
-      resolve(encode(canvas));
+      reject("that picture has no size; give the SVG a width and height");
     };
-    img.onerror = () => reject("that file is not an image");
+    img.onerror = () => { URL.revokeObjectURL(img.src); reject("that file is not an image"); };
     img.src = URL.createObjectURL(file);
   });
+}
+
+// The picture a file input's change event chose, cropped to the square picked
+// in the crop dialog, as a data URL; null when nothing was chosen or the crop
+// was cancelled. Rejects when the file is not an image.
+//
+// Square, because a picture is drawn at 20px beside a name, and letterboxing
+// it there reads as a mistake.
+export async function pickPicture(e) {
+  const file = e.currentTarget.files?.[0];
+  e.currentTarget.value = "";
+  if (!file) return null;
+  const img = await load(file);
+  try {
+    const square = await openModal(CropDialog, { img });
+    if (!square) return null;
+    const canvas = Object.assign(document.createElement("canvas"), { width: AVATAR, height: AVATAR });
+    canvas.getContext("2d").drawImage(img, square.x, square.y, square.side, square.side,
+      0, 0, AVATAR, AVATAR);
+    return encode(canvas);
+  } finally {
+    URL.revokeObjectURL(img.src);
+  }
 }

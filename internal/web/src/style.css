@@ -845,6 +845,14 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
   font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.13em; text-transform: uppercase;
 }
 .profile-picture-pick:hover .hint { color: var(--accent); }
+/* The crop: the square that becomes the avatar, the picture moving under it. */
+.crop {
+  position: relative; overflow: hidden; cursor: grab; touch-action: none;
+  background: var(--sunk); outline: 1px solid var(--border-strong);
+}
+.crop:active { cursor: grabbing; }
+.crop img { position: absolute; left: 0; top: 0; max-width: none; user-select: none; }
+input[type="range"] { accent-color: var(--accent); }
 .profile-facts { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .profile-facts h1 {
   margin: 0; font-size: 23px; font-weight: 600; letter-spacing: -0.014em; color: var(--bright);
