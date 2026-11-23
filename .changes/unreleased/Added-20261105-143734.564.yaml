@@ -1,0 +1,3 @@
+kind: Added
+body: Administration › Backup and restore shows each snapshot's schema version beside this version's, says when a snapshot is too new to restore, and can delete a snapshot. The API adds DELETE /api/snapshots/{name}, for instance administrators.
+time: 2026-11-05T14:37:34.564798966-07:00

@@ -3,12 +3,14 @@ package api
 import (
 	"context"
 	"net/http"
+	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/33313/campfire/internal/backup"
 	"github.com/33313/campfire/internal/config"
 	"github.com/33313/campfire/internal/core"
+	"github.com/33313/campfire/internal/store"
 )
 
 // Snapshots is what the snapshot routes drive: the configured directory, and
@@ -29,12 +31,15 @@ func (s *Server) listSnapshots(w http.ResponseWriter, r *http.Request, a core.Ac
 	}
 	// Verification is what makes the list worth showing: the screen marks a
 	// snapshot verified, and an unverified one is a warning.
+	// The schema version says whether this binary can restore one: an older
+	// file is migrated after the restore, a newer one is refused.
 	for i := range snaps {
-		snaps[i].Verified = backup.Verify(snaps[i].Path) == nil
+		v, err := backup.Inspect(snaps[i].Path)
+		snaps[i].Verified, snaps[i].Version = err == nil, v
 	}
 	c := s.Snapshots.Snapshots
 	out := map[string]any{"snapshots": snaps, "directory": c.Dir, "enabled": c.Enabled,
-		"keep": c.Keep, "interval": c.Interval}
+		"keep": c.Keep, "interval": c.Interval, "version": store.Version()}
 	// The replica's directory, and the span it can restore to, to any moment
 	// in it, once it holds one.
 	if c.Replica != "" {
@@ -60,6 +65,28 @@ func (s *Server) createSnapshot(w http.ResponseWriter, r *http.Request, a core.A
 		return nil, backupErr(err)
 	}
 	return snap, nil
+}
+
+// deleteSnapshot removes one snapshot by its file name. Only a name the list
+// shows is deleted: the name is never a path, and nothing else in the
+// directory, the snapshots taken before a migration included, is reachable.
+func (s *Server) deleteSnapshot(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	if err := core.RequireInstanceAdmin(a); err != nil {
+		return nil, err
+	}
+	snaps, err := backup.List(s.Snapshots.Dir)
+	if err != nil {
+		return nil, backupErr(err)
+	}
+	for _, snap := range snaps {
+		if filepath.Base(snap.Path) == r.PathValue("name") {
+			if err := os.Remove(snap.Path); err != nil {
+				return nil, backupErr(err)
+			}
+			return nil, nil
+		}
+	}
+	return nil, &core.Error{Code: core.CodeNotFound, Message: "there is no snapshot by that name"}
 }
 
 // restoreSnapshot answers with the command to run: from a snapshot by its

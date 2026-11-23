@@ -97,6 +97,7 @@ func (s *Server) routes() {
 	// Snapshots.
 	s.handle("GET /api/snapshots", s.listSnapshots)
 	s.handle("POST /api/snapshots", s.createSnapshot)
+	s.handle("DELETE /api/snapshots/{name}", s.deleteSnapshot)
 	s.handle("POST /api/restore", s.restoreSnapshot)
 
 	// Forges (DEV-114).

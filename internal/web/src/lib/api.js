@@ -192,6 +192,7 @@ export const api = {
   getLog: (params) => get(`/api/log?${new URLSearchParams(params)}`),
   listSnapshots: () => get("/api/snapshots"),
   createSnapshot: () => post("/api/snapshots"),
+  deleteSnapshot: (name) => del(`/api/snapshots/${encodeURIComponent(name)}`),
   restoreSnapshot: (path) => post("/api/restore", { path }),
   restoreAt: (at) => post("/api/restore", { at }),
 };
