@@ -523,6 +523,31 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Ok" }
 
+  /api/items/{id}/pull-requests:
+    post:
+      operationId: addManualPull
+      summary: Attach a pull request URL to an item independently of its title
+      x-agent: false
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [url], properties: { url: { type: string } } }
+      responses:
+        "204": { description: Attached }
+  /api/items/{id}/pull-requests/{pullId}:
+    delete:
+      operationId: removeManualPull
+      summary: Remove a manually attached pull request
+      x-agent: false
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { name: pullId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: Removed }
+
   /api/items/suggestions:
     get:
       operationId: suggestItems

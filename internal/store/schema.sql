@@ -333,6 +333,22 @@ CREATE TABLE item_pull_requests (
 
 CREATE INDEX item_pull_requests_pull_request ON item_pull_requests (pull_request_id);
 
+CREATE TABLE manual_pull_requests (
+    id         INTEGER PRIMARY KEY,
+    item_id    INTEGER NOT NULL REFERENCES items (id) ON DELETE CASCADE,
+    url        TEXT    NOT NULL,
+    repo       TEXT    NOT NULL,
+    number     INTEGER NOT NULL,
+    title      TEXT    NOT NULL,
+    state      TEXT    NOT NULL CHECK (state IN ('unknown', 'open', 'draft', 'merged', 'closed')),
+    author     TEXT    NOT NULL,
+    updated_at INTEGER NOT NULL,
+    checked_at INTEGER NOT NULL,
+    UNIQUE (item_id, url)
+) STRICT;
+
+CREATE INDEX manual_pull_requests_checked ON manual_pull_requests (checked_at);
+
 -- A named CSQL query, owned by one team (SPEC.md §9.4). The query is stored in
 -- its canonical form, naming what it references by #id, so a rename changes
 -- nothing and a deleted referent matches nothing.

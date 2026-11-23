@@ -441,7 +441,10 @@ request, on GitLab) in a repository the token can read is listed on every item i
 identifiers at the start or the end of the title, bare or in brackets — with its state: open, draft,
 merged or closed.
 
-The title is the whole link. Retitling a pull request moves it; one that names nothing is not kept.
+For automatic links the title is the whole link. Retitling a pull request moves its automatic link.
+An item editor may also attach or remove an HTTP(S) pull request link manually. That link survives
+retitling. Status is checked on supported public forges and configured connections; if it cannot be
+read the link remains with an unknown status. An unconfigured, unrecognised host is never fetched.
 A pull request MUST NOT change an item's state: like a relation, it is information. Its link and
 its state changes reach open screens as live updates but are not written to the log: the forge is
 their record. Deliveries for a forge that is not connected are refused. Removing a forge keeps what

@@ -128,6 +128,7 @@ type PullRequest struct {
 	State     string `json:"state"`
 	Author    string `json:"author"`
 	UpdatedAt int64  `json:"updatedAt"`
+	Manual    bool   `json:"manual,omitempty"`
 }
 
 // Ref is how a pull request is named in the log: acme/web#12.
@@ -206,9 +207,12 @@ func DeletePullRequestIfUnlinked(ctx context.Context, q Q, prID int64) error {
 // ItemPullRequests is what an item's detail view lists, newest first.
 func ItemPullRequests(ctx context.Context, q Q, itemID int64) ([]PullRequest, error) {
 	rows, err := q.QueryContext(ctx, `
-		SELECT p.id, p.repo, p.number, p.title, p.url, p.state, p.author, p.updated_at
+		SELECT p.id, p.repo, p.number, p.title, p.url, p.state, p.author, p.updated_at, 0
 		FROM item_pull_requests ip JOIN pull_requests p ON p.id = ip.pull_request_id
-		WHERE ip.item_id = ? ORDER BY p.updated_at DESC`, itemID)
+		WHERE ip.item_id = ? AND NOT EXISTS (SELECT 1 FROM manual_pull_requests m WHERE m.item_id = ? AND m.url = p.url)
+		UNION ALL
+		SELECT id, repo, number, title, url, state, author, updated_at, 1
+		FROM manual_pull_requests WHERE item_id = ? ORDER BY updated_at DESC`, itemID, itemID, itemID)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +220,7 @@ func ItemPullRequests(ctx context.Context, q Q, itemID int64) ([]PullRequest, er
 	var out []PullRequest
 	for rows.Next() {
 		var p PullRequest
-		if err := rows.Scan(&p.ID, &p.Repo, &p.Number, &p.Title, &p.URL, &p.State, &p.Author, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Repo, &p.Number, &p.Title, &p.URL, &p.State, &p.Author, &p.UpdatedAt, &p.Manual); err != nil {
 			return nil, err
 		}
 		out = append(out, p)

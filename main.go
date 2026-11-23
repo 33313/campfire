@@ -357,6 +357,7 @@ func serve(cfg config.Config, configPath string) (change func() error, err error
 	defer cancel()
 
 	go apiServer.PollForges(ctx)
+	go apiServer.PollManualPulls(ctx)
 	if cfg.Updates.Check {
 		go apiServer.Updates.Run(ctx, func() {
 			status := apiServer.Updates.Status()

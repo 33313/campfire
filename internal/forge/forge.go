@@ -413,7 +413,9 @@ func (c *Client) do(ctx context.Context, f Forge, url string, out any) (string, 
 		return "", err
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", kinds[f.Kind].auth+f.Token)
+	if f.Token != "" {
+		req.Header.Set("Authorization", kinds[f.Kind].auth+f.Token)
+	}
 	res, err := c.HTTP.Do(req)
 	if err != nil {
 		return "", err
