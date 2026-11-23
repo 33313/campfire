@@ -1,6 +1,7 @@
 <script>
   import Icon from "./Icon.svelte";
   import Avatar from "./Avatar.svelte";
+  import TeamMark from "./TeamMark.svelte";
   import Mark from "./Mark.svelte";
   import { NAV } from "../lib/icons.js";
   import { app, toggleView, refreshBacklogCount, reloadViews } from "../lib/state.svelte.js";
@@ -82,17 +83,6 @@
 
 </script>
 
-<!-- The team's picture stands for it in the picker, or a blank square where
-     it has none, so the names line up either way. The switch and every option
-     draw the same. -->
-{#snippet teamAvatar(t)}
-  {#if t?.avatar}
-    <img class="team-avatar" src={t.avatar} alt="" />
-  {:else}
-    <span class="team-avatar"></span>
-  {/if}
-{/snippet}
-
 <aside class="sidebar">
   <div class="sidebar-head">
     <!-- The fire is lit while the stream is live and flares on each change that
@@ -107,7 +97,7 @@
       <button class="team-switch" class:on={open} aria-expanded={open} aria-haspopup="menu"
               onclick={() => (open = !open)}
               onkeydown={(e) => e.key === "Escape" && (open = false)}>
-        {@render teamAvatar(known)}
+        <TeamMark team={known} size={22} showCode={false} />
         <span class="team-name">{known ? known.name : "No team yet"}</span>
         <Icon body={NAV.chevron} size={11} color="var(--faint)" />
       </button>
@@ -115,7 +105,7 @@
         <div class="team-list" role="menu">
           {#each app.allTeams as t}
             <button class="team-option" class:on={t.id === teamId} onclick={() => choose(t.id)}>
-              {@render teamAvatar(t)}
+              <TeamMark team={t} size={22} showCode={false} />
               <span class="team-name">{t.name}</span>
               <span class="note">
                 {app.teams.some((m) => m.teamId === t.id) ? "member" : "read only"}

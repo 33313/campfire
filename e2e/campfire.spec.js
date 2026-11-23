@@ -583,6 +583,14 @@ test("a person's and a team's pictures replace their initials", async ({ page })
   await page.goto("/users/root");
   const row = page.locator(".profile-teams .relation-row", { has: page.locator(`a[href='/t/${team.id}/profile']`) });
   await expect(row.locator("img.team-avatar")).toHaveAttribute("src", /^data:image\//);
+
+  // Administration uses the same team mark, including its no-picture fallback.
+  await page.goto("/admin?tab=people");
+  const adminRow = page.getByRole("row").filter({ has: page.getByRole("cell", { name: team.name, exact: true }) });
+  await expect(adminRow.locator("img.team-avatar")).toHaveAttribute("src", /^data:image\//);
+  expect((await page.request.patch(`/api/teams/${team.id}`, { data: { avatar: "" } })).ok()).toBe(true);
+  await expect(adminRow.locator("img.team-avatar")).toHaveCount(0);
+  await expect(adminRow.locator(".code-badge")).toHaveText(team.shortCode);
 });
 
 // Preferences are a convenience: with storage blocked, nothing is remembered

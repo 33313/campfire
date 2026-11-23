@@ -1,11 +1,13 @@
 <script>
-  // A team's picture where it has one, its short code where it has none; as
-  // wide as the badge, so the names line up either way.
-  let { team } = $props();
+  // Shared inline team picture; the sidebar leaves the fallback blank.
+  let { team, size = 24, showCode = true } = $props();
+  let dimensions = $derived(`width:${size}px;height:${size}px;flex-basis:${size}px`);
 </script>
 
-{#if team.avatar}
-  <img class="team-avatar" style="width:24px;flex-basis:24px" src={team.avatar} alt="" />
+{#if team?.avatar}
+  <img class="team-avatar" style={dimensions} src={team.avatar} alt="" />
+{:else if showCode}
+  <span class="code-badge">{team?.shortCode || ""}</span>
 {:else}
-  <span class="code-badge">{team.shortCode}</span>
+  <span class="team-avatar" style={dimensions}></span>
 {/if}

@@ -12,6 +12,7 @@
   import Icon from "../components/Icon.svelte";
   import BucketIcon from "../components/BucketIcon.svelte";
   import Avatar from "../components/Avatar.svelte";
+  import TeamMark from "../components/TeamMark.svelte";
   import Section from "../components/Section.svelte";
   import SettingsRail from "../components/SettingsRail.svelte";
   import ScreenHeader from "../components/ScreenHeader.svelte";
@@ -522,7 +523,7 @@
                 <tbody>
                   {#each teams as t (t.id)}
                     <tr>
-                      <td><span class="code-badge">{t.shortCode}</span></td>
+                      <td><TeamMark team={t} /></td>
                       <td>{t.name}</td>
                       <td class="explain">{t.archivedAt ? "archived" : "active"}</td>
                       <td><a class="btn quiet small" href="/t/{t.id}/settings">Settings</a></td>
