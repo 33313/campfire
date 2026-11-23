@@ -16,6 +16,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/debug"
+	"sync"
 	"syscall"
 	"time"
 
@@ -177,15 +178,11 @@ func run(args []string) error {
 		if err := requireNoArgs(command, rest); err != nil {
 			return err
 		}
-		moveTo, err := serve(cfg, *configPath)
-		if err != nil || moveTo == "" {
+		change, err := serve(cfg, *configPath)
+		if err != nil || change == nil {
 			return err
 		}
-		// A failed move restarts with the old data directory.
-		if err := moveData(cfg, *configPath, moveTo); err != nil {
-			log.Printf("moving the data to %s failed; still using %s: %v", moveTo, filepath.Dir(cfg.Database), err)
-		}
-		return errRestart
+		return change()
 	case "help", "-h", "--help":
 		fmt.Print(usage())
 		return nil
@@ -251,12 +248,11 @@ func check(cfg config.Config) error {
 	return nil
 }
 
-// serve runs the server until it is stopped. moveTo is the directory an
-// administrator asked to move the data to, if any.
-func serve(cfg config.Config, configPath string) (moveTo string, err error) {
+// serve returns any pending data move or binary update after closing the DB.
+func serve(cfg config.Config, configPath string) (change func() error, err error) {
 	db, err := open(cfg)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer db.Close()
 
@@ -277,7 +273,31 @@ func serve(cfg config.Config, configPath string) (moveTo string, err error) {
 	apiServer.Snapshots = api.Snapshots{Snapshots: cfg.Snapshots,
 		Take: func(ctx context.Context) (backup.Snapshot, error) { return takeSnapshot(ctx, cfg, db) }}
 	apiServer.Updates = updates.New(buildVersion())
-	moves := make(chan string, 1)
+	changes := make(chan func() error, 1)
+	var changeMu sync.Mutex
+	exe, updateErr := updates.Executable(buildVersion())
+	apiServer.AutomaticUpdates = cfg.Updates.Automatic && updateErr == nil
+	if updateErr != nil {
+		apiServer.UpdateUnavailable = updateErr.Error()
+	} else {
+		apiServer.InstallUpdate = func(ctx context.Context) error {
+			if !changeMu.TryLock() {
+				return errors.New("a restart is already pending")
+			}
+			status := apiServer.Updates.Status()
+			if !status.Newer || status.Error != "" {
+				changeMu.Unlock()
+				return errors.New("no new release is ready to install")
+			}
+			staged, err := updates.Stage(ctx, exe, status.Latest.Version)
+			if err != nil {
+				changeMu.Unlock()
+				return err
+			}
+			changes <- func() error { return installAndRestart(exe, staged) }
+			return nil
+		}
+	}
 	apiServer.Data = api.Data{Database: cfg.Database, Config: configPath, Snapshots: cfg.Snapshots.Dir,
 		MovesSnapshots: movesSnapshots(cfg),
 		// In the container image the volume sets the data directory, and a
@@ -287,12 +307,16 @@ func serve(cfg config.Config, configPath string) (moveTo string, err error) {
 			if err := checkMoveTarget(cfg, configPath, dir); err != nil {
 				return err
 			}
-			select {
-			case moves <- dir:
-				return nil
-			default:
-				return errors.New("the data is already moving")
+			if !changeMu.TryLock() {
+				return errors.New("a restart is already pending")
 			}
+			changes <- func() error {
+				if err := moveData(cfg, configPath, dir); err != nil {
+					log.Printf("moving the data to %s failed; still using %s: %v", dir, filepath.Dir(cfg.Database), err)
+				}
+				return errRestart
+			}
+			return nil
 		}}
 	mux.Handle("/api/", apiServer)
 	if cfg.MCP.Enabled {
@@ -323,7 +347,7 @@ func serve(cfg config.Config, configPath string) (moveTo string, err error) {
 	defer stopSnapshots()
 	stopReplica, err := startReplica(cfg, db)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer stopReplica()
 	stopChecks := startIntegrityChecks(cfg, db)
@@ -334,7 +358,14 @@ func serve(cfg config.Config, configPath string) (moveTo string, err error) {
 
 	go apiServer.PollForges(ctx)
 	if cfg.Updates.Check {
-		go apiServer.Updates.Run(ctx)
+		go apiServer.Updates.Run(ctx, func() {
+			status := apiServer.Updates.Status()
+			if apiServer.AutomaticUpdates && status.Newer && status.Error == "" {
+				if err := apiServer.InstallUpdate(ctx); err != nil {
+					log.Printf("automatic update: %v", err)
+				}
+			}
+		})
 	} else {
 		log.Print("update check is off")
 	}
@@ -344,7 +375,7 @@ func serve(cfg config.Config, configPath string) (moveTo string, err error) {
 		defer close(stopped)
 		select {
 		case <-ctx.Done():
-		case moveTo = <-moves:
+		case change = <-changes:
 		}
 		shutdown, done := context.WithTimeout(context.Background(), 5*time.Second)
 		defer done()
@@ -356,13 +387,31 @@ func serve(cfg config.Config, configPath string) (moveTo string, err error) {
 
 	log.Printf("campfire %s listening on http://%s (data: %s)", buildVersion(), cfg.Addr, cfg.Database)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return "", err
+		return nil, err
 	}
 	// ListenAndServe returns when shutdown starts. Running requests finish
 	// before the database closes.
 	<-stopped
 	log.Print("stopped")
-	return moveTo, nil
+	return change, nil
+}
+
+func installAndRestart(exe, staged string) error {
+	err := updates.Replace(exe, staged)
+	os.Remove(staged)
+	if err != nil {
+		log.Printf("installing the update failed: %v", err)
+		return restartAt(exe)
+	}
+	log.Print("restarting with the new binary")
+	if err := restartAt(exe); err != nil {
+		log.Printf("starting the new binary failed: %v", err)
+		if restoreErr := os.Rename(exe+".previous", exe); restoreErr != nil {
+			return errors.Join(err, restoreErr)
+		}
+		return restartAt(exe)
+	}
+	return nil
 }
 
 // movesSnapshots reports whether the snapshots are in the data directory, the

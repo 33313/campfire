@@ -76,6 +76,8 @@ type Updates struct {
 	// Check asks GitHub once a day whether a newer release exists, and the
 	// administration screen says so. It sends nothing but the request.
 	Check bool `json:"check"`
+	// Automatic installs checked releases on writable standalone binaries.
+	Automatic bool `json:"automatic"`
 }
 
 // Default is what an instance with data directory dir runs with when nothing
@@ -162,6 +164,9 @@ func (c Config) Validate() error {
 	}
 	if c.Images.MaxMB < 0 || c.Images.MaxMB > 100 {
 		return errors.New("images.maxMB must be between 0 and 100")
+	}
+	if c.Updates.Automatic && !c.Updates.Check {
+		return errors.New("updates.automatic requires updates.check")
 	}
 	return nil
 }

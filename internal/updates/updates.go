@@ -1,7 +1,6 @@
 // Package updates asks GitHub, once a day, whether a newer release exists.
 //
-// It only tells: the administration screen says so, and updating stays the
-// operator's act (DEV-43; self-updating is DEV-96).
+// The checker keeps release discovery separate from installing a binary.
 package updates
 
 import (
@@ -42,7 +41,7 @@ type Checker struct {
 func New(current string) *Checker { return &Checker{Current: current, URL: LatestURL} }
 
 // Run checks now and then once a day until ctx ends.
-func (c *Checker) Run(ctx context.Context) {
+func (c *Checker) Run(ctx context.Context, checked func()) {
 	c.mu.Lock()
 	c.running = true
 	c.mu.Unlock()
@@ -50,6 +49,9 @@ func (c *Checker) Run(ctx context.Context) {
 	defer t.Stop()
 	for {
 		c.Check(ctx)
+		if checked != nil && ctx.Err() == nil {
+			checked()
+		}
 		select {
 		case <-ctx.Done():
 			return

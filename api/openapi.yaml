@@ -46,6 +46,14 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Ok" }
         "403": { $ref: "#/components/responses/Error" }
+    post:
+      operationId: installUpdate
+      summary: Verify the latest release binary and schedule a restart to install it
+      x-agent: false
+      responses:
+        "204": { description: Update staged }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
 
   /api/instance/appearance:
     put:

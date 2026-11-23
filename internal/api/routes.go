@@ -17,6 +17,7 @@ func (s *Server) routes() {
 	s.handle("GET /api/instance", s.getInstance)
 	s.handle("POST /api/instance/bootstrap", s.bootstrap)
 	s.handle("GET /api/instance/updates", s.getUpdates)
+	s.handle("POST /api/instance/updates", s.installUpdate)
 	s.handle("PUT /api/instance/appearance", s.setAppearance)
 	s.handle("GET /api/instance/data", s.getData)
 	s.handle("POST /api/instance/data", s.moveData)
@@ -190,7 +191,24 @@ func (s *Server) getUpdates(w http.ResponseWriter, r *http.Request, a core.Actor
 	if s.Updates == nil {
 		return updates.Status{}, nil
 	}
-	return s.Updates.Status(), nil
+	return struct {
+		updates.Status
+		Automatic   bool   `json:"automatic"`
+		Unavailable string `json:"unavailable,omitempty"`
+	}{s.Updates.Status(), s.AutomaticUpdates, s.UpdateUnavailable}, nil
+}
+
+func (s *Server) installUpdate(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	if err := core.RequireInstanceAdmin(a); err != nil {
+		return nil, err
+	}
+	if s.InstallUpdate == nil {
+		return nil, &core.Error{Code: core.CodeInvalid, Message: "this instance cannot install updates"}
+	}
+	if err := s.InstallUpdate(r.Context()); err != nil {
+		return nil, &core.Error{Code: core.CodeInvalid, Message: err.Error()}
+	}
+	return nil, nil
 }
 
 func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {

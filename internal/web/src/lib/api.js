@@ -97,6 +97,7 @@ export const api = {
   // Instance and authentication
   getInstance: () => get("/api/instance"),
   getUpdates: () => get("/api/instance/updates"),
+  installUpdate: () => post("/api/instance/updates"),
   setAppearance: (body) => put("/api/instance/appearance", body),
   getData: () => get("/api/instance/data"),
   moveData: (directory) => post("/api/instance/data", { directory }),

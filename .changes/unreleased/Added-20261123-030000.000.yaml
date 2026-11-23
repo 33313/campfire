@@ -1,0 +1,3 @@
+kind: Added
+body: 'Administration can install new GitHub releases on writable standalone Linux, macOS and Windows binaries. Set updates.automatic to true to install after an update check.'
+time: 2026-11-23T03:00:00Z

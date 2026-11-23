@@ -14,5 +14,9 @@ func restart() error {
 	if err != nil {
 		return err
 	}
+	return restartAt(exe)
+}
+
+func restartAt(exe string) error {
 	return syscall.Exec(exe, os.Args, os.Environ())
 }

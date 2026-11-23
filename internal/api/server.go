@@ -7,6 +7,7 @@ package api
 
 import (
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -41,9 +42,12 @@ type Server struct {
 	Snapshots      Snapshots
 	Data           Data
 	// MaxImage bounds a pasted picture, in bytes; 0 takes none (DEV-40).
-	MaxImage int64
-	Updates  *updates.Checker
-	Forges   *forge.Client
+	MaxImage          int64
+	Updates           *updates.Checker
+	InstallUpdate     func(context.Context) error
+	AutomaticUpdates  bool
+	UpdateUnavailable string
+	Forges            *forge.Client
 }
 
 func New(svc *core.Service, bus *stream.Bus) *Server {
