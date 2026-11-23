@@ -502,7 +502,10 @@ test("a picture pasted into a description or a comment is uploaded and drawn", a
     const data = new DataTransfer();
     data.items.add(new File([bytes], "image.png", { type: "image/png" }));
     el.focus();
-    el.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+    // Firefox drops file entries passed through the synthetic constructor.
+    const event = new ClipboardEvent("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "clipboardData", { value: data });
+    el.dispatchEvent(event);
   }, [PNG.toString("base64"), size]);
 
   await page.getByRole("banner").getByRole("button", { name: "Edit" }).click();
