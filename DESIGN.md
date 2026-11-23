@@ -238,7 +238,8 @@ over before anyone could wait for it. Nothing loops but the caret, and the fire 
 - A card that changes column travels there, whoever moved it.
 - The product's only shadow is under a card held in a drag (`0 10px 24px` at 50% black).
 - A card reaching the final state feeds the fire: embers rise off it to the mark in the sidebar. It
-  is the one flourish, and only for open work finished on the board.
+  happens only for open work finished on the board. A rejected card burns away where it was, with
+  no ember sent to the mark.
 - Focus is a 1px `accent` outline (`:focus-visible`); a focused input adds a 3px `accent-tint-weak`
   halo.
 - **Reduced motion** turns every animation and transition off, scripted ones included. The e2e suite
