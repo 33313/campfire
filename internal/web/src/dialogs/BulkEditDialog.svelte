@@ -2,17 +2,22 @@
   import Dialog from "../components/Dialog.svelte";
   import OptionIcon from "./OptionIcon.svelte";
   import { plural } from "../lib/format.js";
+  import { ranked } from "../lib/matches.js";
 
   /** Bulk edit — one field at a time. There is no multi-field form. */
   let { field, count, options, close } = $props();
 
   let value = $state(0);
+  let query = $state("");
 </script>
 
 <Dialog title="{field} for {plural(count, 'item')}" {close}>
   {#snippet body()}
     <div style="display:flex;flex-direction:column;gap:2px">
-      {#each options as o}
+      {#if field === "Bucket"}
+        <input class="input" aria-label="Find a bucket" placeholder="Find a bucket" bind:value={query} />
+      {/if}
+      {#each field === "Bucket" ? ranked(options, query) : options as o}
         <button class="option-row" class:on={value === o.value} onclick={() => (value = o.value)}>
           <OptionIcon icon={o.icon} />
           <span>{o.label}</span>

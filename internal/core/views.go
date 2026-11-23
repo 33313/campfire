@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"strings"
 
 	"github.com/33313/campfire/internal/store"
 )
@@ -47,6 +48,21 @@ type Filter struct {
 // gets there. After that it is hidden unless the board asks for all of them
 // (SPEC.md §7.2).
 const DoneFor = 3 * 24 * 60 * 60 * 1_000_000 // microseconds, like every timestamp
+
+func (s *Service) SuggestItems(ctx context.Context, a Actor, query string, teamID int64) ([]store.Item, error) {
+	if err := requireUser(a); err != nil {
+		return nil, err
+	}
+	query = strings.ToLower(strings.TrimSpace(query))
+	if query == "" || len(query) > 1024 {
+		return []store.Item{}, nil
+	}
+	f := store.ItemFilter{BucketsDoneSince: s.Clock() - DoneFor}
+	if teamID != 0 {
+		f.TeamIDs = []int64{teamID}
+	}
+	return list(store.SuggestItems(ctx, s.DB.R, f, query, 6))
+}
 
 // Board returns one team's board: one column per work state, excluding the
 // default and rejected states.

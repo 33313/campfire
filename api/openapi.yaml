@@ -523,6 +523,17 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Ok" }
 
+  /api/items/suggestions:
+    get:
+      operationId: suggestItems
+      summary: Up to six matching tickets and buckets, best match first
+      x-agent: false
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string } }
+        - { name: team, in: query, schema: { type: integer } }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+
   /api/items:
     get:
       operationId: listItems

@@ -469,6 +469,26 @@ func TestDoneBucketsAreHidden(t *testing.T) {
 	}
 }
 
+func TestSuggestionsRankBeforeLimiting(t *testing.T) {
+	w := newWorld(t)
+	first := w.ticket(w.sol, w.marta, "UI polish")
+	second := w.ticket(w.sol, w.marta, "Build UI fixtures")
+	third := w.ticket(w.sol, w.marta, "Build pipeline")
+	for range 8 {
+		if _, err := w.CreateItem(w.ctx, w.marta, NewItem{Kind: store.KindTicket, TeamID: w.sol.ID, Title: "Release notes", Description: "UI"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	hits, err := w.SuggestItems(w.ctx, w.marta, "ui", w.sol.ID)
+	if err != nil || len(hits) != 6 || hits[0].ID != first.ID || hits[1].ID != second.ID || hits[2].ID != third.ID {
+		t.Fatalf("suggestions %v, %v", hits, err)
+	}
+	hits, err = w.SuggestItems(w.ctx, w.marta, first.Identifier, 0)
+	if err != nil || len(hits) == 0 || hits[0].ID != first.ID {
+		t.Fatalf("identifier lookup %v, %v", hits, err)
+	}
+}
+
 // The backlog continues from its own cursor in rank order, which is what its
 // "load older" asks for.
 func TestBacklogPagesInRankOrder(t *testing.T) {

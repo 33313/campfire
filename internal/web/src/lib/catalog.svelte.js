@@ -13,19 +13,17 @@ import { app } from "./state.svelte.js";
 import { PRIORITY } from "./icons.js";
 import { quote } from "./csql.js";
 
-// buckets is every bucket, for names; offered leaves out the ones the server
-// hides from pickers (SPEC.md §9.1), for choosing one.
-export const lists = $state({ buckets: null, offered: null, states: null });
+export const lists = $state({ buckets: null, states: null });
 
-const stale = new Set(["buckets", "offered", "states"]);
+const stale = new Set(["buckets", "states"]);
 const inflight = {};
+let offeredRequest;
 let statesOf = null; // the team the states are of: another team's are stale
 
 // Which lists an event kind can change. A notification does not say whether
 // an item is a bucket, so every item event marks the buckets.
 const MARKS = {
-  "item.created": ["buckets", "offered"], "item.updated": ["buckets", "offered"],
-  "item.deleted": ["buckets", "offered"],
+  "item.created": ["buckets"], "item.updated": ["buckets"], "item.deleted": ["buckets"],
   "item.label_added": ["labels"], "item.label_removed": ["labels"],
   "work_state.created": ["states"], "work_state.updated": ["states"], "work_state.deleted": ["states"],
   "team.created": ["teams"], "team.updated": ["teams"], "team.archived": ["teams"],
@@ -39,7 +37,7 @@ export function notice(kind) {
 
 /** Everything is stale: after a reset, or a name the server did not know. */
 export function staleAll() {
-  for (const list of ["users", "labels", "teams", "buckets", "offered", "states"]) stale.add(list);
+  for (const list of ["users", "labels", "teams", "buckets", "states"]) stale.add(list);
 }
 
 const FETCH = {
@@ -47,9 +45,6 @@ const FETCH = {
   labels: async () => { app.labels = (await api.listLabels()) || []; },
   teams: async () => { app.allTeams = (await api.listTeams()) || []; },
   buckets: async () => { lists.buckets = (await api.listItems({ csql: "kind = bucket" }, "", 200)).items || []; },
-  offered: async () => {
-    lists.offered = (await api.listItems({ csql: "kind = bucket", hideDoneBuckets: true }, "", 200)).items || [];
-  },
   states: async () => {
     statesOf = app.team?.id;
     lists.states = statesOf ? (await api.listWorkStates(statesOf)) || [] : [];
@@ -81,10 +76,10 @@ export async function buckets() {
 }
 
 /** The buckets a picker offers, fresh: the server leaves out done ones. */
-export async function offeredBuckets() {
-  refresh("offered");
-  await inflight.offered;
-  return lists.offered || [];
+export function offeredBuckets() {
+  // Time can hide a bucket without an item event, so revalidate on open.
+  return offeredRequest ||= api.listItems({ csql: "kind = bucket", hideDoneBuckets: true }, "", 200)
+    .then((page) => page.items || []).catch(() => []).finally(() => { offeredRequest = null; });
 }
 
 /**

@@ -1,6 +1,7 @@
 // The option lists the pick and bulk-edit dialogs are handed.
 
-import { buckets, offeredBuckets } from "./catalog.svelte.js";
+import { offeredBuckets } from "./catalog.svelte.js";
+import { api } from "./api.js";
 import { app } from "./state.svelte.js";
 import { PRIORITY } from "./icons.js";
 import { pref, setPref } from "./prefs.js";
@@ -32,9 +33,9 @@ export function usedBucket(id) {
 /** The buckets to offer; `keep` is the one a card is in, offered done or not. */
 export async function bucketOptions(keep = 0) {
   const list = await offeredBuckets();
-  const kept = keep && !list.some((b) => b.id === keep) && (await buckets()).find((b) => b.id === keep);
-  return [{ value: 0, label: "No bucket" }].concat(byUse(kept ? [...list, kept] : list).map((b) => ({
-    value: b.id, label: `${b.identifier}  ${b.title}`, icon: { bucket: b.icon },
+  const kept = keep && !list.some((b) => b.id === keep) && await api.getItem(keep).catch(() => null);
+  return [{ value: 0, label: "No bucket", title: "No bucket" }].concat(byUse(kept ? [...list, kept] : list).map((b) => ({
+    value: b.id, label: `${b.identifier}  ${b.title}`, identifier: b.identifier, title: b.title, icon: { bucket: b.icon },
   })));
 }
 

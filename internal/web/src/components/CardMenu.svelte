@@ -18,6 +18,7 @@
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
   import { moveMany, applyToAll } from "../lib/bulk.js";
   import { assigneeOptions, priorityOptions, bucketOptions } from "../lib/options.js";
+  import { ranked } from "../lib/matches.js";
   import { plural } from "../lib/format.js";
   import { NAV } from "../lib/icons.js";
   import Icon from "./Icon.svelte";
@@ -50,15 +51,17 @@
   // swap it for theirs: a change waits a moment, and reaching the sub-menu
   // calls it off.
   let sub = $state(null);
+  let bucketQuery = $state("");
   let wait = 0;
   async function openSub(name, row, keyboard = false) {
     if (sub?.name !== name) {
       const options = await SUBS[name].options();
+      bucketQuery = "";
       sub = { name, options, top: row.getBoundingClientRect().top, row };
     }
     if (keyboard) {
       await tick();
-      el.querySelector(".sub-menu button")?.focus();
+      el?.querySelector(".sub-menu input, .sub-menu button")?.focus();
     }
   }
   function closeSub() {
@@ -161,8 +164,12 @@
   {#if sub}
     <div class="card-menu sub-menu" role="menu" tabindex="-1" aria-label={sub.name}
          style="left:{subLeft}px;top:{subTop}px" onpointerenter={() => clearTimeout(wait)}
-         onkeydown={(e) => e.key === "ArrowLeft" && closeSub()}>
-      {#each sub.options as o}
+         onkeydown={(e) => e.key === "ArrowLeft" && e.target.tagName !== "INPUT" && closeSub()}>
+      {#if sub.name === "Bucket"}
+        <input class="input" aria-label="Find a bucket" placeholder="Find a bucket" bind:value={bucketQuery}
+               style="width:100%" />
+      {/if}
+      {#each sub.name === "Bucket" ? ranked(sub.options, bucketQuery) : sub.options as o}
         <button class="team-option" class:on={one && o.value === SUBS[sub.name].now}
                 role="menuitem" onclick={() => apply(o.value)}>
           <OptionIcon icon={o.icon} />

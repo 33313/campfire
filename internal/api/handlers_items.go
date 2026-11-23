@@ -23,6 +23,10 @@ func (s *Server) createItem(w http.ResponseWriter, r *http.Request, a core.Actor
 	return s.svc.CreateItem(r.Context(), a, in)
 }
 
+func (s *Server) suggestItems(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	return s.svc.SuggestItems(r.Context(), a, r.URL.Query().Get("q"), queryInt(r, "team"))
+}
+
 func (s *Server) getItem(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
 	id, err := pathID(r, "id")
 	if err != nil {

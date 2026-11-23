@@ -264,6 +264,21 @@ test("search suggests an item as you type, and the suggestion opens it", async (
   await expect(page).toHaveURL(new RegExp(`/${item.identifier}$`));
 });
 
+test("the quick menu opens an item from another team by identifier", async ({ page }) => {
+  const from = await newTeam(page);
+  const to = await newTeam(page);
+  const item = await to.ticket("A different team's ticket");
+  await page.goto(from.board);
+  await expect(page.getByRole("banner")).toContainText("Board");
+  await page.keyboard.press("Control+k");
+  const menu = page.getByRole("dialog");
+  const box = menu.getByRole("combobox");
+  await box.fill(item.identifier);
+  await expect(menu.getByRole("option").first()).toContainText(item.identifier);
+  await box.press("Enter");
+  await expect(page).toHaveURL(new RegExp(`/${item.identifier}$`));
+});
+
 test("a drag carries the whole selection, not just the card under the pointer", async ({ page }) => {
   const team = await newTeam(page);
   await team.ticket("Sweep the chimney", { accepted: true });

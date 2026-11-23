@@ -3,7 +3,6 @@
   import Icon from "./Icon.svelte";
   import { NAV } from "../lib/icons.js";
   import { api } from "../lib/api.js";
-  import { quote } from "../lib/csql.js";
   import { navigate } from "../lib/router.svelte.js";
 
   // Search, with the items that match offered as you type.
@@ -30,7 +29,9 @@
 
   function typed() {
     clearTimeout(timer);
+    issued++;
     active = -1;
+    hits = [];
     const q = text.trim();
     open = true;
     if (q.length < LEAST) { hits = []; return; }
@@ -39,12 +40,9 @@
 
   async function look(q) {
     const mine = ++issued;
-    // Done buckets are not suggested (SPEC.md §9.1); Enter still finds them.
-    const filter = { csql: `text ~ ${quote(q)}${teamId ? ` and team = #${teamId}` : ""}`,
-      hideDoneBuckets: true };
     try {
-      const page = await api.listItems(filter, "", 6);
-      if (mine === issued) hits = page.items || [];
+      const items = await api.suggestItems(q, teamId);
+      if (mine === issued) hits = items;
     } catch {
       // A suggestion that cannot be fetched is no suggestion. The search itself
       // still runs on Enter and reports its own failures.
