@@ -516,7 +516,7 @@ test("a picture pasted into a description or a comment is uploaded and drawn", a
   await page.getByRole("banner").getByRole("button", { name: "Save" }).click();
   const drawn = page.locator(".prose img");
   await expect(drawn).toBeVisible();
-  expect(await drawn.evaluate((img) => img.complete && img.naturalWidth)).toBe(2);
+  await expect.poll(() => drawn.evaluate((img) => img.complete && img.naturalWidth)).toBe(2);
 
   const comment = page.getByPlaceholder("Write a comment…");
   await paste(comment);
