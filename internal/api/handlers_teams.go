@@ -166,6 +166,8 @@ func filterFrom(r *http.Request) core.Filter {
 		Query:   r.URL.Query().Get("csql"),
 		ViewIDs: queryInts(r, "view"),
 		TZ:      r.URL.Query().Get("tz"),
+
+		HideDoneBuckets: queryBool(r, "hideDoneBuckets"),
 	}
 }
 
@@ -227,7 +229,7 @@ func (s *Server) bucketIndex(w http.ResponseWriter, r *http.Request, a core.Acto
 		scope = core.ScopeParticipation
 	}
 	cards, cursor, err := s.svc.BucketIndex(r.Context(), a, queryInt(r, "team"), scope,
-		r.URL.Query().Get("cursor"), int(queryInt(r, "limit")))
+		r.URL.Query().Get("cursor"), int(queryInt(r, "limit")), queryBool(r, "all"))
 	if err != nil {
 		return nil, err
 	}

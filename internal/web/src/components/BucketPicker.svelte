@@ -3,18 +3,22 @@
   // under it as soon as it is clicked. Typing narrows them, by identifier or
   // by title; arrows and Enter pick one, Escape puts the box back.
   //
-  // The list is the catalog's, asked for once and filtered here, so typing
+  // The lists are the catalog's, asked for once and filtered here, so typing
   // costs no query. The buckets picked most in this browser come first.
+  // Done buckets are not offered (SPEC.md §9.1); the one already chosen is
+  // named from the full list, and stays on offer.
 
   import { untrack } from "svelte";
-  import { buckets } from "../lib/catalog.svelte.js";
+  import { buckets, offeredBuckets } from "../lib/catalog.svelte.js";
   import { byUse, usedBucket } from "../lib/options.js";
   import BucketIcon from "./BucketIcon.svelte";
 
   let { value = 0, invalid = false, label = "Bucket", onpick } = $props();
 
   let all = $state([]);
-  buckets().then((list) => (all = byUse(list)));
+  let offered = $state([]);
+  buckets().then((list) => (all = list));
+  offeredBuckets().then((list) => (offered = list));
 
   let input;
   let open = $state(false);
@@ -24,10 +28,12 @@
   const list = `bucket-offers-${Math.random().toString(36).slice(2)}`;
 
   let chosen = $derived(all.find((b) => b.id === value));
+  let live = $derived(byUse(chosen && !offered.some((b) => b.id === value)
+    ? [...offered, chosen] : offered));
   // What the box says when it is not being typed in.
   const name = () => (chosen ? `${chosen.identifier}  ${chosen.title}` : "");
   // Where the list starts: on the bucket the box names, after "No bucket".
-  const start = () => Math.max(0, all.findIndex((b) => b.id === value) + 1);
+  const start = () => Math.max(0, live.findIndex((b) => b.id === value) + 1);
   // The box names the bucket unless it is being typed in, including when the
   // list arrives after the box opened, as it does in a dialog that focuses it.
   $effect(() => {
@@ -39,11 +45,12 @@
     });
   });
 
-  // Nothing typed yet is every bucket, and the way back to none.
+  // Nothing typed yet is every bucket still offered, and the way back to
+  // none. The one already chosen stays, finished or not.
   let offers = $derived.by(() => {
     const q = text.trim().toLowerCase();
-    if (!open || q === name().toLowerCase() || !q) return [{ id: 0 }, ...all];
-    return all.filter((b) => `${b.identifier} ${b.title}`.toLowerCase().includes(q));
+    if (!open || q === name().toLowerCase() || !q) return [{ id: 0 }, ...live];
+    return live.filter((b) => `${b.identifier} ${b.title}`.toLowerCase().includes(q));
   });
 
   // Fixed, measured from the box: a dialog's body scrolls, and would clip it.

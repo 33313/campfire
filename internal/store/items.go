@@ -392,6 +392,9 @@ type ItemFilter struct {
 	// EndedSince drops items that reached a terminal state before this time.
 	// Items still open carry no actual end and always pass.
 	EndedSince int64
+	// BucketsDoneSince drops rejected buckets, and buckets that reached the
+	// final state before this time (SPEC.md §9.1). Tickets always pass.
+	BucketsDoneSince int64
 }
 
 func placeholders(n int) string {
@@ -433,6 +436,13 @@ func (f ItemFilter) where() (string, []any) {
 	if f.EndedSince > 0 {
 		w = append(w, "(i.actual_end IS NULL OR i.actual_end >= ?)")
 		args = append(args, f.EndedSince)
+	}
+	if f.BucketsDoneSince > 0 {
+		// Written to pass, not to drop: an intermediate state has no role and
+		// open work no end, and a NULL inside NOT (...) would drop the row.
+		w = append(w, "(i.kind <> ? OR COALESCE(s.role, '') NOT IN (?, ?)"+
+			" OR (s.role = ? AND (i.actual_end IS NULL OR i.actual_end >= ?)))")
+		args = append(args, KindBucket, RoleRejected, RoleFinal, RoleFinal, f.BucketsDoneSince)
 	}
 	if f.Where != "" {
 		w = append(w, f.Where)

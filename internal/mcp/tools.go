@@ -195,7 +195,9 @@ func (s *Server) toolset() []tool {
 				if in.Scope == "" {
 					in.Scope = core.ScopeParticipation
 				}
-				cards, cursor, err := svc.BucketIndex(ctx, a, in.TeamID, in.Scope, in.Cursor, 0)
+				// Every bucket, finished ones too: an agent asks about the work
+				// as recorded, not as the index screen tidies it.
+				cards, cursor, err := svc.BucketIndex(ctx, a, in.TeamID, in.Scope, in.Cursor, 0, true)
 				if err != nil {
 					return nil, err
 				}

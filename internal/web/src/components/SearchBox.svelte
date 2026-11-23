@@ -39,7 +39,9 @@
 
   async function look(q) {
     const mine = ++issued;
-    const filter = { csql: `text ~ ${quote(q)}${teamId ? ` and team = #${teamId}` : ""}` };
+    // Done buckets are not suggested (SPEC.md §9.1); Enter still finds them.
+    const filter = { csql: `text ~ ${quote(q)}${teamId ? ` and team = #${teamId}` : ""}`,
+      hideDoneBuckets: true };
     try {
       const page = await api.listItems(filter, "", 6);
       if (mine === issued) hits = page.items || [];

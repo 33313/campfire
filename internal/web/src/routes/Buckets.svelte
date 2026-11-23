@@ -31,6 +31,9 @@
   let page = $state(null);
   let error = $state(null);
   let scope = $state(pref("bucketScope", "participation"));
+  // Rejected buckets, and buckets finished more than three days ago, are left
+  // out as the board leaves out old done tickets, unless this is on.
+  let all = $state(pref("bucketsAll", false));
 
   // State and owner narrow the scope's result. They are the ordinary filter
   // dimensions of SPEC.md §9.2, applied to the list the scope produced.
@@ -50,7 +53,7 @@
 
   async function load() {
     try {
-      page = await api.listBuckets(team ? team.id : 0, scope);
+      page = await api.listBuckets(team ? team.id : 0, scope, "", all);
       paged = false;
       stale = false;
       error = null;
@@ -64,7 +67,7 @@
   // page and calling that the whole instance.
   async function loadMore() {
     try {
-      const next = await api.listBuckets(team ? team.id : 0, scope, page.cursor);
+      const next = await api.listBuckets(team ? team.id : 0, scope, page.cursor, all);
       page = { buckets: (page.buckets || []).concat(next.buckets || []), cursor: next.cursor || "" };
       paged = true;
     } catch (err) { failure(err); }
@@ -76,6 +79,12 @@
   function setScope(id) {
     scope = id;
     setPref("bucketScope", id);
+    load();
+  }
+
+  function setAll(on) {
+    all = on;
+    setPref("bucketsAll", on);
     load();
   }
 
@@ -147,6 +156,11 @@
       <button class="chip" class:on={scope === s.id} onclick={() => setScope(s.id)}>{s.label}</button>
     {/each}
     <div class="right">
+      <span style="font-size:12px;color:var(--muted)"
+            title="Rejected, or done for more than three days">Show finished</span>
+      <button class="toggle" class:on={all} aria-label="Show finished"
+              onclick={() => setAll(!all)}><i></i></button>
+      <span class="rule-v"></span>
       <button class="chip" class:on={!!stateFilter} onclick={pickState}>
         <span>{stateFilter ? stateFilter.name : "State"}</span>
         <Icon body={stateFilter ? NAV.close : NAV.chevron} size={10} />
