@@ -256,6 +256,11 @@ a, .btn, .chip, .nav-item, .card, .bucket-card, .input, .bare, .label-input, .to
    The width is explicit: an auto margin on a column-flex child cancels the
    stretch it would otherwise get, and the measure collapses onto the content. */
 .measure { width: 100%; max-width: 860px; margin: 0 auto; }
+/* A screen of controls and short lists is scanned, not read: wider than the
+   measure, still capped, so a table's columns stay near each other. `split`
+   gives it a side column for what the screen is about. */
+.manage { width: 100%; max-width: 1200px; margin: 0 auto; padding-bottom: 24px; }
+.manage.split { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 0 12px; }
 
 /* Controls -------------------------------------------------------------- */
 
@@ -788,15 +793,18 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 .comment-meta b { font-weight: 500; font-size: 12.5px; color: var(--text); }
 .comment-meta time { font-family: var(--mono); font-size: 11px; color: var(--faint); }
 
-/* A profile: the picture at a size worth looking at, beside who they are.
+/* A person's or a team's profile: activity in the main column, and who or
+   what it is about at the side, first in the markup because it is what the
+   page is about.
 
-   The page does not scroll as a whole. Who someone is — picture, name, bio,
-   teams — stays on screen, and the activity below it gets the leftover height
-   and its own scrollbar. Scrolling the page instead buries the person under a
-   list of events. */
-.profile-body { overflow: hidden; display: flex; flex-direction: column; }
-.profile-top { flex: 0 0 auto; }
-.profile-activity { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+   The page does not scroll as a whole. The side stays on screen, and the
+   activity gets the full height and its own scrollbar. Scrolling the page
+   instead buries the person under a list of events. */
+.profile-body { overflow: hidden; }
+.profile-split { height: 100%; padding-bottom: 0; grid-template-rows: minmax(0, 1fr); }
+.profile-top { grid-column: 2; grid-row: 1; overflow: auto; }
+.profile-top .profile-head { flex-direction: column; }
+.profile-activity { grid-column: 1; grid-row: 1; min-height: 0; display: flex; flex-direction: column; }
 /* Grows with the trail, then stops at the height that is left and scrolls
    inside itself; a short trail keeps its footnote next to it rather than
    pinned to the bottom of the screen. */
@@ -825,10 +833,6 @@ a.aside-control, a.aside-control:hover { color: var(--text); text-decoration: no
 .profile-email { font-size: 12.5px; color: var(--accent); }
 .profile-meta { display: flex; align-items: baseline; gap: 8px; }
 .profile-bio { margin-top: 4px; font-size: 14px; }
-/* Memberships side by side: a fact about a person, not a list to read down. */
-.profile-teams {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0 16px;
-}
 
 /* Buckets --------------------------------------------------------------- */
 

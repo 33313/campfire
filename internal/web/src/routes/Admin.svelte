@@ -290,7 +290,7 @@
   {/if}
 
   <div class="body">
-    <SettingsRail sections={SECTIONS} active={tab} onpick={(t) => (tab = t)}>
+    <SettingsRail sections={SECTIONS} active={tab} onpick={(t) => (tab = t)} manage>
       {#snippet children()}
         {#if tab === "users"}
           <Section title="Users" sub="{users.length} accounts">

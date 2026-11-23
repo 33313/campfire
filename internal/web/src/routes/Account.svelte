@@ -102,32 +102,7 @@
     {/snippet}
   </ScreenHeader>
 
-  <div class="body measure">
-    <Section title="Password">
-      {#snippet children()}
-        <label class="field">
-          <span class="field-label">Current</span>
-          <input class="input" type="password" bind:value={current} />
-        </label>
-        <label class="field">
-          <span class="field-label">New</span>
-          <input class="input" type="password" bind:value={next} />
-        </label>
-        <button class="btn primary" style="margin-top:10px;align-self:flex-start"
-                onclick={changePassword}>Change password</button>
-      {/snippet}
-    </Section>
-
-    <Section title="2FA" sub={me.hasTotp ? "on" : "off"}>
-      {#snippet children()}
-        {#if me.hasTotp}
-          <button class="btn destructive small" onclick={disableTotp}>Turn off</button>
-        {:else}
-          <button class="btn small" onclick={enableTotp}>Set up an authenticator app</button>
-        {/if}
-      {/snippet}
-    </Section>
-
+  <div class="body"><div class="manage split">
     <Section title="Agent tokens" sub="{tokens.length} active">
       {#snippet children()}
         <p class="explain">
@@ -154,5 +129,32 @@
         </table>
       {/snippet}
     </Section>
-  </div>
+
+    <div>
+      <Section title="Password">
+        {#snippet children()}
+          <label class="field">
+            <span class="field-label">Current</span>
+            <input class="input" type="password" bind:value={current} />
+          </label>
+          <label class="field">
+            <span class="field-label">New</span>
+            <input class="input" type="password" bind:value={next} />
+          </label>
+          <button class="btn primary" style="margin-top:10px;align-self:flex-start"
+                  onclick={changePassword}>Change password</button>
+        {/snippet}
+      </Section>
+
+      <Section title="2FA" sub={me.hasTotp ? "on" : "off"}>
+        {#snippet children()}
+          {#if me.hasTotp}
+            <button class="btn destructive small" onclick={disableTotp}>Turn off</button>
+          {:else}
+            <button class="btn small" onclick={enableTotp}>Set up an authenticator app</button>
+          {/if}
+        {/snippet}
+      </Section>
+    </div>
+  </div></div>
 {/if}

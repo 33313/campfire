@@ -1,5 +1,7 @@
 <script>
-  let { sections, active, onpick, children } = $props();
+  // `manage` caps the content for a screen of controls (style.css, .manage);
+  // the docs keep their own measure.
+  let { sections, active, onpick, manage = false, children } = $props();
 </script>
 
 <div class="settings-layout">
@@ -10,5 +12,5 @@
       </button>
     {/each}
   </nav>
-  <div class="settings-main">{@render children()}</div>
+  <div class="settings-main" class:manage>{@render children()}</div>
 </div>
