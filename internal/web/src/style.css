@@ -653,8 +653,10 @@ body.grabbing, body.grabbing * { cursor: grabbing !important; user-select: none;
 .card-menu {
   position: fixed; z-index: 40; width: 186px; padding: 3px;
   display: flex; flex-direction: column;
+  max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow-y: auto;
   background: var(--surface); border: 1px solid var(--border-strong);
 }
+.card-menu > * { flex-shrink: 0; }
 .card-menu .menu-head {
   padding: 6px 6px 5px; font-family: var(--mono); font-size: 9.5px;
   letter-spacing: 0.13em; text-transform: uppercase; color: var(--faint);
@@ -665,7 +667,7 @@ body.grabbing, body.grabbing * { cursor: grabbing !important; user-select: none;
    row stays marked while its sub-menu is up. */
 .card-menu .sub-chevron { margin-left: auto; display: flex; rotate: -90deg; color: var(--faint); }
 .card-menu .team-option.open { background: var(--sunk); color: var(--text); }
-.card-menu.sub-menu { width: 220px; max-height: 340px; overflow-y: auto; }
+.card-menu.sub-menu { width: 220px; max-height: min(340px, calc(100dvh - 16px)); }
 .card-menu .sub-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Item detail ----------------------------------------------------------- */

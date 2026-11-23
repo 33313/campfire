@@ -57,7 +57,7 @@
     if (sub?.name !== name) {
       const options = await SUBS[name].options();
       bucketQuery = "";
-      sub = { name, options, top: row.getBoundingClientRect().top, row };
+      sub = { name, options, row };
     }
     if (keyboard) {
       await tick();
@@ -92,13 +92,16 @@
   // open a menu half of which cannot be reached. A sub-menu opens to the
   // right, or to the left where the right has no room, and scrolls within
   // itself when its list is longer than the window.
-  const WIDTH = 186, SUB = 220;
-  const left = $derived(Math.min(x, innerWidth - WIDTH - 10));
-  const top = $derived(Math.min(y, innerHeight - (one ? 250 : 190)));
-  const subLeft = $derived(left + WIDTH + SUB + 8 > innerWidth ? left - SUB + 1 : left + WIDTH - 1);
-  const subTop = $derived(sub
-    ? Math.max(8, Math.min(sub.top - 4, innerHeight - 8 - Math.min(sub.options.length * 29 + 8, 340)))
-    : 0);
+  const MARGIN = 8;
+  let viewportWidth = $state(innerWidth), viewportHeight = $state(innerHeight);
+  let width = $state(0), height = $state(0), subWidth = $state(0), subHeight = $state(0);
+  let scrollY = $state(0);
+  const fit = (at, size, space) => Math.max(MARGIN, Math.min(at, space - size - MARGIN));
+  const left = $derived(fit(x, width, viewportWidth));
+  const top = $derived(fit(y, height, viewportHeight));
+  const subLeft = $derived(fit(left + width + subWidth + MARGIN > viewportWidth
+    ? left - subWidth + 1 : left + width - 1, subWidth, viewportWidth));
+  const subTop = $derived(sub ? fit(top + sub.row.offsetTop - scrollY - 4, subHeight, viewportHeight) : 0);
 
   // The menu goes before the dialog it opens: leaving it up behind a modal is
   // two things asking for the same answer.
@@ -131,6 +134,8 @@
   });
 </script>
 
+<svelte:window bind:innerWidth={viewportWidth} bind:innerHeight={viewportHeight} />
+
 {#snippet parent(name)}
   <button class="team-option" class:open={sub?.name === name} aria-haspopup="menu"
           aria-expanded={sub?.name === name}
@@ -146,7 +151,8 @@
   <button class="team-option" onpointerenter={() => hover(null)} onclick={fn}>{label}</button>
 {/snippet}
 
-<div class="card-menu" role="menu" bind:this={el} style="left:{left}px;top:{top}px">
+<div class="card-menu" role="menu" bind:this={el} bind:offsetWidth={width} bind:offsetHeight={height}
+     onscroll={(e) => { scrollY = e.currentTarget.scrollTop; }} style="left:{left}px;top:{top}px">
   <span class="menu-head">{one ? target.identifier : `${picked.length} selected`}</span>
   {@render parent("Move to")}
   {@render plain("Reject…", reject)}
@@ -163,6 +169,7 @@
 
   {#if sub}
     <div class="card-menu sub-menu" role="menu" tabindex="-1" aria-label={sub.name}
+         bind:offsetWidth={subWidth} bind:offsetHeight={subHeight}
          style="left:{subLeft}px;top:{subTop}px" onpointerenter={() => clearTimeout(wait)}
          onkeydown={(e) => e.key === "ArrowLeft" && e.target.tagName !== "INPUT" && closeSub()}>
       {#if sub.name === "Bucket"}
