@@ -122,7 +122,7 @@
           <label class="profile-picture-pick" title="Choose a picture">
             {@render picture()}
             <span class="hint">Change</span>
-            <input type="file" accept="image/*" aria-label="Picture" hidden
+            <input class="file-input" type="file" accept="image/*" aria-label="Picture"
                    onchange={choosePicture} />
           </label>
         {:else}

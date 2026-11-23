@@ -1,0 +1,3 @@
+kind: Changed
+body: 'Administration has five sections instead of seven: Instance (version, updates, data directory and a status list), People (users and teams), Appearance, Backup and restore, and Integrations. An empty snapshot list says so, and the icon set upload uses Campfire''s own file button.'
+time: 2026-11-05T12:22:15.613859513-07:00

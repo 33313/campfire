@@ -5,7 +5,7 @@
   import { onNotify } from "../lib/stream.svelte.js";
   import { openModal, failure, toast } from "../lib/ui.svelte.js";
   import { newTeam } from "../lib/teams.js";
-  import { when, ago } from "../lib/format.js";
+  import { when, ago, plural } from "../lib/format.js";
   import { NAV, BUCKET_ICON_GROUPS, BUCKET_ICONS, BUCKET_COLOURS } from "../lib/icons.js";
   import { app, setIconSets } from "../lib/state.svelte.js";
 
@@ -21,17 +21,17 @@
   import ConfirmDialog from "../dialogs/ConfirmDialog.svelte";
 
   const SECTIONS = [
-    { id: "users", label: "Users" },
-    { id: "teams", label: "Teams" },
+    { id: "instance", label: "Instance" },
+    { id: "people", label: "People" },
     { id: "appearance", label: "Appearance" },
     { id: "backup", label: "Backup and restore" },
-    { id: "updates", label: "Updates" },
     { id: "integrations", label: "Integrations" },
-    { id: "preferences", label: "Preferences" },
   ];
+  // The sections before DEV-136, for a ?tab= link made then.
+  const MOVED = { users: "people", teams: "people", updates: "instance", preferences: "instance" };
 
   const query = new URLSearchParams(location.search);
-  let tab = $state(query.get("tab") || "users");
+  let tab = $state(MOVED[query.get("tab")] || query.get("tab") || "instance");
   if (query.size) history.replaceState(history.state, "", location.pathname);
   let users = $state([]);
   let teams = $state([]);
@@ -206,6 +206,22 @@
     if (ok) guard(() => api.deleteForge(f.id));
   }
 
+  // The Instance section's side: one row per thing that can be on or off,
+  // each opening the section that changes it.
+  let status = $derived([
+    { label: "Snapshots", on: !!snapshots?.enabled, tab: "backup",
+      note: !snapshots?.enabled ? "off" : `every ${snapshots.interval}` + (snapshots.snapshots?.length
+        ? ` · last ${ago(Math.max(...snapshots.snapshots.map((s) => Date.parse(s.taken))) * 1000)}` : "") },
+    { label: "Point in time", on: !!snapshots?.replica, tab: "backup",
+      note: snapshots?.replica ? "on" : "off" },
+    { label: "Agent tokens", on: tokens.length > 0, tab: "integrations",
+      note: `${tokens.length} active` },
+    { label: "Pull requests", on: !!forges?.length, tab: "integrations",
+      note: forges?.length ? plural(forges.length, "forge") : "no forge" },
+    { label: "Accounts", on: true, tab: "people",
+      note: `${users.length} · ${plural(teams.length, "team")}` },
+  ]);
+
   const usernameOf = (id) => users.find((u) => u.id === id)?.username || `user ${id}`;
 
   async function newAccount() {
@@ -292,7 +308,86 @@
   <div class="body">
     <SettingsRail sections={SECTIONS} active={tab} onpick={(t) => (tab = t)} manage>
       {#snippet children()}
-        {#if tab === "users"}
+        {#if tab === "instance"}
+          <div class="split">
+            <div>
+              <Section title="Version" sub={updates?.check ? "checking daily" : "not checking"}>
+                {#snippet children()}
+                  <dl class="facts">
+                    <dt class="field-label">Running</dt><dd>{updates?.current || "unknown"}</dd>
+                    {#if updates?.latest}
+                      <dt class="field-label">Latest</dt>
+                      <dd>{updates.latest.version}{updates.newer ? "" : " · up to date"}</dd>
+                      <dt class="field-label">Checked</dt>
+                      <dd>{new Date(updates.latest.checked).toLocaleString()}</dd>
+                    {/if}
+                  </dl>
+                  {#if !updates?.check}
+                    <p class="explain">
+                      Set <code>updates.check</code> to true and restart to check for new releases.
+                    </p>
+                  {:else if updates.error}
+                    <p class="explain">Check failed: {updates.error}.</p>
+                  {:else if !updates.latest}
+                    <p class="explain">Checking GitHub…</p>
+                  {/if}
+                  {#if updates?.newer}
+                    <a class="btn small" style="margin-top:10px" href={updates.latest.url}
+                       target="_blank" rel="noopener">Release notes for {updates.latest.version}</a>
+                  {/if}
+                {/snippet}
+              </Section>
+
+              <Section title="Data directory">
+                {#snippet children()}
+                  {#if !data}
+                    <p class="explain">The data directory is unavailable.</p>
+                  {:else}
+                    <dl class="facts">
+                      <dt class="field-label">Directory</dt><dd>{data.directory}</dd>
+                      {#if !data.movesSnapshots}
+                        <dt class="field-label">Snapshots</dt><dd>{data.snapshots}</dd>
+                      {/if}
+                      <dt class="field-label">Configuration</dt><dd>{data.config}</dd>
+                    </dl>
+                    {#if data.fixed}
+                      <p class="explain">
+                        In the container image the data is in the volume mounted at <code>/data</code>.
+                        To move it, mount a different volume.
+                      </p>
+                    {:else}
+                      <form style="display:flex;gap:8px;align-items:center" onsubmit={moveData}>
+                        <input class="input" style="flex:1" aria-label="New data directory" placeholder="/path/to/directory"
+                               disabled={moving} bind:value={moveTo} />
+                        <button class="btn primary small" disabled={moving || !moveTo.trim()}>
+                          {moving ? "Moving…" : "Move"}
+                        </button>
+                      </form>
+                      <p class="explain" style="margin-top:8px">
+                        Moves the database{data.movesSnapshots ? " and its snapshots" : ""} and restarts the
+                        server. A full path on a local disk: network shares and synced folders (Dropbox,
+                        iCloud Drive, OneDrive) corrupt the database.
+                      </p>
+                    {/if}
+                  {/if}
+                {/snippet}
+              </Section>
+            </div>
+
+            <Section title="Status">
+              {#snippet children()}
+                {#each status as s (s.label)}
+                  <button class="status-row" onclick={() => (tab = s.tab)}>
+                    <span class="pip" class:final={s.on}></span>
+                    <span style="flex:1">{s.label}</span>
+                    <span class="ident">{s.note}</span>
+                  </button>
+                {/each}
+              {/snippet}
+            </Section>
+          </div>
+
+        {:else if tab === "people"}
           <Section title="Users" sub="{users.length} accounts">
             {#snippet children()}
               <div style="display:flex;gap:8px;margin:10px 0">
@@ -360,8 +455,6 @@
               </table>
             {/snippet}
           </Section>
-
-        {:else if tab === "teams"}
           <Section title="Teams" sub="{teams.length} teams">
             {#snippet children()}
               <button class="btn primary small" style="margin-bottom:10px"
@@ -445,9 +538,12 @@
                   <input class="input" bind:value={setName} placeholder="Ops" /></label>
                 <label class="field"><span class="field-label">Prefix</span>
                   <input class="input" bind:value={setPrefix} placeholder="ops" spellcheck="false" /></label>
-                <label class="field"><span class="field-label">SVG files, at most 100</span>
-                  <input class="input" type="file" multiple accept=".svg,image/svg+xml" bind:this={fileInput}
-                         onchange={(e) => (setFiles = [...e.currentTarget.files])} /></label>
+                <div class="field"><span class="field-label">SVG files, at most 100</span>
+                  <label class="btn small">
+                    <span>{setFiles.length ? plural(setFiles.length, "file") : "Choose files"}</span>
+                    <input class="file-input" type="file" multiple accept=".svg,image/svg+xml" bind:this={fileInput}
+                           onchange={(e) => (setFiles = [...e.currentTarget.files])} />
+                  </label></div>
                 <button class="btn primary small" disabled={!setName.trim() || !setPrefix.trim() || !setFiles.length}>Add set</button>
               </form>
               {#if skipped.length}
@@ -516,6 +612,8 @@
                           <button class="btn quiet small" onclick={() => restore(s)}>Restore</button>
                         </td>
                       </tr>
+                    {:else}
+                      <tr><td colspan="4"><div class="empty-note">No snapshots yet.</div></td></tr>
                     {/each}
                   </tbody>
                 </table>
@@ -547,32 +645,8 @@
             </Section>
           {/if}
 
-        {:else if tab === "updates"}
-          <Section title="Updates" sub={updates?.check ? "checking daily" : "off"}>
-            {#snippet children()}
-              <p class="explain">
-                Running {updates?.current || "an unknown version"}.
-                {#if !updates?.check}
-                  Set <code>updates.check</code> to true and restart to check for new releases.
-                {:else if updates.latest}
-                  Latest: {updates.latest.version}{updates.newer ? "" : " (up to date)"},
-                  checked {new Date(updates.latest.checked).toLocaleString()}.
-                {:else if !updates.error}
-                  Checking GitHub…
-                {/if}
-              </p>
-              {#if updates?.error}
-                <p class="explain">Check failed: {updates.error}.</p>
-              {/if}
-              {#if updates?.newer}
-                <a class="btn small" style="margin-top:10px" href={updates.latest.url}
-                   target="_blank" rel="noopener">Release notes for {updates.latest.version}</a>
-              {/if}
-            {/snippet}
-          </Section>
-
         {:else if tab === "integrations"}
-          <Section title="Pull requests" sub={forges?.length ? `${forges.length} ${forges.length === 1 ? "forge" : "forges"}` : "off"}>
+          <Section title="Pull requests" sub={forges?.length ? plural(forges.length, "forge") : "off"}>
             {#snippet children()}
               {#if !forges}
                 <p class="explain">Forges are unavailable.</p>
@@ -695,39 +769,6 @@
                   {/each}
                 </tbody>
               </table>
-            {/snippet}
-          </Section>
-
-        {:else if tab === "preferences"}
-          <Section title="Data directory" sub={data?.directory}>
-            {#snippet children()}
-              {#if !data}
-                <p class="explain">The data directory is unavailable.</p>
-              {:else}
-                <p class="explain">
-                  The database{data.movesSnapshots ? " and its snapshots" : ""} live here.
-                  {#if !data.movesSnapshots}Snapshots stay in {data.snapshots}.{/if}
-                  The configuration file is {data.config}.
-                </p>
-                {#if data.fixed}
-                  <p class="explain" style="margin-top:8px">
-                    In the container image the data is in the volume mounted at <code>/data</code>.
-                    To move it, mount a different volume.
-                  </p>
-                {:else}
-                  <form style="display:flex;gap:8px;align-items:center;margin-top:10px" onsubmit={moveData}>
-                    <input class="input" style="flex:1" aria-label="New data directory" placeholder="/path/to/directory"
-                           disabled={moving} bind:value={moveTo} />
-                    <button class="btn primary small" disabled={moving || !moveTo.trim()}>
-                      {moving ? "Moving…" : "Move"}
-                    </button>
-                  </form>
-                  <p class="explain" style="margin-top:8px">
-                    A full path on a local disk. Network shares and synced folders
-                    (Dropbox, iCloud Drive, OneDrive) corrupt the database.
-                  </p>
-                {/if}
-              {/if}
             {/snippet}
           </Section>
         {/if}

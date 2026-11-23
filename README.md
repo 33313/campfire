@@ -119,7 +119,7 @@ Run other commands as the same user, with the same `-data`:
 Campfire prints the address it listens on. Open it and create the first account, which becomes an
 instance administrator. There is no setup wizard and no open registration: afterwards, an
 administrator creates accounts, or hands out invitation and password-reset links, in
-*Administration → Users*. Campfire sends no email.
+*Administration → People*. Campfire sends no email.
 
 Until that first account exists, anyone who can reach the server can create it. Create it before
 the server is reachable from other machines.
@@ -185,7 +185,7 @@ The file is read at startup; restart after editing it.
 cloud-synchronised folders (Dropbox, iCloud Drive, OneDrive, Google Drive). To keep a copy
 elsewhere, use `snapshots.replica`.
 
-To move the data to another directory, enter it in *Administration → Preferences*. The database,
+To move the data to another directory, enter it in *Administration → Instance*. The database,
 and the snapshots if they are in the data directory, are copied there, the configuration file is
 updated, and the server restarts. The old files are kept until you delete them. In the container
 image, mount a different volume instead.
