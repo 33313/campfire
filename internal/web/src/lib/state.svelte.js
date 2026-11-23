@@ -26,21 +26,44 @@ export function setIconSets(sets) {
   app.customIcons = Object.fromEntries(sets.flatMap((s) => s.icons.map((i) => [i.key, i])));
 }
 
+// The newest reload wins: following one item and then another starts two, and
+// the first to be asked can be the last to answer.
+let reloads = 0;
+
 export async function reloadContext(teamId) {
+  const mine = ++reloads;
   const [session, teams] = await Promise.all([api.getSession(), api.listTeams()]);
+  if (mine !== reloads) return;
   app.user = session.user;
   app.teams = session.teams || [];
   app.allTeams = teams || [];
-  const chosen = teamId || app.teams[0]?.teamId || app.allTeams[0]?.id;
-  app.team = app.allTeams.find((t) => t.id === chosen) || null;
+  // The team asked for, else the one this account last had in context in
+  // this browser. Per account: whoever signs in next starts on their own.
+  const lastKey = `team:${app.user.id}`;
+  const known = (id) => app.allTeams.find((t) => t.id === id);
+  app.team = known(teamId) || known(pref(lastKey)) || known(app.teams[0]?.teamId)
+    || app.allTeams[0] || null;
   if (!app.team) return;
+  setPref(lastKey, app.team.id);
   const [views, labels, users] = await Promise.all([
     api.listSavedViews(app.team.id), api.listLabels(), api.listUsers(), refreshBacklogCount(),
   ]);
+  if (mine !== reloads) return;
   app.views = views || [];
   app.viewsOn = stored(app.team.id);
   app.labels = labels || [];
   app.users = users || [];
+}
+
+/**
+ * Puts a team in context for a screen that belongs to it, so the sidebar's
+ * Board and Backlog lead to the team the screen is about. Only a known team:
+ * asking for one the instance does not have would ask again forever.
+ */
+export function followTeam(id) {
+  if (id && app.user && id !== app.team?.id && app.allTeams.some((t) => t.id === id)) {
+    reloadContext(id);
+  }
 }
 
 // The sidebar's backlog count. It is not any one screen's: the sidebar

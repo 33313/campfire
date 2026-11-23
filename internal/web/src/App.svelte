@@ -2,7 +2,7 @@
   // The client: boot, routing and the shell.
 
   import { api, ApiError, forget } from "./lib/api.js";
-  import { app, reloadContext, setIconSets } from "./lib/state.svelte.js";
+  import { app, reloadContext, followTeam, setIconSets } from "./lib/state.svelte.js";
   import { route, navigate } from "./lib/router.svelte.js";
   import { stream, openStream, configure } from "./lib/stream.svelte.js";
 
@@ -73,26 +73,14 @@
 
   // The team in context follows the address. Everything per-team the sidebar
   // draws — the name in the switcher, the views, the backlog count — is read
-  // from app.team, which otherwise only ever held the team the session booted
-  // on, so switching changed the board and nothing around it.
-  //
-  // The team has to be one we know of: reloading a team the instance does not
-  // have leaves app.team null, and the effect would ask again forever. Asking
-  // only for a known team ends it, because loading that team is what makes the
-  // condition false.
-  $effect(() => {
-    const id = +(route.path.match(/^\/t\/(\d+)\//)?.[1] || 0);
-    if (id && app.user && id !== app.team?.id && app.allTeams.some((t) => t.id === id)) {
-      reloadContext(id);
-    }
-  });
+  // from app.team. An item's screen follows its own team (Item.svelte).
+  $effect(() => followTeam(+(route.path.match(/^\/t\/(\d+)\//)?.[1] || 0)));
 
-  // The one address that is a redirect: land on the first team's board, or on
-  // the bucket index when there is no team yet.
+  // The one address that is a redirect: land on the board of the team in
+  // context, or on the bucket index when there is no team yet.
   $effect(() => {
-    if (app.user && route.path === "/") {
-      const first = app.teams[0];
-      navigate(first ? `/t/${first.teamId}/board` : "/buckets", true);
+    if (booted && app.user && route.path === "/") {
+      navigate(app.team ? `/t/${app.team.id}/board` : "/buckets", true);
     }
   });
 

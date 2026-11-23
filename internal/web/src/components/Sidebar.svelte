@@ -190,13 +190,13 @@
 
   <div class="sidebar-foot">
     {#if teamId}
-      <a class="nav-item" class:on={route.path === `/t/${teamId}/profile`} href="/t/{teamId}/profile">
+      <!-- Its settings are a button on the team's page, as Account is on a
+           profile, so the place stays marked while they are open. -->
+      <a class="nav-item"
+         class:on={[`/t/${teamId}/profile`, `/t/${teamId}/settings`].includes(route.path)}
+         href="/t/{teamId}/profile">
         <Icon body={NAV.team} size={15} />
         <span class="label">Team</span>
-      </a>
-      <a class="nav-item" class:on={route.path === `/t/${teamId}/settings`} href="/t/{teamId}/settings">
-        <Icon body={NAV.settings} size={15} />
-        <span class="label">Team settings</span>
       </a>
     {/if}
     <a class="nav-item" class:on={route.path === "/docs"} href="/docs">

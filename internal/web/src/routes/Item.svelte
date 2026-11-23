@@ -10,7 +10,7 @@
   // either is for.
 
   import { api, peek } from "../lib/api.js";
-  import { app } from "../lib/state.svelte.js";
+  import { app, followTeam } from "../lib/state.svelte.js";
   import { navigate } from "../lib/router.svelte.js";
   import { onNotify, touches } from "../lib/stream.svelte.js";
   import { openModal, toast, failure } from "../lib/ui.svelte.js";
@@ -89,6 +89,7 @@
 
   load();
   ensure("bucket");
+  $effect(() => followTeam(item?.teamId));
   // What the page shows: the item, its bucket and the items it relates to,
   // and a bucket's contents, which come from any team, so for a bucket every
   // item event counts.
