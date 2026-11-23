@@ -12,6 +12,10 @@ func restart() error {
 	if err != nil {
 		return err
 	}
+	return restartAt(exe)
+}
+
+func restartAt(exe string) error {
 	cmd := exec.Command(exe, os.Args[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Start(); err != nil {

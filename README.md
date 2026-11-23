@@ -180,6 +180,12 @@ The file is read at startup; restart after editing it.
   database; `0` turns them off.
 - `updates.check` asks GitHub once a day whether a newer release exists, and the administration
   screen says so. `false` turns it off.
+- **Update now** in *Administration → Instance* installs the latest GitHub release for a standalone
+  Linux, macOS or Windows binary. The running account needs write access to the binary directory.
+  Set `updates.automatic` to `true` with `updates.check` enabled to install updates after a check.
+  Installation verifies the release checksum, keeps the old binary as `<binary>.previous`, and
+  restarts the server. If a release migrated the database, restore the pre-migration snapshot before
+  running an older binary. For Docker, pull the new image and recreate the container instead.
 
 **The database must be on local disk.** SQLite corrupts on network filesystems (NFS, SMB) and in
 cloud-synchronised folders (Dropbox, iCloud Drive, OneDrive, Google Drive). To keep a copy

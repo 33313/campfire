@@ -252,8 +252,33 @@
     });
   }
 
-  // Moving the data restarts the server (DEV-116). Poll until it answers,
-  // then show the data directory.
+  let updating = $state(false);
+  async function installUpdate() {
+    const current = updates.current;
+    const version = updates.latest.version;
+    const ok = await openModal(ConfirmDialog, {
+      title: `Update to ${version}`,
+      lines: ["Downloads and verifies the release, then restarts Campfire."],
+      consequence: "Everyone is disconnected during the restart", action: "Update",
+    });
+    if (!ok) return;
+    updating = true;
+    try {
+      await api.installUpdate();
+      for (let i = 0; i < 120; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const now = await api.getUpdates().catch(() => null);
+        if (now?.current && now.current !== current) {
+          location.reload();
+          return;
+        }
+      }
+      failure("The new version did not start. Check the server log.");
+    } catch (err) { failure(err); }
+    finally { updating = false; }
+  }
+
+  // Moving the data restarts the server. Poll until it answers with its directory.
   let moveTo = $state("");
   let moving = $state(false);
   async function moveData(e) {
@@ -330,7 +355,8 @@
               <Section title="Version" sub={updates?.check ? "checking daily" : "not checking"}>
                 {#snippet children()}
                   <dl class="facts">
-                    <dt class="field-label">Running</dt><dd>{updates?.current || "unknown"}</dd>
+                      <dt class="field-label">Running</dt><dd>{updates?.current || "unknown"}</dd>
+                      <dt class="field-label">Automatic updates</dt><dd>{updates?.automatic ? "on" : "off"}</dd>
                     {#if updates?.latest}
                       <dt class="field-label">Latest</dt>
                       <dd>{updates.latest.version}{updates.newer ? "" : " · up to date"}</dd>
@@ -350,6 +376,16 @@
                   {#if updates?.newer}
                     <a class="btn small" style="margin-top:10px" href={updates.latest.url}
                        target="_blank" rel="noopener">Release notes for {updates.latest.version}</a>
+                    {#if !updates.unavailable && !updates.error}
+                      <button class="btn primary small" disabled={updating} onclick={installUpdate}>
+                        {updating ? "Updating…" : "Update now"}
+                      </button>
+                    {/if}
+                  {/if}
+                  {#if updates?.unavailable}
+                    <p class="explain">{updates.unavailable}.</p>
+                  {:else if updates?.check && !updates.automatic}
+                    <p class="explain">Set <code>updates.automatic</code> to true and restart to install updates automatically.</p>
                   {/if}
                 {/snippet}
               </Section>
