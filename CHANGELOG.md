@@ -5,6 +5,20 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v1.2.0 - 2026-11-23
+
+### Added
+
+- Administration can install new GitHub releases on writable standalone Linux, macOS and Windows binaries. Set updates.automatic to true to install after an update check.
+- Administration can add shared themes and set an instance default. Account settings can add personal themes and choose a palette that overrides the default. Dracula and Tokyo Night are included.
+- Ctrl+K (Command+K on macOS) opens pages and items or creates a ticket or bucket. Typed suggestions put exact identifiers and stronger title matches first. Bucket pickers refresh when opened.
+- Link a pull request directly from item detail without putting the item identifier in its title. Links stay visible with Unknown status when Campfire cannot read the forge.
+- A ticket rejected from the board burns away in place. Reduced-motion settings turn off the effect.
+
+### Fixed
+
+- Right-click menus and their submenus fit the viewport and scroll when too tall.
+
 ## v1.1.0 - 2026-11-23
 
 ### Added
