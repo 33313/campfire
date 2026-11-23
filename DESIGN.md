@@ -1,41 +1,14 @@
-# Campfire — Design Handoff
+# Campfire — Design rules
 
-**For:** whoever builds the client.
-**Status:** the source of truth. Reconciled with the built client on 2026-09-01. Where an artboard
-or the published canvas shows something else, this file wins — the drawings came first and are not
-kept in step.
+The rules the interface follows: tokens, type, geometry, motion, the mark, and the few decisions
+that are easy to get wrong. `SPEC.md` fixes behaviour and wins where the two disagree.
 
-## Where the design files are
+This is not a description of the client. How a screen or a component looks today is in the code
+(`internal/web/src`, with the tokens in `style.css`). Change this file only when a change breaks a
+rule here or adds one; a new screen or component that follows the rules needs no entry.
 
-This document and `SPEC.md` live in this repository. The drawings they describe do not: they are in
-
-```
-~/dev/.design/kanban/
-```
-
-which is a scratch directory, not a package. Everything below that names a `.dc.html` file means a
-file in there.
-
-## What to read, in what order
-
-| File | What it settles | Authority |
-|---|---|---|
-| `SPEC.md` *(this repo)* | What the application does and does not do; data model; API and storage rules. | Behaviour. If this document and `SPEC.md` disagree, `SPEC.md` wins. |
-| This file *(this repo)* | Tokens, components, and the rules the interface is expressing. | Appearance. Nothing overrules it. |
-| `*.dc.html` *(design dir)* | The original drawings, one file per screen. | Reference for anything this document does not say. Superseded wherever it disagrees. |
-| `THEME.md` *(design dir)* | The desktop theme the palette was taken from. | Background only. Not a dependency. |
-
-`kanban-ui.html` in the design directory is the published canvas — the same artboards wrapped in a
-viewer, and the artifact published from it is a snapshot of that bundle. Both carry the standing of
-the artboards, no more: they are a picture of the intent before the client existed. Read the
-`*.dc.html` files directly; the bundle exists to be looked at, not built from.
-
-### How to read an artboard
-
-Each `*.dc.html` is one screen at a fixed 1440×N, written as flat HTML with **inline styles and no
-classes**. That is a drawing convention, not a proposal: there is no component system in there to
-port. Take the numbers, not the markup. The `<x-dc>` and `<helmet>` wrappers and the trailing
-`<script data-dc-script>` block belong to the canvas editor — ignore them.
+The original drawings are in `~/dev/.design/kanban/` (`*.dc.html`, one screen each). They came
+before the client and are not kept in step: background only.
 
 ---
 
@@ -78,6 +51,7 @@ Nothing in the interface uses a colour that is not on this list.
 | `alert` | `#e5604d` | clay. **Errors, rejection, overdue deadlines and P1 only** — one meaning: act now. Never decoration. |
 | `alert-tint` | `rgba(229,96,77,0.14)` | the count block in a destructive confirm. |
 | `ok` | `#b2bd52` | olive. Terminal states, progress fill, verified snapshots, the live dot. |
+| `pr-merged` | `#a58cc4` | a merged pull request only. |
 
 `on-accent` is `#131110` — text on an amber or clay fill.
 
@@ -107,20 +81,20 @@ Three families, each with one job.
 
 ### Geometry
 
-**Every corner is square. `border-radius: 0` everywhere** — one exception, below.
+**Every corner is square. `border-radius: 0` everywhere** — one exception, §2.
 
 | Metric | Value |
 |---|---|
 | Sidebar | 224px fixed |
 | Screen header | 56px |
 | Filter / scope bar | 46px |
-| Right-hand detail aside (the preview) | 320px fixed |
-| Item detail column | 860px maximum, centred in what is left; 20px 24px padding |
-| Board column | 280px drawn, 12px gutter. Columns share spare width above that, capped at 420px; below it they give way to 200px, so five fit at 1366px, and scroll sideways past that |
+| Preview aside | 320px fixed |
+| Reading column (item detail) | 860px maximum, centred |
+| Board column | 280px drawn, 12px gutter; shares spare width up to 420px, gives way to 200px, then scrolls sideways |
 | Card | 10px 11px padding, 9px internal gap, 8px between cards |
 | Table row | 42px; header row 34px; 12px column gap; 14px side padding |
-| Button | 30px tall, 0 12px padding (primary 0 14px). 28px in a screen header or beside a field, where it sits with 28px inputs; only a dialog footer keeps 30px |
-| Chip / small control | 26px tall, 0 8–10px |
+| Button | 30px tall; 28px in a screen header or beside a field |
+| Chip / small control | 26px tall |
 | Input | 30–34px tall, 0 11px |
 | Avatar | 20px in lists and cards, 24px in the sidebar, 26px on a comment |
 | Settings rail | 190px fixed |
@@ -129,38 +103,28 @@ Three families, each with one job.
 Icon strokes: 1.4 for outline glyphs, 1.5–1.8 for markers, 2 for priority and check marks.
 `stroke-linecap="square"`, `stroke-linejoin="miter"` — round caps are off-language.
 
-These are the numbers for a ~1440px viewport, and they are not re-specified per size. A display that
-wants them larger is the desktop's job, or the browser's: OS scaling and browser zoom both report a
-smaller viewport in CSS pixels, and the geometry above then lands at the size it was drawn at.
-
-The interface never zooms itself: no `zoom` or scale on `#app`. A zoomed app is a second coordinate
-space, and every drag, menu and animation that measures the screen would have to divide by the zoom
-by hand; each one that forgot would be a bug. A client rect and a CSS length inside the app are the
-same pixels.
+The numbers are for a ~1440px viewport and are not re-specified per size; OS scaling and browser
+zoom handle larger displays. The interface never zooms itself (no `zoom` or scale on `#app`): a
+client rect and a CSS length inside the app are the same pixels.
 
 ---
 
 ## 2. Five rules that are easy to get wrong
 
 1. **Status pips are circular.** Every dot that reports state — work-state dots, the live dot, stream
-   banners, verified snapshots — is `border-radius: 50%`, and stays circular even though every other
-   corner in the product is square. This is deliberate: a pip reads as a status light, not a tile.
-2. **Radio buttons and checkboxes stay square.** They are controls, not status. Do not "fix" them to
-   match the pips.
-3. **A ticket has no type.** There is no `type` field, no per-team type list, no type filter, no type
-   column, and no type on a card. See `SPEC.md` §3.2. If you find yourself adding one back, the
-   answer is in Appendix B.
-4. **Priority is four glyphs, two signals, one alarm.** The shape carries the level on its own;
-   colour marks P1 and P2 only. Do not collapse it to a coloured dot, and do not give the default
-   level a colour: it is on most cards.
+   banners, verified snapshots — is `border-radius: 50%`. A pip reads as a status light, not a tile.
+2. **Radio buttons and checkboxes stay square.** They are controls, not status.
+3. **A ticket has no type.** No `type` field, list, filter, column or card mark. See `SPEC.md` §3.2
+   and Appendix B.
+4. **Priority is four glyphs, two signals, one alarm.** The shape carries the level; colour marks P1
+   and P2 only (§3).
 5. **Labels never appear on a board card.** They live on the item detail view. `SPEC.md` §8.1.
 
 ---
 
 ## 3. Priority
 
-Four levels. Rendered at 14px on cards and rows, 16px in a legend, `stroke-width="2"`,
-`viewBox="0 0 16 16"`.
+Four levels, `viewBox="0 0 16 16"`, `stroke-width="2"`, 14px on cards and rows.
 
 | Level | Colour | Glyph | Path |
 |---|---|---|---|
@@ -169,24 +133,19 @@ Four levels. Rendered at 14px on cards and rows, 16px in a legend, `stroke-width
 | P3 Medium *(default)* | `muted` | bar | `M3.8 8h8.4` |
 | P4 Low | `faint` | chevron down | `M3.8 5.8 8 10l4.2-4.2` |
 
-P1 wears the one red the interface already has, because red already means act now. Every glyph is a
-stroke: none has a fill or a background, so the four read as one family. Blue is out of priority;
-steel is a bucket colour only.
-
-This mapping is provisional. Cool hues pop harder in a warm room, and a violet P1 was measured to
-out-pull this red, but no cool pairing has been settled on yet. The measurements and the candidates
-are in `priority-colour-handoff.md` and `priority-lineup.html` in the design directory.
+Every glyph is a stroke, with no fill or background. The default level has no colour: it is on most
+cards. Blue is out of priority; steel is a bucket colour only.
 
 ---
 
-## 4. Bucket icons
+## 4. Bucket icons and colours
 
-A bucket carries one icon; a ticket carries none (`SPEC.md` §6.2). It stands in for the bucket
-wherever the bucket is named: on a card, in the bucket index, in the item detail aside, in the log.
+A bucket carries one icon and optionally one colour; a ticket carries neither (`SPEC.md` §6.2). They
+are recognition only: nothing reads them.
 
-The built-in set is 42 glyphs in four groups, offered in this order wherever a picker draws them.
-Each key is stored on the bucket and named by the API, so after v1 a key may be added but never
-renamed or removed. The path data lives in `internal/web/src/lib/icons.js` (`BUCKET_ICON_GROUPS`).
+The built-in icons are 42 glyphs in four groups, offered in this order. Each key is stored and named
+by the API, so a key may be added but never renamed or removed. Path data is in
+`internal/web/src/lib/icons.js` (`BUCKET_ICON_GROUPS`).
 
 | Group | Keys |
 |---|---|
@@ -195,24 +154,17 @@ renamed or removed. The path data lives in `internal/web/src/lib/icons.js` (`BUC
 | Work | `check` `bug` `wrench` `pen` `page` `code` `terminal` `database` `beaker` `box` `layers` |
 | Places | `flame` `tent` `mountain` `leaf` `sun` `moon` `globe` `map` `anchor` `home` |
 
-Rendered at 9–11px inline, 16px in the picker, `stroke-width` 1.3–1.8, `viewBox="0 0 16 16"`.
-Strokes only, square caps, mitred joins, no fills. A glyph that already means a place in the
-navigation — the pail, calendar, clock, shield and people, the search magnifier, the edit pen — is
-not a bucket icon, so a bucket never reads as somewhere to go. An icon is drawn in `muted-soft`, or in
-its bucket's colour.
+- Strokes only, square caps, mitred joins, no fills, `viewBox="0 0 16 16"`. An instance's own sets
+  keep their viewBox with the stroke scaled to it (1.5 at 16 units, 2.25 at 24).
+- A glyph that already means a place in the navigation — the pail, calendar, clock, shield, people,
+  the search magnifier, the edit pen — is not a bucket icon. The **pail** is the sidebar's Buckets
+  icon and nothing else.
+- A colour tints the bucket chip's border and text and the bucket's icon, never a fill: a filled
+  chip on most cards outshouts the priority glyph beside it.
 
-An instance may add sets of its own (`SPEC.md` §6.2), offered in the picker after the built-in groups,
-each under its name. They keep their own grid: an icon is drawn in its own viewBox with the stroke
-scaled to it (1.5 at 16 units, 2.25 at 24), so a 24-unit set weighs what the built-in one does. Only
-their stroked shapes survive the upload, so they share the built-in set's square, unfilled look as
-far as their drawing allows.
-
-### A bucket's colour
-
-A bucket may also carry one colour, on the same terms as the icon: recognition only, nothing reads
-it. There is no default member — a bucket without a colour is drawn exactly as it always was. The
-sixteen are one step of lightness and saturation for the warm page, in hue order. Red is left out,
-because on a card red means late or P1, and so is the accent orange, which means selected.
+The sixteen colours are one step of lightness and saturation for the warm page, in hue order. Red is
+left out (late, P1) and so is the accent orange (selected). A custom `#rrggbb` must stand at least
+3:1 off `surface`, the floor every palette colour clears.
 
 | Key | Hex | Key | Hex |
 |---|---|---|---|
@@ -220,191 +172,83 @@ because on a card red means late or P1, and so is the accent orange, which means
 | `straw` | `#c8b45e` | `plum` | `#9d82c2` |
 | `olive` | `#a3a961` | `mauve` | `#b087a3` |
 | `moss` | `#7fa86a` | `rose` | `#c48098` |
-| `sage` | `#8aa8a0` | `rust` | `#a27459` — a brown, whatever its key says |
+| `sage` | `#8aa8a0` | `rust` | `#a27459` |
 | `teal` | `#5fa7a3` | `sand` | `#b7a587` |
 | `sky` | `#6fa3c7` | `stone` | `#8f8578` |
 | `steel` | `#7d94a8` | `slate` | `#737d87` |
-
-An instance administrator may also let a bucket take any `#rrggbb` (`SPEC.md` §6.2), typed under
-the swatches in the picker. One is refused unless it stands at least 3:1 off `surface`, the floor
-every palette colour clears; the rest of the rule is theirs to keep.
-
-A bucket's colour tints the bucket chip on a card — border and text in the colour, never a fill: a
-filled chip on most cards outshouts the priority glyph beside it — and the bucket's icon wherever
-that is drawn.
-
-The **pail** glyph (`M3.2 5.2h9.6l-1 8a1.1 1.1 0 0 1-1.1 1H5.3a1.1 1.1 0 0 1-1.1-1Z` +
-`M5.5 5.2a2.5 2.5 0 0 1 5 0`) is *not* a bucket icon. It is the sidebar's Buckets section icon and
-nothing else.
 
 ---
 
 ## 5. Components
 
-Each entry lists what exists. States not listed do not exist yet — ask before inventing one.
-
-| Component | States and notes |
-|---|---|
-| **Button** | primary (accent fill, `on-accent` text, 600) · secondary (1px `border`, `muted`) · destructive (clay fill) · destructive disabled (1px clay, `dim` text) · quiet (no border, `muted`) |
-| **Input** | rest (`sunk` + `border`, `faint` placeholder) · focused (1px `accent`, `bright` text, 1px accent caret) · error (1px `alert`, alert text) |
-| **Checkbox** | 13–15px square. Checked: accent fill, `on-accent` tick. Unchecked: 1px `border-strong`. Indeterminate: accent fill, `on-accent` bar — used by select-all when the selection is partial. |
-| **Radio** | 14px square, 1px accent, 6px square accent dot. Square by design. |
-| **Toggle** | 30×17px. On: `accent-tint` field, 1px accent, 11px accent knob, right. Off: `sunk`, 1px `border`, `ghost` knob, left. The knob travels between the two (§8). |
-| **Label chip** | 1px `border`, `muted-soft`, 3px 8px. Not clickable, not coloured, never on a card. |
-| **Label editor** | one component wherever labels are added — the item detail and the create dialog. Chips and a 104px × 24px `sunk` box on one wrapping line, the box always present and carrying no placeholder; 1px `accent` when focused. Existing labels that start with what has been typed drop under it in the drop-down panel (`surface`, 1px `border-strong`), the typed prefix in `accent`; ↑↓ move, Enter takes the highlighted one or what was typed, Backspace on an empty box takes back the last chip. A label already on the item is never offered. |
-| **Filter chip** | 26px, 1px `border`, `muted`, chevron. Active chip carries the accent treatment and an × to clear. |
-| **Avatar** | square. A person's picture where they have one, cropped square from the centre and `object-fit: cover`; otherwise `border` fill with `muted-soft` mono initials. Unassigned is a 1px dashed `border-strong` square of the same size — never a person glyph. |
-| **State pip** | 5px circle. `ghost` for a plain state, `ok` for the final state, `alert` for rejected. |
-| **Card** | `surface`, 1px `border`. Selected: 1px `accent`, `bright` title. Focused (the card in the preview): 1px `border-strong` and a 2px inset accent left edge — the accent border belongs to the selection alone, so a card is never drawn as selected when it is not. Dragging: `opacity: 0.4` where it was, while a copy of it is held under the pointer (§8). Contents, in rows: title → bucket chip → deadline (calendar glyph and the planned end, mono 11.5 `text`, only when set; `accent` when three days away or less, `alert` once past; `dim` once the ticket is in the final state, whatever the date) → footer (priority glyph, identifier, avatar pushed right). Six fields, no seventh. |
-| **Bucket chip** *(on a card)* | icon + name, mono 9.5 caps, 1px `border`, `dim`, on its own row between the title and the footer, sized to its name. Wears the bucket's colour where it has one (§4). Omitted when there is no bucket. A long name wraps within the chip, and the border follows its longest line rather than the card's width. |
-| **Bare field** | a property typed into where it is drawn. No fill and no border until the pointer is on it (then 1px `border`), 1px `accent` on `sunk` when focused, `field-sizing: content`. It keeps the type of the thing it stands for — a title stays a title, a description stays serif prose at the 66ch measure. Save (floppy) and cancel are two 24px square buttons under the field, appearing only once it has actually changed. |
-| **Label shortcut** | a value one click away, written into a field's label after its name: the label's mono caps, in `accent`, no box. The create dialog's `Assignee (Me!)` is the one there is. |
-| **Markdown** | a description or a comment, rendered: CommonMark with GitHub's tables, strikethrough, task lists and bare links, in the prose's serif at its measure. A line break typed inside a paragraph is drawn. Headings in Sans 600 (1.2em, 1.08em, then 1em), code in Mono on `sunk` with a 1px `border`, block quotes `muted` behind a 2px `border-strong` rule, tables with 1px `border` cells, square bullets, a task's box the checkbox, read only. An identifier of a team on the instance links to its item, except in code; a link off the instance opens in a new tab; a picture from off the instance is a link to it, never fetched. A picture pasted or dropped into a description or a comment is uploaded and goes in at the caret as `![name](/api/images/12)`, an `Uploading name…` placeholder holding its place meanwhile; it is drawn at most 480px tall in a 1px `border`, and opens full size in a new tab. One over the instance's limit is refused in a toast before it is sent. Any HTML in the text is shown as text. In the preview the description is read rendered, and a click on it — not on a link — opens the Markdown where it was. |
-| **Aside control** | the preview's version of the same idea for a property that is picked rather than typed: a 34px row, transparent until hover, then `sunk` + 1px `border`. May be an anchor — the bucket row follows through to the bucket — without taking the link colour. |
-| **Swatch** | 20px square, 1px `border-strong`, filled with the colour itself. Selected: a `surface` inset ring inside a `bright` outline. The empty one is "no colour". |
-| **Icon picker** | a bucket's icon and colour as one field: the icon, its key and `· colour` in `muted`, and a chevron. A click hangs the panel under it (above it where there is no room): the four groups under eyebrow heads, eleven 30px icons a row, scrolling within 300px; the swatches in two rows of nine and eight along a `bar` foot. A click applies and the panel stays up, so the other can be picked too; Escape and a click away close it. The current icon is in an `accent` box on `accent-tint`. |
-| **Search box** | 250px, 28px tall, magnifier inside the border on the left. Searches on Enter. What matches drops under it as you type — the same panel as the card menu, a row of identifier + title each, at most six — from two characters and one request per pause in the typing. ↑↓ move, Enter on a highlighted row opens that item, Escape and a click away close it; Enter on none of them runs the search as before. |
-| **State badge** | the work state named in a bordered mono-caps box, `muted`. Terminal states carry their pip and take `ok` / `alert` text. |
-| **Live indicator** | the live pip (6px, `ok`) and the stream status as an eyebrow. |
-| **Toast** | bottom right, `surface`, 1px `border`, max 420px; 1px `alert` when it reports a failure. Stacks upward. |
-| **Board column** | header (state pip, name in mono caps, count in a bordered box, right) over a `sunk` body. While a card is held, a 2px `accent` line marks where it will land, in the gap between the two cards around the pointer; nothing moves until it is dropped. Held within 48px of the screen's top or bottom, it scrolls the screen, every column together; within 48px of the board's left or right, the board. Faster the nearer the edge (up to 1100px a second, at the edge and up to 48px past it), and the line follows what passes under it. Escape puts it back. |
-| **Table row** | 42px, `rule-faint` underline. Focused row: `accent-tint` + 2px accent left border. Selected row: `accent-tint-weak`. Deprioritised row: `opacity: 0.32`. |
-| **Selection bar** | takes the filter bar's place while a selection is non-empty, fading in and out over it (120ms, none under reduced motion) so nothing below moves; a 1px `accent` underline marks the mode. Count in accent mono caps, then the actions of §6, then Clear on the right. |
-| **Card menu** | the right-click menu on a card. 186px, fixed at the pointer and kept inside the viewport, `surface` on 1px `border-strong` — the team drop-down's panel. An eyebrow head names what it will act on (the identifier, or "n selected"), then the selection bar's five actions, then Clone, Split and Open for a single ticket, separated by a 1px `border` rule. Move to, Assignee, Priority and Bucket carry a chevron and open a **sub-menu** of their values beside their row — the same panel, 220px, scrolling within itself past 340px, to the right or to the left where the right has no room — and a value applies as it is clicked, with no dialog; for one card its value now is in `accent`. A sub-menu opens on hover, on a click and on →, and ← goes back; while one is up another waits a moment before taking its place, so a pointer crossing rows on its way in does not swap it. Reject keeps its dialog, for the reason. Closes on Escape, on a click away, and before any dialog it opens. |
-| **Dialog** | `surface`, 1px `border-strong` (1px `alert` when destructive). Title row, body at 16px padding, footer on `bar` with the consequence stated on the left in mono caps and the actions on the right. |
-| **Stream banner** | too-far-behind: 1px `alert`, alert pip, Reload button. Reconnecting: 1px `border`, `muted` pip, no action. |
-| **State role badge** | mono caps in a 1px box — `muted` for default/accepted, `ok` for final, `alert` for rejected. Intermediate has no box, just `ghost` text. |
+- **The accent border belongs to the selection.** A focused card or row that is not selected gets
+  `border-strong` and an inset accent edge, never the accent border.
+- **A card has six fields and no seventh:** title, bucket chip, deadline, priority, identifier,
+  assignee. The deadline is `accent` within three days, `alert` once past, `dim` once the ticket is
+  in the final state.
+- **Avatars are square.** A picture is cropped square; without one, initials on `border`.
+  Unassigned is a dashed `border-strong` square, never a person glyph.
+- **One button per action, in the place it acts.** Header actions are buttons, not an overflow menu.
+  Buttons in a screen header or beside a field are 28px; a dialog footer keeps 30px.
+- **Destructive is clay, and says what it costs.** A destructive dialog has a 1px `alert` edge and
+  states the consequence in its footer.
+- **One shared panel.** Drop-downs, the card menu, sub-menus and suggestion lists are the same
+  `surface` panel on 1px `border-strong`.
+- Any HTML in a description or comment is shown as text; a picture from off the instance is a link,
+  never fetched.
 
 ---
 
 ## 6. Screens
 
-| Artboard | Screen | Notes for the build |
-|---|---|---|
-| `SignIn.dc.html` | Sign in | Username + password, optional TOTP step (`Dialogs.dc.html`). |
-| `Main.dc.html` | Board | One column per work state, less the default and rejected ones; the header says "4 of 6 states". Search box in the header, show-buckets toggle and filter chips in the filter bar. A plain click on a card previews it in the aside; the identifier in the preview opens it. |
-| `Backlog.dc.html` | Backlog | Table + preview aside, same preview as the board. Carries the selection bar and the checkbox column. The priority column has no header; Assignee shows the avatar and the username. Title and bucket wrap at a set width and a filler column takes the rest, so the columns sit beside the title. A row's right-click is the card menu. |
-| `ItemDetail.dc.html` | Item detail | Header actions: Copy link · **Clone** · **Split** · Reject · Edit (Save · Cancel while open). Relations, comments/history tabs. Relations are rows of kind (mono caps, `faint`), identifier (accent) and title; the preview aside and the create form draw the same rows, compact. The fields are a grid in the one column: the artboard's field aside is drawn beside the board's sidebar, and two asides on one screen read as neither. |
-| `BucketIndex.dc.html` | Bucket index | Cards with progress bar, per-bucket icon, scope switch (participation / owned / instance). |
-| `BucketDetail.dc.html` | Bucket detail | Contents grouped by owning team, per-row remove ×. `Icon` and `Colour` are fields here. The screen is the item detail screen — a bucket and a ticket are one namespace. |
-| `Log.dc.html` | Log | Keyset paging: the footer says "load older from 41192", never a page number. Agent actions carry a small accent glyph beside the actor. |
-| `TeamSettings.dc.html` | Team settings | Work states, Members, Identity, Archive. **No ticket types tab.** |
-| `Admin.dc.html` | Administration | Users, backup/restore, agent access. *Appearance* (never drawn): a toggle row per built-in icon group with its icons beside it, the same rows for the instance's own sets with their `prefix.*` and Delete, then a form to add one (name, prefix, SVG files) that lists what it skipped and why, the colour mode as chips, and the palette as swatches, a hidden one at a quarter opacity. |
-| `Components.dc.html` | Foundations | The token and component reference this document describes. |
-| *(none)* | Docs | How the product works, at `/docs`, from `Documentation` at the foot of the sidebar: one page, written as Markdown (`internal/web/src/docs.md`) and drawn by the description renderer but set in Sans 14 at a 784px column, tables across it, `h2` 20px under a `rule-faint` line, `h3` 15px. Its sections sit in a settings rail that stays beside the scroll and marks the one being read. It runs from the concepts to everyday use to the agent interface and the HTTP API, in that order, and ends with *Source code*, the link AGPL-3.0 §13 asks for. `/docs#filtering` opens at a section; the query box's cheat sheet links there. A line under the sign-in card links the source too. Never drawn. |
-| *(none)* | Account | Settings that are not about how you appear: password, second factor, and the tokens that act as you. Reached from Settings on your own profile, not from the sidebar. Never drawn. |
-| *(none)* | Profile | A person at `/users/<name>`, and where the identity block at the foot of the sidebar goes. Fits the viewport: the picture, name, email, last seen, bio and teams are fixed at the top, and only the activity panel below them scrolls. Memberships sit side by side in a 230px-minimum grid, not stacked. Your own carries Edit profile and Settings; in edit mode the picture *is* the file control (a mono-caps `Change` strip across its foot) and the email and bio are inputs in place, with Save and Cancel in the screen header. Never drawn. |
-| `Dialogs.dc.html` | Dialogs and states | Create item · Reject · New bucket · Split · Bulk move · Bulk edit · delete confirms · second factor · stream banners. |
-
-The sidebar also lists the saved views of `SPEC.md` §9.4 under a `Views` section heading, between
-the main navigation and team settings. A view is a switch, not a place: a click turns it on or
-off, several can be on, and Board or Backlog stays the marked place. A view that is on is
-accent-coloured on `accent-tint-weak`, without the place's left bar, with a mono-caps `ON` at its
-right; `All off` appears in the section heading once two are on. Which are on is remembered per
-team in the browser, and an old `?view=` link switches its view on. A view appears only in the
-sidebar, never in the bar.
-
-The filter bar edits one CSQL query (`SPEC.md` §9.2) two ways, and opens on the first.
-
-The `</>` mode switch leads the bar, right after the `Filter` eyebrow, in both modes: it never moves,
-so switching back is where switching there was.
-
-- **Chips.** Assignee, State, Label, Bucket and Priority, then `+ More` (Reporter, Team, Created,
-  Started, Completed, Due) and `Clear` once anything is set. A chip opens a dropdown in place, the card menu's panel, with a search box once it
-  lists more than seven values. Each value row leads with a mono box that a click cycles: `[ ]`
-  not in the filter, `[+]` is (accent), `[−]` isn't (alert, the name struck through). A mono hint
-  at the foot says so: `Click: [+] is · [−] isn't · Esc undoes`. The dropdown applies when it
-  closes; Escape leaves the filter as it was. A set chip reads `Label: api, −roses` (two values,
-  then `+N`) in the accent, with its own clear. A date chip offers presets (Today, Last 7 days,
-  Last 30 days; Due: Before today, Today, Next 7 days, No due date; Started and Completed: Not yet)
-  and a From–To range; a preset applies at once. A field from `+ More` stays on the bar while it
-  holds something; `Clear` takes the bar back to the five.
-- **Raw.** `</>` (accent while on) turns the chips into the query they make, in a mono box at most
-  420px wide, with a `?` beside it for a cheat sheet: three short sections (Fields, Operators,
-  Examples) under mono-caps eyebrows, at most 520px wide, kept inside the window and scrolling
-  within itself when the window is short. As you type, a list under the box
-  offers what can come next at the caret — a field, its operators, its values, then `and` or `or`.
-  A muted note follows an offer only where the offer alone does not say it: a bucket's title, a
-  team's name, a priority's word, what `-7d` means. Tab takes the first offer, or the one moved to with the arrows; Enter runs
-  the query unless an offer was moved to. Nothing runs while typing. A mistake is underlined wavy
-  in `alert` where it is, and its sentence heads the list, unless the caret is in it, which is a
-  word still being typed. A query the server refuses keeps the board as it was. Nothing in the box
-  ever blocks: whenever it holds something not in use, `Discard` beside it puts the query in use
-  back. `</>` goes back to the chips at once when they can show the query, applying the box on the
-  way; a box that cannot be applied says "Not applied. Discard it to go back to the chips.", and
-  Discard then goes back; a query in use that the chips cannot show says so and offers `Clear
-  filter`.
-
-The views that are on are and-ed with the bar. Save as view (shown once the bar holds a filter) and
-the sidebar's + open a dialog with the name, the same two-way editor (chips wrapping, nothing run
-until Save) and the pins; right-clicking a view opens a menu (the card menu's panel) with Edit… and
-Delete…. Saving the bar's filter clears the bar and switches the new view on.
-
-`canvas.json` in the design directory holds the layout and the annotations; the annotations are
-design intent in prose and are worth reading once.
+- **Reading screens keep a measure.** The item detail and the docs are read, not scanned: a capped
+  column, prose at its measure.
+- **One sidebar, one screen header.** A screen adds a filter or scope bar under its header, and at
+  most one aside (the preview, or a settings rail). Two asides on one screen read as neither.
+- **The preview is the item.** A plain click on a card or row previews it in the aside, editable
+  there; its identifier opens the full view.
 
 ---
 
-## 7. Bulk, clone and split — the interactions the mockups added
+## 7. Bulk, clone and split
 
-Behaviour is in `SPEC.md` §6.5. What the design fixes:
+Behaviour is in `SPEC.md` §6.5.
 
-- **Selection** lives on the board and the backlog. A checkbox column leads each row; the header
-  checkbox is select-all and goes indeterminate on a partial selection. A board card has no
-  checkbox: ⌘/Ctrl-click picks it into the selection, where a plain click previews it.
-- **Selection bar** offers, in this order: `Move to…` (primary), `Reject…`, then `Assignee`,
-  `Priority`, `Bucket`, then `Clear`. All five are v1.
-- **Bulk edit is one field at a time.** The dialog has a field switcher across the top and a value
-  list below. There is no multi-field form.
-- **Clone** and **Split** are buttons on the item header, not menu items buried in an overflow.
-- **Split** takes a title per new ticket and offers one checkbox: reject the original afterwards.
+- Selection lives on the board and the backlog. ⌘/Ctrl-click picks a card; a plain click previews.
+- The selection bar and the card menu offer the same actions: `Move to…`, `Reject…`, `Assignee`,
+  `Priority`, `Bucket`.
+- **Bulk edit is one field at a time.** No multi-field form.
+- **Clone** and **Split** are buttons on the item header.
 
 ---
 
 ## 8. Motion
 
 Things arrive; they do not appear. Motion says where something came from and where it went, and is
-over before anyone could wait for it. Nothing loops but the caret, and the fire (§9) only where there
-is nothing else to look at.
+over before anyone could wait for it. Nothing loops but the caret, and the fire (§9).
 
 | Token | Value | Used for |
 |---|---|---|
-| `snap` | 90ms | colour, border and background answering the pointer — every control |
-| `quick` | 140ms | a drop-down, a dialog, a toast leaving, the selection bar, a tick in a checkbox, the toggle knob |
+| `snap` | 90ms | colour, border and background answering the pointer |
+| `quick` | 140ms | a drop-down, a dialog, a toast leaving, the selection bar, a toggle |
 | `glide` | 220ms | a card travelling, the preview sliding in, a screen fading up, a toast arriving |
-| `ease-out` | `cubic-bezier(0.33, 1, 0.68, 1)` | the one curve: fast out, soft landing. Colour changes use plain `ease-out` |
+| `ease-out` | `cubic-bezier(0.33, 1, 0.68, 1)` | the one curve: fast out, soft landing |
 
-| What | How |
-|---|---|
-| Drop-down (team, search, labels) | fades in from 4px above: it hangs from what opened it |
-| Card menu | fades in where the pointer is, and does not travel |
-| Dialog | the scrim fades; the dialog rises 8px into place |
-| Preview aside | slides in 12px from the right edge it lives on |
-| Screen | its body fades up once it has something to show; header and rails stay put |
-| Card changing column | travels there, whoever moved it — a drop, a bulk move, a teammate's change on the stream. Cards around it close up or make room. A card from nowhere or to nowhere fades |
-| Card held in a drag | a copy follows the pointer from the spot it was picked up by, lifted to 103% and off the surface on the product's only shadow (`0 10px 24px` at 50% black). It turns about that spot with the speed it is carried at, at most 6°, and swings back upright when the hand stops. A run of cards carries its count in an `accent` badge |
-| Card dropped | the copy travels straight from the hand onto the card's new place in 180ms, on `ease-out`, and the card shows under it; the cards around it make room. Called off — Escape, or let go outside a column — it settles back where it came from |
-| Card reaching the final state | it feeds the fire, once it has landed. The card kindles: a wash of `accent-tint` rises through it over 1s, and its border runs `accent` → `ok` → rest, while the column's count bumps. About 26 square embers leave it. They rise on buoyancy, drift on a turbulent draft, flicker, shrink, and cool along the palette — `accent-hover`, `accent`, `alert`, `faint` — over 0.6–1.4s. One carrier ember, white-hot (`bright`) with a 64px streak cooling behind it, rises off the card and sweeps to the campfire mark in the sidebar in 0.62s. On arrival the mark roars: the flame and core leap and settle, with an `accent` glow, and it throws a few embers of its own. Drawn on one canvas that exists only while an ember is alive. Only a card that was open work on the board a moment ago: a filter that brings finished work into view has finished nothing. A run finished together feeds it one card after another, six at most. A card finished while a filter it no longer matches is on screen still lands in Done and feeds the fire (see the next row) |
-| Card leaving the filter in view | it goes where it went, as any move does, and stays there: a card that stops matching the filter while on screen — moved, finished, relabelled, by you or anyone — glides to its new column (kindling, in Done) and, 1.4s on, settles to 50% opacity over 400ms, titled "No longer matches the filter". It stays through every refresh, following a later move, until the filter, a view or a toggle changes; a new filter shows only what matches it. Under reduced motion it is simply at 50% |
-| Progress bar | both parts grow from the left in proportion, over 700ms, when drawn |
-| Toast | rises into the stack; the ones above make room; it fades on the way out |
-| Button | gives by 1px while pressed |
-| Focus | `:focus-visible` is a 1px `accent` outline; a focused input also carries a 3px `accent-tint-weak` halo |
-| Caret | blinks 500ms on, 500ms off, whatever the desktop's setting, and starts over lit on every key and click. Steady under reduced motion. Where the browser cannot take the beat (Firefox, Safari), it keeps the desktop's |
-
-Exits are instant or `quick`, never `glide`: nobody waits for a dismissed thing to finish going.
-
-**Reduced motion** turns every animation and transition off, scripted ones included — things still
-change, nothing travels. The end-to-end suite runs that way, because it checks where things land.
+- Exits are instant or `quick`, never `glide`: nobody waits for a dismissed thing.
+- A card that changes column travels there, whoever moved it.
+- The product's only shadow is under a card held in a drag (`0 10px 24px` at 50% black).
+- A card reaching the final state feeds the fire: embers rise off it to the mark in the sidebar. It
+  is the one flourish, and only for open work finished on the board.
+- Focus is a 1px `accent` outline (`:focus-visible`); a focused input adds a 3px `accent-tint-weak`
+  halo.
+- **Reduced motion** turns every animation and transition off, scripted ones included. The e2e suite
+  runs that way.
 
 ---
 
 ## 9. The mark
 
-Campfire is where people stop to warm up and plan their next move. The brand says so once, quietly,
-and then gets out of the way: the product is about the work, not about itself.
-
-The mark is a flame over two crossed logs, in the 16px grid, square and mitred like every glyph:
+A flame over two crossed logs, in the 16px grid, square and mitred like every glyph:
 
 | Part | Path | Lit | Out |
 |---|---|---|---|
@@ -412,31 +256,15 @@ The mark is a flame over two crossed logs, in the 16px grid, square and mitred l
 | core | `M8 5.6 10.4 9.6 9.4 12H6.6L5.6 9.6Z` | `accent-hover` | `dim` |
 | logs | `M2.8 12.6 13.2 14.8M2.8 14.8 13.2 12.6`, stroke 1.4 | `faint` | `faint` |
 
-Where it appears, and nowhere else:
-
-- **Sidebar**, 19px beside the wordmark (mono 15 / 500 caps at 0.18em, `text`), the pair centred
-  over the sidebar. It is lit while the live stream is up and burns down to embers while it is not,
-  so the one piece of branding is also a status light nobody has to look for. It flares once for
-  each change that arrives.
-- **Loading**, 32px, burning — the flame leans, the core flickers on its own beat. It fades in only
-  after 300ms, so a fast boot never shows it.
-- **Sign in**, 36px, burning, above the wordmark. This is the one screen allowed a glow: a low
-  `accent-tint-weak` ellipse from the bottom edge, as if from the fire the card is drawn up to.
-- **Favicon**, lit, on `page`.
+The brand says so once, quietly, and gets out of the way. It appears in the sidebar (lit while the
+live stream is up, burnt down while it is not), while loading, on sign in (the one screen allowed a
+glow), and as the favicon. Nowhere else.
 
 ---
 
-## 10. What the design does not cover
+## 10. Out of scope
 
-Ask rather than invent:
-
-- Light mode. There is none, and the palette is not built for one.
-- Mobile and narrow layouts. The rails are fixed and the board columns flex, and that is the whole
-  of it. Narrower than the rails allow, the interface scrolls
-  rather than reflows.
-- Empty states beyond the board's empty column, the log's end-of-list, and the one-line `empty-note`
-  a list falls back to.
-- Error and validation copy beyond the input error state, the per-field message under a refused
-  field, and the failure toast.
-- Keyboard shortcuts and focus order beyond what is bound today, which the Docs page lists under
-  *Keyboard and mouse*. A new binding is added there too.
+- Light mode. The palette is not built for one.
+- Mobile and narrow layouts. Narrower than the rails allow, the interface scrolls rather than
+  reflows.
+- A new keyboard binding is listed on the Docs page under *Keyboard and mouse*.

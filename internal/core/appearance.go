@@ -85,7 +85,7 @@ func subset(field string, keys, set []string) ([]string, error) {
 
 var hexColour = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
-// surface is the card a bucket's colour is read on (DESIGN.md §2).
+// surface is the card a bucket's colour is read on (DESIGN.md §4).
 const surface = "#1a1715"
 
 // minContrast is the least a colour may stand off the card: WCAG's floor for

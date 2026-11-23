@@ -15,7 +15,8 @@ the same in lower case.
 
 - Read the ticket with the `campfire` MCP server: `lookup_item`, then `list_comments` and the
   related items it names.
-- Read the `SPEC.md` and `DESIGN.md` sections it touches.
+- Read the `SPEC.md` and `DESIGN.md` sections it touches. They hold rules; how the client looks
+  and works today is in the code.
 - Read the code end to end: where the behaviour lives, every caller of what you'll change, and
   the tests that cover it. `git log -S` and the related tickets show why it is the way it is.
 - Reproduce a bug before planning a fix.
