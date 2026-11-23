@@ -5,6 +5,7 @@
   import { app, reloadContext, followTeam, setIconSets } from "./lib/state.svelte.js";
   import { route, navigate } from "./lib/router.svelte.js";
   import { stream, openStream, configure } from "./lib/stream.svelte.js";
+  import { applyTheme, currentTheme, loadThemes, themeState } from "./lib/themes.svelte.js";
 
   import Sidebar from "./components/Sidebar.svelte";
   import Mark from "./components/Mark.svelte";
@@ -37,6 +38,7 @@
       configure(instance.hiddenTabGrace);
       app.imageMaxSize = instance.imageMaxSize;
       app.appearance = instance.appearance;
+      themeState.instance = instance.theme;
       setIconSets(instance.iconSets);
       if (instance.needsBootstrap) {
         needsBootstrap = true;
@@ -50,6 +52,7 @@
         app.user = session.user;
         openStream();
         await reloadContext();
+        await loadThemes().catch(() => {});
       } catch (err) {
         if (!(err instanceof ApiError) || err.status !== 401) throw err;
         app.user = null;
@@ -66,10 +69,12 @@
     forget(); // what an earlier account was shown is not this one's to see
     openStream();
     await reloadContext();
+    await loadThemes().catch(() => {});
     navigate("/", true);
   }
 
   boot();
+  $effect(() => applyTheme(currentTheme()));
 
   // The team in context follows the address. Everything per-team the sidebar
   // draws — the name in the switcher, the views, the backlog count — is read

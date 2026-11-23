@@ -120,6 +120,7 @@ func TestMigrationNeedsItsSnapshotAndRunsAtomically(t *testing.T) {
 		t.Fatal(err)
 	}
 	db.Close()
+	before := Version()
 	defer func(m []string) { migrations = m }(migrations)
 	migrations = append(migrations, `ALTER TABLE labels ADD COLUMN colour TEXT`)
 	colour := func() (n int) {
@@ -144,7 +145,7 @@ func TestMigrationNeedsItsSnapshotAndRunsAtomically(t *testing.T) {
 
 	from := 0
 	db, err = OpenMigrating(path, func(_ *DB, v int) error { from = v; return nil })
-	if err != nil || from != 1 || colour() != 1 {
+	if err != nil || from != before || colour() != 1 {
 		t.Fatalf("migrate: %v, snapshot saw version %d, colour columns %d", err, from, colour())
 	}
 	db.Close()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -241,7 +242,19 @@ func TestSnapshotBeforeMigrationIsTheWayBack(t *testing.T) {
 		return paths
 	}
 
-	setVersion(0) // a file from before versions were recorded
+	v1, err := os.ReadFile("internal/store/testdata/v1.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := oldDB.Exec(string(v1)); err != nil {
+		oldDB.Close()
+		t.Fatal(err)
+	}
+	oldDB.Close() // a v1 file from before versions were recorded
 	if err := run([]string{"-config", cfg, "check"}); err != nil {
 		t.Fatal(err)
 	}

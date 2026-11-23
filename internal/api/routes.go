@@ -18,6 +18,8 @@ func (s *Server) routes() {
 	s.handle("POST /api/instance/bootstrap", s.bootstrap)
 	s.handle("GET /api/instance/updates", s.getUpdates)
 	s.handle("POST /api/instance/updates", s.installUpdate)
+	s.handle("GET /api/themes", s.getThemes)
+	s.handle("PUT /api/themes/{scope}", s.setThemes)
 	s.handle("PUT /api/instance/appearance", s.setAppearance)
 	s.handle("GET /api/instance/data", s.getData)
 	s.handle("POST /api/instance/data", s.moveData)
@@ -132,6 +134,10 @@ func (s *Server) getInstance(w http.ResponseWriter, r *http.Request, a core.Acto
 	if err != nil {
 		return nil, err
 	}
+	theme, err := s.svc.InstanceTheme(r.Context())
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
 		"needsBootstrap": needs,
 		"bucketIcons":    store.BucketIcons,
@@ -140,7 +146,20 @@ func (s *Server) getInstance(w http.ResponseWriter, r *http.Request, a core.Acto
 		"iconSets":       sets,
 		"hiddenTabGrace": s.HiddenTabGrace.Milliseconds(),
 		"imageMaxSize":   s.MaxImage,
+		"theme":          theme,
 	}, nil
+}
+
+func (s *Server) getThemes(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	return s.svc.Themes(r.Context(), a)
+}
+
+func (s *Server) setThemes(w http.ResponseWriter, r *http.Request, a core.Actor) (any, error) {
+	var in store.ThemeSettings
+	if err := decode(r, &in); err != nil {
+		return nil, err
+	}
+	return nil, s.svc.SetThemeSettings(r.Context(), a, r.PathValue("scope"), in)
 }
 
 // setAppearance hides icon groups and colours from pickers and picks the

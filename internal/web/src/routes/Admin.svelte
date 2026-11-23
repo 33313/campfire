@@ -19,6 +19,7 @@
   import FormDialog from "../dialogs/FormDialog.svelte";
   import ShowOnceDialog from "../dialogs/ShowOnceDialog.svelte";
   import ConfirmDialog from "../dialogs/ConfirmDialog.svelte";
+  import ThemeSettings from "../components/ThemeSettings.svelte";
 
   const SECTIONS = [
     { id: "instance", label: "Instance" },
@@ -533,6 +534,7 @@
           </Section>
 
         {:else if tab === "appearance"}
+          <ThemeSettings scope="instance" />
           <Section title="Bucket icons" sub="{offered} of {Object.keys(BUCKET_ICONS).length} offered">
             {#snippet children()}
               <p class="explain">Hidden groups leave the pickers. Buckets keep their icons.</p>

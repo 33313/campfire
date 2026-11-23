@@ -264,7 +264,7 @@ glow), and as the favicon. Nowhere else.
 
 ## 10. Out of scope
 
-- Light mode. The palette is not built for one.
+- A stock light palette. The bundled palettes are dark.
 - Mobile and narrow layouts. Narrower than the rails allow, the interface scrolls rather than
   reflows.
 - A new keyboard binding is listed on the Docs page under *Keyboard and mouse*.

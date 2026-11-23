@@ -175,7 +175,10 @@ func (d *DB) create() error {
 // migrations[i] takes a file from schema version i+1 to i+2. Append only: one
 // that has shipped is never edited. Before adding one, copy schema.sql to
 // testdata/v<its from version>.sql, then change schema.sql to match.
-var migrations []string
+var migrations = []string{`
+ALTER TABLE users ADD COLUMN theme_settings TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE appearance ADD COLUMN theme_settings TEXT NOT NULL DEFAULT '{}';
+`}
 
 // Version is the schema version this binary writes. A file records its own in
 // PRAGMA user_version; a file with none (0) has the v1 schema, version 1.
