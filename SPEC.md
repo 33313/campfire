@@ -141,6 +141,10 @@ item, and is no more an entity than comments are ([§9.4](#94-saved-views)).
   instance administrator as a one-time reset, never by a mailed link.
 - Open registration WILL NOT be offered. An instance administrator creates accounts or issues
   invitation links.
+- Instance administrators may manage the shared theme library and set the default palette. Each
+  account may manage a private theme library and choose a built-in, shared or private palette.
+  An account's selection overrides the instance default. With no available selection the instance
+  default applies; with no available default the built-in Campfire palette applies.
 
 ### 5.2 Roles
 

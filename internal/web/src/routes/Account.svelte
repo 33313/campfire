@@ -10,6 +10,7 @@
   import { when } from "../lib/format.js";
 
   import Section from "../components/Section.svelte";
+  import ThemeSettings from "../components/ThemeSettings.svelte";
   import ScreenHeader from "../components/ScreenHeader.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
   import FormDialog from "../dialogs/FormDialog.svelte";
@@ -133,6 +134,7 @@
     </Section>
 
     <div>
+      <ThemeSettings />
       <Section title="Password">
         {#snippet children()}
           <label class="field">

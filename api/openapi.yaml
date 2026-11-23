@@ -55,6 +55,30 @@ paths:
         "400": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
 
+  /api/themes:
+    get:
+      operationId: getThemes
+      summary: The instance theme library and the signed-in user's own themes and selection
+      x-agent: false
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+  /api/themes/{scope}:
+    put:
+      operationId: setThemes
+      summary: Save the theme library and selection for the instance or signed-in user
+      x-agent: false
+      parameters:
+        - { name: scope, in: path, required: true, schema: { type: string, enum: [instance, personal] } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [selected, themes] }
+      responses:
+        "204": { description: Saved }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+
   /api/instance/appearance:
     put:
       operationId: setAppearance

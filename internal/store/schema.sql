@@ -28,6 +28,7 @@ CREATE TABLE users (
     avatar         TEXT,
     -- Prose about themselves, for their profile page. Nothing reads it.
     bio            TEXT,
+    theme_settings TEXT    NOT NULL DEFAULT '{}',
     is_admin       INTEGER NOT NULL DEFAULT 0,
     created_at     INTEGER NOT NULL
 ) STRICT;
@@ -245,7 +246,8 @@ CREATE TABLE appearance (
     colour_mode    TEXT    NOT NULL CHECK (colour_mode IN ('palette', 'hex', 'off')),
     -- Space-separated keys: built-in icon groups, and palette colours.
     hidden_groups  TEXT    NOT NULL,
-    hidden_colours TEXT    NOT NULL
+    hidden_colours TEXT    NOT NULL,
+    theme_settings TEXT    NOT NULL DEFAULT '{}'
 ) STRICT;
 
 -- An instance's own bucket icons (DEV-79), uploaded by an administrator as a
