@@ -18,7 +18,7 @@
   import { pref, setPref } from "../lib/prefs.js";
   import { NAV } from "../lib/icons.js";
   import { ms, easeOut, QUICK, GLIDE } from "../lib/motion.js";
-  import { kindle } from "../lib/embers.js";
+  import { burnRejected, kindle } from "../lib/embers.js";
   import { conjoin, quote } from "../lib/csql.js";
   import { lift } from "../lib/ghost.js";
 
@@ -81,6 +81,8 @@
     duration: () => ms(GLIDE), easing: easeOut,
     fallback: (node, p) => fade(node, { duration: p.instant ? 0 : ms(QUICK) }),
   });
+  let rejected = new Set();
+  const leaveCard = (node, params) => rejected.has(params.key) ? burnRejected(node) : send(node, params);
 
   // A card that was open work a moment ago and is now in the final state
   // feeds the fire once it has landed (embers.js). Only one that was on the
@@ -127,7 +129,8 @@
       known = true;
       const next = await fetchBoard(filter, signal);
       // The same filter asked again keeps what left it; a new one starts afresh.
-      return key === drawn && shown ? keep(shown, next) : next;
+      const rejected = key === drawn && shown ? await keep(shown, next) : [];
+      return { next, rejected };
     });
     if (res.superseded) return res;
     if (res.error) {
@@ -141,7 +144,8 @@
     }
     try {
       const before = board;
-      board = res.value;
+      rejected = new Set(res.value.rejected);
+      board = res.value.next;
       applied = filter;
       drawn = key;
       if (before) {
@@ -182,7 +186,7 @@
   async function keep(shown, next) {
     const there = new Set(next.columns.flatMap((c) => (c.items || []).map((i) => i.id)));
     const gone = shown.columns.flatMap((c) => c.items || []).filter((i) => !there.has(i.id)).slice(0, 10);
-    if (!gone.length) return next;
+    if (!gone.length) return [];
     const found = await Promise.all(gone.map((i) => api.getItem(i.id).catch(() => null)));
     const columns = new Map(next.columns.map((c) => [c.state.id, c]));
     for (const item of found) {
@@ -192,7 +196,8 @@
       const at = items.findIndex((i) => i.rank > item.rank);
       items.splice(at < 0 ? items.length : at, 0, { ...item, kept: true });
     }
-    return next;
+    return found.filter((i) => i?.teamId === teamId && i.kind === "ticket" && i.stateRole === "rejected")
+      .map((i) => i.id);
   }
 
   // A click previews the card beside the board rather than leaving it.
@@ -474,7 +479,7 @@
                        title={item.kept ? "No longer matches the filter. Hidden when the filter changes." : null}
                        in:receive={{ key: landing.includes(item.id) ? -item.id : item.id,
                                      instant: landing.includes(item.id) }}
-                       out:send={{ key: item.id }}
+                       out:leaveCard={{ key: item.id }}
                        animate:flip={{ duration: landing.includes(item.id) ? 0 : ms(GLIDE),
                                        easing: easeOut }}>
                     <Card {item} selected={selected.includes(item.id)}

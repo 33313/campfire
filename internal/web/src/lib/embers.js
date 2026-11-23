@@ -29,6 +29,7 @@ const carriers = []; // the ones carrying work to the fire: { from, to, bend, ag
 
 function surface() {
   if (canvas) return;
+  ramp = null; // The palette may have changed since the last burst.
   canvas = document.createElement("canvas");
   canvas.className = "embers";
   document.body.append(canvas);
@@ -42,6 +43,28 @@ function surface() {
   fit();
   addEventListener("resize", fit);
   canvas.fit = fit;
+}
+
+/** A rejected card burns away in place without sending an ember to the mark. */
+export function burnRejected(node) {
+  if (still.matches) return { duration: 0 };
+  const box = node.getBoundingClientRect();
+  if (box.bottom > 0 && box.top < innerHeight && box.right > 0 && box.left < innerWidth) {
+    surface();
+    const first = embers.length;
+    burst(box.left, box.top, box.width, Math.min(20, box.height), 14, 0.45);
+    for (let i = first; i < embers.length; i++) embers[i].life *= 0.35;
+    if (!frame) { last = performance.now(); frame = requestAnimationFrame(step); }
+  }
+  return {
+    duration: 280,
+    css: (t) => {
+      const edge = (1 - t) * 100;
+      const y = (offset) => Math.max(0, Math.min(100, edge + offset));
+      return `pointer-events:none;opacity:${t};filter:sepia(${1 - t});clip-path:polygon(` +
+        `0 ${y(0)}%,18% ${y(-5)}%,38% ${y(4)}%,57% ${y(-4)}%,80% ${y(5)}%,100% ${y(-2)}%,100% 100%,0 100%)`;
+    },
+  };
 }
 
 function burst(x, y, w, h, n, power = 1) {
