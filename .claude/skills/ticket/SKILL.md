@@ -6,7 +6,7 @@ argument-hint: <ticket identifier> [trivial]
 
 # Work a ticket
 
-Follow CLAUDE.md throughout. The phases run in order, and phase 2 ends with a stop.
+The phases run in order, and phase 2 ends with a stop.
 
 The ticket is any Campfire identifier, `<CODE>-<n>`. Below, `<ID>` is that identifier and `<id>` is
 the same in lower case.
@@ -17,8 +17,7 @@ the same in lower case.
   related items it names.
 - Read the `SPEC.md` and `DESIGN.md` sections it touches. They hold rules; how the client looks
   and works today is in the code.
-- Read the code end to end: where the behaviour lives, every caller of what you'll change, and
-  the tests that cover it. `git log -S` and the related tickets show why it is the way it is.
+- `git log -S` and the related tickets show why the code is the way it is.
 - Reproduce a bug before planning a fix.
 
 ## 2. Plan, then stop
@@ -47,16 +46,9 @@ only when the arguments include `trivial`; in that case, state the plan in two l
 - If the client changed: run e2e once, and look at the change in the running app (the `run`
   skill). Check browser-dependent CSS or JS in Firefox.
 
-## 5. Review your own diff
+## 5. Review
 
-- Read all of `git diff origin/main...`.
-- Run the `code-review` skill on it and fix what holds up.
-- Check:
-  - Every point of the ticket is done.
-  - Nothing was added that the ticket didn't ask for.
-  - No dead code or debug output is left.
-  - The user-facing text reads plainly.
-  - Nothing simpler would do.
+Run the `code-review` skill on `git diff origin/main...` and fix what holds up.
 
 ## 6. Open the PR
 
@@ -67,5 +59,4 @@ only when the arguments include `trivial`; in that case, state the plan in two l
 
 ## 7. Report
 
-Give the PR link, what you verified, what the review found, and anything the reviewer should look
-at or decide.
+Give the PR link, what the review found, and anything the reviewer should look at or decide.
