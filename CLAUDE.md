@@ -21,7 +21,6 @@ use `/ticket <ID>`, e.g. `/ticket DEV-120`.
 
 - UI copy, docs, README, change files and PR bodies are plain and factual: what it does, what it
   needs, what it won't do. No narrative ("you open the tab and…"), no metaphor, no selling.
-- Code comments explain why, briefly. Don't copy the literary voice of older comments.
 
 ## Tests
 
