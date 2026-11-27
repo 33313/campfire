@@ -30,15 +30,16 @@
   // What the menu named when it opened, copied out of the props: the actions
   // outlive the menu — it closes before the dialog it opens — and a prop read
   // after that is a read of a board state that has already moved on.
-  const [picked, target] = untrack(() => [[...ids], item]);
+  const [picked, target, workStates] = untrack(() => [[...ids], item, states]);
 
   let el = $state(null);
   let one = picked.length === 1;
+  const ticket = target.kind === "ticket";
 
   // Each sub-menu: its field, and its values. For one card the value it has
   // now is marked.
   const SUBS = {
-    "Move to": { field: "state", now: target.stateId, options: () => states
+    "Move to": { field: "state", now: target.stateId, options: () => workStates
       .filter((s) => s.role !== "rejected")
       .map((s) => ({ value: s.id, label: s.name, icon: { pip: s.role } })) },
     Assignee: { field: "assignee", now: target.assigneeId || 0, options: assigneeOptions },
@@ -110,7 +111,7 @@
     if (await fn()) onapplied();
   }
 
-  const reject = () => run(() => moveMany(picked, states, (s) => s.role === "rejected"));
+  const reject = () => run(() => moveMany(picked, workStates, (s) => s.role === "rejected"));
   function apply(value) {
     const { field } = SUBS[sub.name];
     run(() => applyToAll(picked, field, value));
@@ -159,11 +160,13 @@
   <span class="menu-rule"></span>
   {@render parent("Assignee")}
   {@render parent("Priority")}
-  {@render parent("Bucket")}
+  {#if !one || ticket}{@render parent("Bucket")}{/if}
   {#if one}
     <span class="menu-rule"></span>
-    {@render plain("Clone", clone)}
-    {@render plain("Split…", split)}
+    {#if ticket}
+      {@render plain("Clone", clone)}
+      {@render plain("Split…", split)}
+    {/if}
     {@render plain("Open", () => { onclose(); navigate(`/${target.identifier}`); })}
   {/if}
 

@@ -1,0 +1,3 @@
+kind: Fixed
+body: Bucket cards open the item menu on right-click, using their owning team’s states and omitting ticket-only actions.
+time: 2026-11-23T20:15:06.257827632+01:00
