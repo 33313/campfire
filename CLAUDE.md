@@ -12,11 +12,6 @@ use `/ticket <ID>`, e.g. `/ticket DEV-120`.
 - Edit them only when a change breaks or adds a rule, not to describe what the code does.
 - README "Contributing" maps the packages.
 
-## How to work
-
-- Read before planning: the code the change touches, end to end, and every caller of what you
-  will change.
-
 ## Writing
 
 - UI copy, docs, README, change files and PR bodies are plain and factual: what it does, what it
