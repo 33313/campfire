@@ -372,6 +372,34 @@ test("a held card scrolls the screen at its edge, and the board at its side", as
   await expect(last.locator(`.card[data-id="${id}"]`)).toBeVisible();
 });
 
+test("the bucket index menu edits a bucket using its owning team's states", async ({ page }) => {
+  const here = await newTeam(page);
+  const owner = await newTeam(page);
+  const renamed = await page.request.patch(`/api/states/${owner.doing.id}`, { data: { name: "Milestone work" } });
+  expect(renamed.ok()).toBe(true);
+  const bucket = await owner.ticket("Prepare the release", { kind: "bucket" });
+  await page.goto(here.board);
+  await page.getByRole("link", { name: "Buckets", exact: true }).click();
+  await page.getByRole("button", { name: "Whole instance", exact: true }).click();
+  const card = page.locator(".bucket-card", { hasText: bucket.identifier });
+  await card.click({ button: "right" });
+  const menu = page.locator(".card-menu").first();
+  await expect(menu.locator(".menu-head")).toHaveText(bucket.identifier);
+  for (const name of ["Bucket", "Clone", "Split…"]) {
+    await expect(menu.getByRole("button", { name, exact: true })).toHaveCount(0);
+  }
+  await menu.getByRole("button", { name: "Move to", exact: true }).click();
+  await page.getByRole("menu", { name: "Move to", exact: true })
+    .getByRole("menuitem", { name: "Milestone work", exact: true }).click();
+  await expect(card).toContainText("Milestone work");
+
+  await card.click({ button: "right" });
+  await menu.getByRole("button", { name: "Reject…", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /^Rejected/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Move", exact: true }).click();
+  await expect(card).toHaveCount(0);
+});
+
 test("the card menu sets a field on the whole selection", async ({ page }) => {
   const team = await newTeam(page);
   const items = [await team.ticket("Sweep the chimney", { accepted: true }),
@@ -555,6 +583,14 @@ test("a person's and a team's pictures replace their initials", async ({ page })
   await page.goto("/users/root");
   const row = page.locator(".profile-teams .relation-row", { has: page.locator(`a[href='/t/${team.id}/profile']`) });
   await expect(row.locator("img.team-avatar")).toHaveAttribute("src", /^data:image\//);
+
+  // Administration uses the same team mark, including its no-picture fallback.
+  await page.goto("/admin?tab=people");
+  const adminRow = page.getByRole("row").filter({ has: page.getByRole("cell", { name: team.name, exact: true }) });
+  await expect(adminRow.locator("img.team-avatar")).toHaveAttribute("src", /^data:image\//);
+  expect((await page.request.patch(`/api/teams/${team.id}`, { data: { avatar: "" } })).ok()).toBe(true);
+  await expect(adminRow.locator("img.team-avatar")).toHaveCount(0);
+  await expect(adminRow.locator(".code-badge")).toHaveText(team.shortCode);
 });
 
 // Preferences are a convenience: with storage blocked, nothing is remembered

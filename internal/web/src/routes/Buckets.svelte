@@ -9,6 +9,7 @@
 
   import { pref, setPref } from "../lib/prefs.js";
   import { api } from "../lib/api.js";
+  import { latest } from "../lib/latest.js";
   import { app } from "../lib/state.svelte.js";
   import { onNotify } from "../lib/stream.svelte.js";
   import { openModal, failure } from "../lib/ui.svelte.js";
@@ -25,6 +26,7 @@
   import ScreenHeader from "../components/ScreenHeader.svelte";
   import ErrorPanel from "../components/ErrorPanel.svelte";
   import LoadOlder from "../components/LoadOlder.svelte";
+  import CardMenu from "../components/CardMenu.svelte";
   import PickDialog from "../dialogs/PickDialog.svelte";
 
   let team = $derived(app.team);
@@ -44,6 +46,19 @@
   // reloading would throw them away, so the refresh is offered rather taken.
   let stale = $state(false);
   let paged = $state(false);
+  let menu = $state(null);
+  const askMenu = latest();
+
+  async function openMenu(item, e) {
+    e.preventDefault();
+    const { clientX: x, clientY: y } = e;
+    menu = null;
+    // The index can include buckets owned by teams other than the sidebar's.
+    const res = await askMenu(() => api.listWorkStates(item.teamId));
+    if (res.superseded) return;
+    if (res.error) { failure(res.error); return; }
+    menu = { item, states: res.value, x, y };
+  }
 
   let SCOPES = $derived([
     { id: "participation", label: "Taking part" },
@@ -186,7 +201,7 @@
             ? Math.round((b.progress.done / b.progress.total) * 100) : 0}
           {@const started = b.progress.total
             ? Math.round((b.progress.accepted / b.progress.total) * 100) : 0}
-          <a class="bucket-card" href="/{b.identifier}">
+          <a class="bucket-card" href="/{b.identifier}" oncontextmenu={(e) => openMenu(b, e)}>
             <div style="display:flex;align-items:center;gap:8px">
               <BucketIcon name={b.icon} size={13} color={b.color} />
               <span class="ident">{b.identifier}</span>
@@ -217,4 +232,9 @@
       <LoadOlder label="Load more" onclick={loadMore} />
     {/if}
   </div>
+
+  {#if menu}
+    <CardMenu ids={[menu.item.id]} item={menu.item} states={menu.states} x={menu.x} y={menu.y}
+              onclose={() => (menu = null)} onapplied={load} />
+  {/if}
 {/if}
