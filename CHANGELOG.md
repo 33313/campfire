@@ -5,6 +5,13 @@ Every release of Campfire, newest first. Versions follow [Semantic Versioning](h
 This file is generated from `.changes/`; edit the release's file there, then run
 `npm run changie -- merge`.
 
+## v1.2.1 - 2026-11-27
+
+### Fixed
+
+- Bucket cards open the item menu on right-click, using their owning team’s states and omitting ticket-only actions.
+- Show team pictures in Administration > People and use the shared team mark for inline avatars, including the sidebar.
+
 ## v1.2.0 - 2026-11-23
 
 ### Added
